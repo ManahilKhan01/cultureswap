@@ -1,0 +1,171 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* CultureSwap Color Palette */
+    --background: 40 33% 98%;
+    --foreground: 220 13% 18%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 13% 18%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 13% 18%;
+
+    /* Primary - Terracotta */
+    --primary: 16 65% 56%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Warm Cream */
+    --secondary: 36 71% 95%;
+    --secondary-foreground: 220 13% 18%;
+
+    /* Accent - Teal */
+    --accent: 174 42% 51%;
+    --accent-foreground: 0 0% 100%;
+
+    --muted: 36 20% 92%;
+    --muted-foreground: 220 9% 46%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 87%;
+    --input: 220 13% 87%;
+    --ring: 16 65% 56%;
+
+    --radius: 0.75rem;
+
+    /* Custom CultureSwap Colors */
+    --terracotta: 16 65% 56%;
+    --terracotta-light: 16 65% 70%;
+    --terracotta-dark: 16 65% 45%;
+    
+    --teal: 174 42% 51%;
+    --teal-light: 174 42% 65%;
+    --teal-dark: 174 42% 40%;
+    
+    --golden: 43 74% 66%;
+    --golden-light: 43 74% 78%;
+    --golden-dark: 43 74% 50%;
+    
+    --navy: 220 47% 25%;
+    --navy-light: 220 47% 40%;
+    
+    --warm-cream: 36 71% 95%;
+    --soft-sand: 40 33% 94%;
+    --charcoal: 220 13% 18%;
+
+    --sidebar-background: 36 71% 95%;
+    --sidebar-foreground: 220 13% 18%;
+    --sidebar-primary: 16 65% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 174 42% 51%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 220 13% 87%;
+    --sidebar-ring: 16 65% 56%;
+  }
+
+  .dark {
+    --background: 220 13% 10%;
+    --foreground: 36 71% 95%;
+
+    --card: 220 13% 14%;
+    --card-foreground: 36 71% 95%;
+
+    --popover: 220 13% 14%;
+    --popover-foreground: 36 71% 95%;
+
+    --primary: 16 65% 56%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 13% 18%;
+    --secondary-foreground: 36 71% 95%;
+
+    --accent: 174 42% 51%;
+    --accent-foreground: 0 0% 100%;
+
+    --muted: 220 13% 20%;
+    --muted-foreground: 220 9% 60%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 25%;
+    --input: 220 13% 25%;
+    --ring: 16 65% 56%;
+
+    --sidebar-background: 220 13% 12%;
+    --sidebar-foreground: 36 71% 95%;
+    --sidebar-primary: 16 65% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 174 42% 51%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 220 13% 25%;
+    --sidebar-ring: 16 65% 56%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-terracotta to-teal bg-clip-text text-transparent;
+  }
+
+  .bg-gradient-warm {
+    @apply bg-gradient-to-br from-warm-cream via-soft-sand to-secondary;
+  }
+
+  .bg-gradient-hero {
+    @apply bg-gradient-to-br from-secondary via-warm-cream to-background;
+  }
+
+  .hover-lift {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
+  }
+
+  .card-shadow {
+    box-shadow: 0 4px 20px -4px hsl(var(--terracotta) / 0.15);
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%) skewX(-15deg); }
+    100% { transform: translateX(200%) skewX(-15deg); }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s infinite;
+  }
+}
+
+@layer components {
+  .btn-glow {
+    @apply relative overflow-hidden;
+  }
+
+  .btn-glow::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-terracotta/20 to-teal/20 opacity-0 transition-opacity duration-300;
+  }
+
+  .btn-glow:hover::before {
+    @apply opacity-100;
+  }
+}
