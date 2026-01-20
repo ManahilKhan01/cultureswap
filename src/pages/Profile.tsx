@@ -175,7 +175,7 @@ const Profile = () => {
           <div className="flex flex-col md:flex-row gap-6 items-start">
             <div className="relative group">
               <img
-                src={userProfile.profile_image_url || "/placeholder.svg"}
+                src={userProfile.profile_image_url || "/download.png"}
                 alt={userProfile.full_name}
                 className="h-32 w-32 rounded-2xl object-cover border-4 border-white shadow-warm transition-transform duration-500 group-hover:scale-105"
               />

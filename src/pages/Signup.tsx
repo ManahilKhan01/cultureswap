@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,10 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { profileService } from "@/lib/profileService";
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string>("/download.png");
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -26,6 +29,18 @@ const Signup = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setError("");
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProfileImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -78,6 +93,7 @@ const Signup = () => {
             id: authData.user.id,
             email: formData.email,
             full_name: formData.fullName,
+            profile_image_url: "/download.png", // Default placeholder image
             languages: [],
             skills_offered: [],
             skills_wanted: [],
@@ -89,6 +105,17 @@ const Signup = () => {
           throw new Error(`Profile creation failed: ${profileError.message}`);
         }
         console.log("User profile created in user_profiles table");
+
+        // Upload profile image if provided
+        if (profileImage) {
+          try {
+            await profileService.uploadAndUpdateProfileImage(authData.user.id, profileImage);
+            console.log("Profile image uploaded successfully");
+          } catch (imageError) {
+            console.error("Error uploading profile image:", imageError);
+            // Continue with signup even if image upload fails
+          }
+        }
       }
 
       toast({
@@ -110,8 +137,15 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: "#FBF5EA" }}>
-      <Card className="w-full max-w-md shadow-lg">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat"
+      style={{ 
+        backgroundImage: 'url(/bg.jpg)',
+        backgroundColor: "#FBF5EA"
+      }}
+    >
+      <div className="absolute inset-0 bg-black/40"></div>
+      <Card className="w-full max-w-md shadow-lg relative z-10">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Create Account</CardTitle>
           <CardDescription>Join CultureSwap today</CardDescription>
@@ -123,6 +157,37 @@ const Signup = () => {
                 <AlertDescription className="text-red-600">{error}</AlertDescription>
               </Alert>
             )}
+
+            {/* Profile Image Upload */}
+            <div className="space-y-2">
+              <Label htmlFor="profileImage">Profile Picture (Optional)</Label>
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-300 flex items-center justify-center bg-gray-100">
+                  <img 
+                    src={profileImagePreview} 
+                    alt="Profile preview" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="relative w-full">
+                  <Input
+                    id="profileImage"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    disabled={isLoading}
+                    className="hidden"
+                  />
+                  <Label 
+                    htmlFor="profileImage"
+                    className="flex items-center justify-center gap-2 w-full p-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition"
+                  >
+                    <Upload className="h-4 w-4" />
+                    <span className="text-sm">Click to upload image</span>
+                  </Label>
+                </div>
+              </div>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="fullName">Full Name</Label>

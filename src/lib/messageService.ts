@@ -199,6 +199,28 @@ export const messageService = {
     }
   },
 
+  // Mark all messages in a conversation as read for a specific user
+  async markConversationAsRead(conversationId: string, userId: string) {
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ read: true })
+        .eq('conversation_id', conversationId)
+        .eq('receiver_id', userId)
+        .eq('read', false);
+
+      if (error) {
+        console.error('Error marking conversation as read:', error);
+        throw error;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('messageService.markConversationAsRead error:', error);
+      throw error;
+    }
+  },
+
   // Get unread message count for a user
   async getUnreadCount(userId: string) {
     try {
@@ -216,6 +238,28 @@ export const messageService = {
       return count || 0;
     } catch (error) {
       console.error('messageService.getUnreadCount error:', error);
+      throw error;
+    }
+  },
+
+  // Get unread message count for a specific conversation
+  async getUnreadCountByConversation(conversationId: string, userId: string) {
+    try {
+      const { data, error, count } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact' })
+        .eq('conversation_id', conversationId)
+        .eq('receiver_id', userId)
+        .eq('read', false);
+
+      if (error) {
+        console.error('Error getting conversation unread count:', error);
+        throw error;
+      }
+
+      return count || 0;
+    } catch (error) {
+      console.error('messageService.getUnreadCountByConversation error:', error);
       throw error;
     }
   },

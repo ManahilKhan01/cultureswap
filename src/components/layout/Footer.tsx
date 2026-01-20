@@ -1,9 +1,34 @@
 import { Link } from "react-router-dom";
 import { Facebook, Twitter, Instagram, Linkedin, Youtube, Mail } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 const Footer = () => {
+  const { toast } = useToast();
+  const [email, setEmail] = useState("");
+  const [isSubscribing, setIsSubscribing] = useState(false);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email) {
+      return;
+    }
+
+    setIsSubscribing(true);
+    
+    // Simulate subscription process
+    setTimeout(() => {
+      toast({
+        title: "Success!",
+        description: "You have been successfully subscribed.",
+      });
+      setEmail("");
+      setIsSubscribing(false);
+    }, 500);
+  };
   const footerLinks = {
     platform: [
       { name: "How It Works", href: "/how-it-works" },
@@ -57,9 +82,17 @@ const Footer = () => {
               <Input
                 type="email"
                 placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/50 w-full md:w-72"
               />
-              <Button variant="terracotta">Subscribe</Button>
+              <Button 
+                variant="terracotta"
+                onClick={handleSubscribe}
+                disabled={isSubscribing || !email}
+              >
+                {isSubscribing ? "Subscribing..." : "Subscribe"}
+              </Button>
             </div>
           </div>
         </div>

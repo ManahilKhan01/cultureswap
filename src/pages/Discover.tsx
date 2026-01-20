@@ -165,9 +165,20 @@ const Discover = () => {
       loadSwaps();
     };
 
+    // Listen for profile updates to refresh user data
+    const handleProfileUpdate = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const profile = await profileService.getProfile(user.id);
+        setUserProfile(profile);
+      }
+    };
+
     window.addEventListener('ratingUpdated', handleRatingUpdate);
+    window.addEventListener('profileUpdated', handleProfileUpdate);
     return () => {
       window.removeEventListener('ratingUpdated', handleRatingUpdate);
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
       supabase.removeChannel(subscription);
     };
   }, []);
@@ -354,7 +365,7 @@ const Discover = () => {
                   <div className="flex items-start gap-4 mb-4">
                     {profile ? (
                       <img
-                        src={profile.profile_image_url || "/placeholder.svg"}
+                        src={profile.profile_image_url || "/download.png"}
                         alt={profile.full_name || "User"}
                         className="h-12 w-12 rounded-full object-cover border-2 border-white shadow-sm transition-opacity duration-300"
                       />

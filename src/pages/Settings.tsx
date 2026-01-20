@@ -14,6 +14,8 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { supabase } from "@/lib/supabase";
 import { profileService } from "@/lib/profileService";
+import { SkillsMultiSelect } from "@/components/SkillsMultiSelect";
+import { clearProfileCaches, dispatchProfileUpdate } from "@/lib/cacheUtils";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -31,8 +33,8 @@ const Settings = () => {
     timezone: "",
     availability: "",
     languages: "",
-    skillsOffered: "",
-    skillsWanted: "",
+    skillsOffered: [] as string[],
+    skillsWanted: [] as string[],
   });
 
   const [notifications, setNotifications] = useState({
@@ -53,6 +55,17 @@ const Settings = () => {
           // Load user profile
           const userProfile = await profileService.getProfile(user.id);
           if (userProfile) {
+            // Handle backward compatibility: convert string to array if needed
+            const parseSkills = (skills: any): string[] => {
+              if (Array.isArray(skills)) {
+                return skills.filter(s => typeof s === 'string' && s.trim());
+              }
+              if (typeof skills === 'string') {
+                return skills.split(',').map(s => s.trim()).filter(s => s);
+              }
+              return [];
+            };
+
             const profileData = {
               name: userProfile.full_name || "",
               bio: userProfile.bio || "",
@@ -61,11 +74,11 @@ const Settings = () => {
               timezone: userProfile.timezone || "",
               availability: userProfile.availability || "",
               languages: userProfile.languages?.join(", ") || "",
-              skillsOffered: userProfile.skills_offered?.join(", ") || "",
-              skillsWanted: userProfile.skills_wanted?.join(", ") || "",
+              skillsOffered: parseSkills(userProfile.skills_offered),
+              skillsWanted: parseSkills(userProfile.skills_wanted),
             };
             setProfile(profileData);
-            setProfileImage(userProfile.profile_image_url || "/placeholder.svg");
+            setProfileImage(userProfile.profile_image_url || "/download.png");
 
             // Cache profile for faster next load
             localStorage.setItem('settings_profile_cache', JSON.stringify({
@@ -97,7 +110,7 @@ const Settings = () => {
       try {
         const { profile: cachedProfile, image } = JSON.parse(cached);
         setProfile(cachedProfile);
-        setProfileImage(image || "/placeholder.svg");
+        setProfileImage(image || "/download.png");
       } catch {
         // Ignore cache errors
       }
@@ -221,6 +234,28 @@ const Settings = () => {
 
       console.log("DEBUG - User authenticated:", user.id);
 
+      // Handle image upload FIRST if not skipped
+      if (!skipImage && imageFile) {
+        console.log("DEBUG - Uploading image file...");
+        try {
+          const uploadedProfile = await profileService.uploadAndUpdateProfileImage(user.id, imageFile);
+          console.log("DEBUG - Image uploaded successfully:", uploadedProfile);
+          
+          // Image is already updated in the database via uploadAndUpdateProfileImage
+          // Clear the imageFile so we don't try to upload it again
+          setImageFile(null);
+        } catch (imgError: any) {
+          console.error("DEBUG - Image upload error:", imgError);
+          toast({
+            title: "Error",
+            description: imgError.message || "Failed to upload image. Please try again.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return; // Stop if image upload fails
+        }
+      }
+
       const updates: any = {
         full_name: profile.name || "",
         bio: profile.bio || "",
@@ -229,26 +264,9 @@ const Settings = () => {
         timezone: profile.timezone || "",
         availability: profile.availability || "",
         languages: (profile.languages || "").split(",").map(l => l.trim()).filter(l => l),
-        skills_offered: (profile.skillsOffered || "").split(",").map(s => s.trim()).filter(s => s),
-        skills_wanted: (profile.skillsWanted || "").split(",").map(s => s.trim()).filter(s => s),
+        skills_offered: Array.isArray(profile.skillsOffered) ? profile.skillsOffered : [],
+        skills_wanted: Array.isArray(profile.skillsWanted) ? profile.skillsWanted : [],
       };
-
-      // Handle image upload if not skipped
-      if (!skipImage && imageFile) {
-        console.log("DEBUG - Uploading image file...");
-        try {
-          await profileService.uploadAndUpdateProfileImage(user.id, imageFile);
-          console.log("DEBUG - Image uploaded successfully");
-        } catch (imgError) {
-          console.error("DEBUG - Image upload error:", imgError);
-          // Continue without image update
-          toast({
-            title: "Warning",
-            description: "Profile updated but image upload failed. You can try again later.",
-            variant: "default",
-          });
-        }
-      }
 
       console.log("DEBUG - Starting database update (upsert)...");
       const { error: upsertErr } = await supabase
@@ -267,17 +285,19 @@ const Settings = () => {
 
       console.log("DEBUG - Update successful");
 
-      // Trigger navbar refresh by dispatching event
-      window.dispatchEvent(new Event('profileUpdated'));
+      // Clear all profile-related caches
+      clearProfileCaches();
 
-      // Clear related caches
-      localStorage.removeItem('settings_profile_cache');
-      localStorage.removeItem('profile_page_cache');
-      localStorage.removeItem('navbar_profile_cache');
+      // Add a small delay to ensure database sync
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Fetch updated profile and dispatch event for real-time sync
+      const updatedProfile = await profileService.getProfile(user.id);
+      dispatchProfileUpdate(updatedProfile);
 
       toast({
         title: "Profile Updated",
-        description: skipImage ? "Profile saved (image skipped)." : "Profile saved successfully.",
+        description: "Your profile has been saved successfully.",
       });
 
       // Redirect to dashboard after successful update
@@ -332,7 +352,7 @@ const Settings = () => {
                 {/* Avatar */}
                 <div className="flex items-center gap-4">
                   <img
-                    src={profileImage || "/placeholder.svg"}
+                    src={profileImage || "/download.png"}
                     alt={profile.name}
                     className="h-20 w-20 rounded-full object-cover border-2 border-border"
                   />
@@ -401,13 +421,23 @@ const Settings = () => {
 
                 {/* Skills */}
                 <div className="space-y-2">
-                  <Label htmlFor="skillsOffered">Skills You Offer (comma separated)</Label>
-                  <Textarea id="skillsOffered" rows={2} value={profile.skillsOffered} onChange={(e) => setProfile({ ...profile, skillsOffered: e.target.value })} placeholder="Web Development, JavaScript, Python" />
+                  <SkillsMultiSelect
+                    label="Skills You Offer"
+                    value={profile.skillsOffered}
+                    onChange={(skills) => setProfile({ ...profile, skillsOffered: skills })}
+                    placeholder="Select skills you offer"
+                    searchPlaceholder="Search skills..."
+                  />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="skillsWanted">Skills You Want to Learn (comma separated)</Label>
-                  <Textarea id="skillsWanted" rows={2} value={profile.skillsWanted} onChange={(e) => setProfile({ ...profile, skillsWanted: e.target.value })} placeholder="Photography, Cooking, Graphic Design" />
+                  <SkillsMultiSelect
+                    label="Skills You Want to Learn"
+                    value={profile.skillsWanted}
+                    onChange={(skills) => setProfile({ ...profile, skillsWanted: skills })}
+                    placeholder="Select skills you want to learn"
+                    searchPlaceholder="Search skills..."
+                  />
                 </div>
 
                 <div className="flex flex-wrap gap-4 pt-4 border-t border-border mt-6">

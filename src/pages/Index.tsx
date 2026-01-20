@@ -192,8 +192,18 @@ const Index = () => {
                 Popular skill exchanges happening now
               </p>
             </div>
-            <Button variant="outline" asChild className="hidden md:flex">
-              <Link to="/discover">View All</Link>
+            <Button 
+              variant="outline" 
+              className="hidden md:flex"
+              onClick={() => {
+                if (isLoggedIn) {
+                  navigate("/discover");
+                } else {
+                  navigate("/signup");
+                }
+              }}
+            >
+              View All
             </Button>
           </div>
 
@@ -240,11 +250,19 @@ const Index = () => {
                       <span>{swap.user.rating}</span>
                       <span>({swap.user.reviewCount})</span>
                     </div>
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link to={`/swap/${swap.id}`}>
-                        View Details
-                        <ArrowRight className="ml-1 h-4 w-4" />
-                      </Link>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        if (isLoggedIn) {
+                          navigate(`/swap/${swap.id}`);
+                        } else {
+                          navigate("/signup");
+                        }
+                      }}
+                    >
+                      View Details
+                      <ArrowRight className="ml-1 h-4 w-4" />
                     </Button>
                   </div>
                 </CardContent>
@@ -253,8 +271,17 @@ const Index = () => {
           </div>
 
           <div className="mt-8 text-center md:hidden">
-            <Button variant="outline" asChild>
-              <Link to="/discover">View All Swaps</Link>
+            <Button 
+              variant="outline"
+              onClick={() => {
+                if (isLoggedIn) {
+                  navigate("/discover");
+                } else {
+                  navigate("/signup");
+                }
+              }}
+            >
+              View All Swaps
             </Button>
           </div>
         </div>

@@ -111,9 +111,11 @@ const ResetPassword = () => {
       <div className="w-full max-w-md">
         {/* Logo */}
         <Link to="/" className="flex items-center justify-center gap-2 mb-8">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-terracotta to-teal">
-            <span className="text-xl font-bold text-white">C</span>
-          </div>
+          <img 
+            src="/Logo_1_svg.svg" 
+            alt="CultureSwap Logo" 
+            className="h-10 w-10 object-contain"
+          />
           <span className="font-display text-2xl font-semibold text-foreground">
             CultureSwap
           </span>

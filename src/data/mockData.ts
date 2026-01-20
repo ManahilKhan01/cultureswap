@@ -456,7 +456,8 @@ export const skillCategories = [
   { id: 'crafts', name: 'Craftsmanship', icon: '🔨', count: 156 },
   { id: 'business', name: 'Business & Entrepreneurship', icon: '💼', count: 189 },
   { id: 'academic', name: 'Academic', icon: '📚', count: 167 },
-  { id: 'sports', name: 'Sports', icon: '⚽', count: 145 }
+  { id: 'sports', name: 'Sports', icon: '⚽', count: 145 },
+  { id: 'literature', name: 'Literature & Writing', icon: '📖', count: 198 }
 ];
 
 // Current logged in user (for demo purposes)

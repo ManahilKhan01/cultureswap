@@ -9,43 +9,42 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { profileService } from "@/lib/profileService";
 import { reviewService } from "@/lib/reviewService";
+import { useProfileUpdates } from "@/hooks/useProfileUpdates";
 
 const UserProfile = () => {
   const { id } = useParams();
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState<any[]>([]);
   const [rating, setRating] = useState(0);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
 
+  // Use real-time profile updates hook
+  const { profile: user, isLoading: profileLoading } = useProfileUpdates(id || null);
+
+  // Load reviews separately
   useEffect(() => {
-    const loadProfile = async () => {
+    const loadReviews = async () => {
       try {
         if (!id) {
-          setLoading(false);
+          setReviewsLoading(false);
           return;
         }
 
-        // Load user profile from database
-        const profile = await profileService.getProfile(id);
-        if (profile) {
-          setUser(profile);
+        const userReviews = await reviewService.getReviewsForUser(id);
+        const avgRating = await reviewService.getAverageRating(id);
 
-          // Load reviews and rating
-          const userReviews = await reviewService.getReviewsForUser(id);
-          const avgRating = await reviewService.getAverageRating(id);
-
-          setReviews(userReviews || []);
-          setRating(avgRating || 0);
-        }
+        setReviews(userReviews || []);
+        setRating(avgRating || 0);
       } catch (error) {
-        console.error("Error loading user profile:", error);
+        console.error("Error loading reviews:", error);
       } finally {
-        setLoading(false);
+        setReviewsLoading(false);
       }
     };
 
-    loadProfile();
+    loadReviews();
   }, [id]);
+
+  const loading = profileLoading || reviewsLoading;
 
   if (loading) {
     return (
@@ -89,7 +88,7 @@ const UserProfile = () => {
             <Card>
               <CardContent className="pt-6 text-center">
                 <img 
-                  src={user.profile_image_url || "/placeholder.svg"} 
+                  src={user.profile_image_url || "/download.png"} 
                   alt={user.full_name || "User"} 
                   className="h-32 w-32 rounded-full object-cover mx-auto ring-4 ring-terracotta/20" 
                 />

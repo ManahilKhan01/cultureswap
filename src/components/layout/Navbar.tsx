@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
+import logo from "@/assets/logo.svg";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -15,6 +17,8 @@ import { supabase } from "@/lib/supabase";
 import { notificationService } from "@/lib/notificationService";
 import { messageService } from "@/lib/messageService";
 import { profileService } from "@/lib/profileService";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { useProfileUpdates } from "@/hooks/useProfileUpdates";
 
 interface NavbarProps {
   isLoggedIn?: boolean;
@@ -32,41 +36,35 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
   })() : null;
 
   const [isOpen, setIsOpen] = useState(false);
-  const [userName, setUserName] = useState(cachedProfile?.userName || "User");
-  const [userImage, setUserImage] = useState<string | null>(cachedProfile?.userImage || null);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [unreadMessages, setUnreadMessages] = useState(0);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [senderProfiles, setSenderProfiles] = useState<Record<string, any>>({});
-  const [profileLoaded, setProfileLoaded] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Listen for profile updates
+  // Use the new unread messages hook for accurate real-time tracking
+  const { total: unreadMessages } = useUnreadMessages(currentUser?.id || null);
+
+  // Use real-time profile updates hook
+  const { profile } = useProfileUpdates(currentUser?.id || null);
+
+  // Compute display values from real-time profile or cache
+  const userName = profile?.full_name || currentUser?.email?.split('@')[0] || "User";
+  const userImage = profile?.profile_image_url || null;
+
+  // Listen for profile updates event from other components
   useEffect(() => {
     const handleProfileUpdate = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          // Fetch from user_profiles table to get latest data
-          const profile = await profileService.getProfile(user.id);
-          if (profile) {
-            const name = profile.full_name || user.email?.split('@')[0] || "User";
-            const image = profile.profile_image_url || null;
-            setUserName(name);
-            setUserImage(image);
-            // Update localStorage cache
-            localStorage.setItem('navbar_profile_cache', JSON.stringify({ userName: name, userImage: image }));
-          } else {
-            const name = user.email?.split('@')[0] || "User";
-            setUserName(name);
-            setUserImage(null);
-            // Update localStorage cache
-            localStorage.setItem('navbar_profile_cache', JSON.stringify({ userName: name, userImage: null }));
+          // Refresh profile data from database
+          const updatedProfile = await profileService.getProfile(user.id);
+          if (updatedProfile) {
+            // Clear cache to force refresh
+            localStorage.removeItem('navbar_profile_cache');
           }
-          // Reset the loaded flag so next navigation can refresh if needed
-          setProfileLoaded(true);
         }
       } catch (error) {
         console.error('Error updating profile:', error);
@@ -80,42 +78,15 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
   useEffect(() => {
     // Get logged in user
     const loadUser = async () => {
-      // Only load if not already loaded
-      if (profileLoaded) return;
-
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           setCurrentUser(user);
 
-          // Fetch profile data from user_profiles table
-          const profile = await profileService.getProfile(user.id);
-          if (profile) {
-            const name = profile.full_name || user.email?.split('@')[0] || "User";
-            const image = profile.profile_image_url || null;
-            setUserName(name);
-            setUserImage(image);
-            // Cache in localStorage
-            localStorage.setItem('navbar_profile_cache', JSON.stringify({ userName: name, userImage: image }));
-          } else {
-            const name = user.email?.split('@')[0] || "User";
-            setUserName(name);
-            setUserImage(null);
-            // Cache fallback
-            localStorage.setItem('navbar_profile_cache', JSON.stringify({ userName: name, userImage: null }));
-          }
-
-          // Mark profile as loaded
-          setProfileLoaded(true);
-
           // Load notifications
           const unreadNotifs = await notificationService.getUnreadNotifications(user.id);
           setNotifications(unreadNotifs);
           setUnreadCount(unreadNotifs.length);
-
-          // Load unread message count
-          const unreadMsgs = await messageService.getUnreadCount(user.id);
-          setUnreadMessages(unreadMsgs);
 
           // Load sender profiles
           const profiles: Record<string, any> = {};
@@ -135,7 +106,7 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
     if (isLoggedIn) {
       loadUser();
     }
-  }, [isLoggedIn, profileLoaded]);
+  }, [isLoggedIn]);
 
   // Handle subscriptions separately once currentUser is available
   useEffect(() => {
@@ -165,7 +136,7 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
         table: 'messages',
         filter: `receiver_id=eq.${currentUser.id}`
       }, () => {
-        setUnreadMessages(prev => prev + 1);
+        // Count is now managed by useUnreadMessages hook
       })
       .subscribe();
 
@@ -202,9 +173,11 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-terracotta to-teal">
-              <span className="text-lg font-bold text-white">C</span>
-            </div>
+            <img 
+              src="/logo.svg" 
+              alt="CultureSwap Logo" 
+              className="h-9 w-9 object-contain"
+            />
             <span className="font-display text-xl font-semibold text-foreground">
               CultureSwap
             </span>
@@ -281,7 +254,7 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                           >
                             <div className="flex items-start gap-3 w-full">
                               <img
-                                src={senderProfile?.profile_image_url || "/placeholder.svg"}
+                                src={senderProfile?.profile_image_url || "/download.png"}
                                 alt="Sender"
                                 className="h-10 w-10 rounded-full object-cover flex-shrink-0"
                               />
@@ -310,7 +283,7 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="gap-2 pl-2 pr-3">
                       <img
-                        src={userImage || "/placeholder.svg"}
+                        src={userImage || "/download.png"}
                         alt={userName}
                         className="h-8 w-8 rounded-full object-cover"
                       />

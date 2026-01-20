@@ -80,8 +80,15 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: "#FBF5EA" }}>
-      <Card className="w-full max-w-md shadow-lg">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat"
+      style={{ 
+        backgroundImage: 'url(/bg.jpg)',
+        backgroundColor: "#FBF5EA"
+      }}
+    >
+      <div className="absolute inset-0 bg-black/40"></div>
+      <Card className="w-full max-w-md shadow-lg relative z-10">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Welcome Back</CardTitle>
           <CardDescription>Sign in to your account</CardDescription>
