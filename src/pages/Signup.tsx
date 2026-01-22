@@ -72,22 +72,8 @@ const Signup = () => {
 
       console.log("Auth user created:", authData.user);
 
-      // Create user profile in both users and user_profiles tables
+      // Create in user_profiles table (new)
       if (authData.user) {
-        // Create in users table (legacy)
-        const { error: usersError } = await supabase.from("users").insert([
-          {
-            id: authData.user.id,
-            email: formData.email,
-            full_name: formData.fullName,
-          },
-        ]);
-
-        if (usersError) {
-          console.error("Users table insert error:", usersError);
-        }
-
-        // Create in user_profiles table (new)
         const { error: profileError } = await supabase.from("user_profiles").insert([
           {
             id: authData.user.id,
@@ -137,9 +123,9 @@ const Signup = () => {
   };
 
   return (
-    <div 
+    <div
       className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat"
-      style={{ 
+      style={{
         backgroundImage: 'url(/bg.jpg)',
         backgroundColor: "#FBF5EA"
       }}
@@ -163,9 +149,9 @@ const Signup = () => {
               <Label htmlFor="profileImage">Profile Picture (Optional)</Label>
               <div className="flex flex-col items-center gap-4">
                 <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-300 flex items-center justify-center bg-gray-100">
-                  <img 
-                    src={profileImagePreview} 
-                    alt="Profile preview" 
+                  <img
+                    src={profileImagePreview}
+                    alt="Profile preview"
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -178,7 +164,7 @@ const Signup = () => {
                     disabled={isLoading}
                     className="hidden"
                   />
-                  <Label 
+                  <Label
                     htmlFor="profileImage"
                     className="flex items-center justify-center gap-2 w-full p-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition"
                   >
@@ -294,4 +280,3 @@ const Signup = () => {
 }
 
 export default Signup;
-          

@@ -10,8 +10,6 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import { supabase } from "@/lib/supabase";
 import { profileService } from "@/lib/profileService";
 import { SkillsMultiSelect } from "@/components/SkillsMultiSelect";
@@ -324,8 +322,7 @@ const Settings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar isLoggedIn={true} />
+    <>
       <main className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <Button variant="ghost" asChild className="mb-4">
@@ -517,8 +514,7 @@ const Settings = () => {
           </TabsContent>
         </Tabs>
       </main>
-      <Footer />
-    </div>
+    </>
   );
 };
 

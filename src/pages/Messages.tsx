@@ -4,7 +4,6 @@ import { Search, Send, Loader2, Handshake, ChevronLeft, MoreVertical, CheckCheck
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import Navbar from "@/components/layout/Navbar";
 import { supabase } from "@/lib/supabase";
 import { messageService } from "@/lib/messageService";
 import { profileService } from "@/lib/profileService";
@@ -709,8 +708,7 @@ const Messages = () => {
   const canCreateOffer = selectedConversation && currentUser;
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      <Navbar isLoggedIn={true} />
+    <div className="flex flex-col h-[calc(100vh-64px)] bg-background">
 
       <div className="flex-1 overflow-hidden">
         <div className="container mx-auto h-full py-4 px-4 md:py-8">

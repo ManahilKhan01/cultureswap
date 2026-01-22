@@ -26,11 +26,12 @@ export const authService = {
 
     // Create user profile
     if (data.user) {
-      const { error: profileError } = await supabase.from('users').insert([
+      const { error: profileError } = await supabase.from('user_profiles').insert([
         {
           id: data.user.id,
           email,
           full_name: fullName,
+          profile_image_url: '/download.png',
         },
       ]);
 
@@ -108,7 +109,7 @@ export const userService = {
   // Update user profile
   async updateProfile(userId: string, updates: any) {
     const { data, error } = await supabase
-      .from('users')
+      .from('user_profiles')
       .update(updates)
       .eq('id', userId)
       .select();
@@ -425,8 +426,8 @@ export const swapService = {
       .select(
         `
         *,
-        initiator:users!initiator_id(id, full_name, profile_picture_url),
-        recipient:users!recipient_id(id, full_name, profile_picture_url),
+        initiator:user_profiles!initiator_id(id, full_name, profile_image_url),
+        recipient:user_profiles!recipient_id(id, full_name, profile_image_url),
         initiator_skill:skills!initiator_skill_id(id, name),
         recipient_skill:skills!recipient_skill_id(id, name)
       `

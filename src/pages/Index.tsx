@@ -4,8 +4,6 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import { mockSwaps, mockUsers, skillCategories } from "@/data/mockData";
 import { supabase } from "@/lib/supabase";
 
@@ -57,8 +55,7 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar isLoggedIn={isLoggedIn} />
+    <>
 
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-hero">
@@ -73,12 +70,12 @@ const Index = () => {
               <span className="text-gradient">Share Cultures</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Connect with people worldwide to teach what you know and learn what you love. 
+              Connect with people worldwide to teach what you know and learn what you love.
               No money needed—just your passion and curiosity.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                variant="hero" 
+              <Button
+                variant="hero"
                 size="xl"
                 onClick={() => {
                   if (isLoggedIn) {
@@ -192,8 +189,8 @@ const Index = () => {
                 Popular skill exchanges happening now
               </p>
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="hidden md:flex"
               onClick={() => {
                 if (isLoggedIn) {
@@ -250,8 +247,8 @@ const Index = () => {
                       <span>{swap.user.rating}</span>
                       <span>({swap.user.reviewCount})</span>
                     </div>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="sm"
                       onClick={() => {
                         if (isLoggedIn) {
@@ -271,7 +268,7 @@ const Index = () => {
           </div>
 
           <div className="mt-8 text-center md:hidden">
-            <Button 
+            <Button
               variant="outline"
               onClick={() => {
                 if (isLoggedIn) {
@@ -364,7 +361,7 @@ const Index = () => {
             Ready to Start Swapping?
           </h2>
           <p className="text-white/80 mb-8 max-w-xl mx-auto">
-            Join thousands of learners exchanging skills and cultures every day. 
+            Join thousands of learners exchanging skills and cultures every day.
             It's free to get started!
           </p>
           <Button size="xl" className="bg-white text-terracotta hover:bg-white/90" asChild>
@@ -376,8 +373,7 @@ const Index = () => {
         </div>
       </section>
 
-      <Footer />
-    </div>
+    </>
   );
 };
 

@@ -26,15 +26,6 @@ interface NavbarProps {
 }
 
 const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
-  // Initialize from localStorage cache to avoid flickering
-  const cachedProfile = typeof window !== 'undefined' ? (() => {
-    try {
-      const cached = localStorage.getItem('navbar_profile_cache');
-      return cached ? JSON.parse(cached) : null;
-    } catch {
-      return null;
-    }
-  })() : null;
 
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -58,27 +49,6 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
   const userImage = profile?.profile_image_url || null;
   const userImageUrl = getCacheBustedImageUrl(userImage);
 
-  // Listen for profile updates event from other components
-  useEffect(() => {
-    const handleProfileUpdate = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          // Refresh profile data from database
-          const updatedProfile = await profileService.getProfile(user.id);
-          if (updatedProfile) {
-            // Clear cache to force refresh
-            localStorage.removeItem('navbar_profile_cache');
-          }
-        }
-      } catch (error) {
-        console.error('Error updating profile:', error);
-      }
-    };
-
-    window.addEventListener('profileUpdated', handleProfileUpdate);
-    return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
-  }, []);
 
   useEffect(() => {
     // Get logged in user

@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import { supabase } from "@/lib/supabase";
 import { profileService } from "@/lib/profileService";
 import { reviewService } from "@/lib/reviewService";
@@ -15,7 +13,6 @@ import { getCacheBustedImageUrl } from "@/lib/cacheUtils";
 
 const ProfileSkeleton = () => (
   <div className="min-h-screen bg-background animate-pulse">
-    <Navbar isLoggedIn={true} />
     <main className="container mx-auto px-4 py-8">
       {/* Skeleton Header */}
       <div className="bg-muted rounded-2xl p-8 mb-8 h-48 flex flex-col md:flex-row gap-6 relative overflow-hidden">
@@ -44,7 +41,6 @@ const ProfileSkeleton = () => (
         </div>
       </div>
     </main>
-    <Footer />
   </div>
 );
 
@@ -155,21 +151,18 @@ const Profile = () => {
 
   if (!userProfile) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar isLoggedIn={true} />
+      <div className="text-center">
         <main className="container mx-auto px-4 py-8 text-center">
           <h1 className="font-display text-2xl font-bold mb-4">Profile Not Found</h1>
           <p className="text-muted-foreground mb-6">Please complete your profile in Settings</p>
           <Button asChild><Link to="/settings">Go to Settings</Link></Button>
         </main>
-        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar isLoggedIn={true} />
+    <>
       <main className="container mx-auto px-4 py-8">
         {/* Profile Header */}
         <div className="bg-gradient-to-r from-terracotta/10 to-teal/10 rounded-2xl p-8 mb-8 border border-white/20">
@@ -349,8 +342,7 @@ const Profile = () => {
           </div>
         </div>
       </main>
-      <Footer />
-    </div>
+    </>
   );
 };
 

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { profileService } from '@/lib/profileService';
+import { refreshImageCache } from '@/lib/cacheUtils';
 
 interface ProfileData {
   id: string;
@@ -17,17 +18,41 @@ interface ProfileData {
   updated_at?: string;
 }
 
+// Module-level cache for in-memory persistence across page navigations
+const profileMemoryCache: Record<string, ProfileData> = {};
+
 /**
  * Custom hook for real-time profile updates
  * Subscribes to changes on the user_profiles table and updates state
  * Also provides a refresh function for manual updates
- * 
- * Usage:
- * const profile = useProfileUpdates(userId);
  */
 export const useProfileUpdates = (userId: string | null) => {
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Try to get initial data from memory cache first, then localStorage
+  const getInitialProfile = (): ProfileData | null => {
+    if (!userId) return null;
+
+    // 1. Check memory cache (fastest, current session)
+    if (profileMemoryCache[userId]) {
+      return profileMemoryCache[userId];
+    }
+
+    // 2. Check localStorage (persists between tab reloads)
+    try {
+      const cached = localStorage.getItem(`profile_cache_${userId}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        profileMemoryCache[userId] = parsed; // Sync to memory cache
+        return parsed;
+      }
+    } catch (e) {
+      console.warn('Error reading profile from localStorage:', e);
+    }
+
+    return null;
+  };
+
+  const [profile, setProfile] = useState<ProfileData | null>(getInitialProfile);
+  const [isLoading, setIsLoading] = useState(!profile && !!userId);
   const [error, setError] = useState<Error | null>(null);
 
   // Fetch profile from database
@@ -38,34 +63,52 @@ export const useProfileUpdates = (userId: string | null) => {
     }
 
     try {
-      setIsLoading(true);
+      // Only set loading if we don't already have some data to show
+      if (!profile) setIsLoading(true);
+
       const data = await profileService.getProfile(userId);
-      setProfile(data);
+
+      if (data) {
+        setProfile(data);
+        profileMemoryCache[userId] = data; // Update memory cache
+
+        // Update localStorage for persistence
+        try {
+          localStorage.setItem(`profile_cache_${userId}`, JSON.stringify(data));
+          // Backward compatibility for Navbar
+          localStorage.setItem('navbar_profile_cache', JSON.stringify(data));
+        } catch (e) {
+          console.warn('Error saving profile to localStorage:', e);
+        }
+      }
+
       setError(null);
     } catch (err) {
       console.error('Error fetching profile:', err);
-      setError(err instanceof Error ? err : new Error('Failed to fetch profile'));
+      // Don't override existing profile on error if we have one
+      if (!profile) {
+        setError(err instanceof Error ? err : new Error('Failed to fetch profile'));
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [userId]);
+  }, [userId, profile]);
 
   // Initial fetch
   useEffect(() => {
     fetchProfile();
-  }, [fetchProfile]);
+  }, [userId]); // Only re-fetch if userId changes, not on every mount if data is already there
 
   // Set up real-time subscription
   useEffect(() => {
     if (!userId) return;
 
-    // Subscribe to updates on this user's profile
     const channel = supabase
       .channel(`profile:${userId}`)
       .on(
         'postgres_changes',
         {
-          event: '*', // Listen to INSERT, UPDATE, DELETE
+          event: '*',
           schema: 'public',
           table: 'user_profiles',
           filter: `id=eq.${userId}`,
@@ -75,61 +118,62 @@ export const useProfileUpdates = (userId: string | null) => {
 
           if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
             const newProfile = payload.new as ProfileData;
-            const oldProfile = payload.old as ProfileData;
 
-            // Check if profile image changed
-            if (newProfile.profile_image_url !== oldProfile?.profile_image_url) {
-              console.log('Profile image changed, invalidating cache');
+            // Refresh global image cache busting timestamp
+            refreshImageCache();
 
-              // Clear image cache to force reload
-              try {
-                if (newProfile.profile_image_url) {
-                  // Force reload all images with this URL
-                  const images = document.querySelectorAll('img');
-                  images.forEach((img) => {
-                    if (img.src.includes(newProfile.profile_image_url!.split('?')[0])) {
-                      const newSrc = newProfile.profile_image_url!;
-                      img.src = '';
-                      setTimeout(() => { img.src = newSrc; }, 0);
-                    }
-                  });
-                }
-              } catch (e) {
-                console.warn('Error invalidating image cache:', e);
-              }
-            }
-
-            // Update local state with new data
-            setProfile(newProfile);
-
-            // Clear related caches
+            // Update caches
+            profileMemoryCache[userId] = newProfile;
             try {
-              localStorage.removeItem('navbar_profile_cache');
-              localStorage.removeItem('profile_page_cache');
-              localStorage.removeItem('settings_profile_cache');
-            } catch (e) {
-              console.warn('Error clearing cache:', e);
-            }
+              localStorage.setItem(`profile_cache_${userId}`, JSON.stringify(newProfile));
+              localStorage.setItem('navbar_profile_cache', JSON.stringify(newProfile));
+            } catch (e) { }
+
+            // Update local state
+            setProfile(newProfile);
 
             // Dispatch event for other components
             window.dispatchEvent(new CustomEvent('profileUpdated', {
               detail: payload.new
             }));
           } else if (payload.eventType === 'DELETE') {
+            delete profileMemoryCache[userId];
+            localStorage.removeItem(`profile_cache_${userId}`);
             setProfile(null);
           }
         }
       )
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR') {
-          console.error('Channel error subscribing to profile updates');
-        }
-      });
+      .subscribe();
 
-    // Cleanup subscription
     return () => {
       supabase.removeChannel(channel);
     };
+  }, [userId]);
+
+  // Listen for manual profile update events for immediate cross-component sync
+  useEffect(() => {
+    const handleManualUpdate = (event: any) => {
+      const updatedData = event.detail as ProfileData;
+      if (userId && updatedData && updatedData.id === userId) {
+        console.log('Manual profile update received in hook:', updatedData);
+
+        // Refresh global image cache busting timestamp
+        refreshImageCache();
+
+        // Update caches
+        profileMemoryCache[userId] = updatedData;
+        try {
+          localStorage.setItem(`profile_cache_${userId}`, JSON.stringify(updatedData));
+          localStorage.setItem('navbar_profile_cache', JSON.stringify(updatedData));
+        } catch (e) { }
+
+        // Update state
+        setProfile(updatedData);
+      }
+    };
+
+    window.addEventListener('profileUpdated', handleManualUpdate);
+    return () => window.removeEventListener('profileUpdated', handleManualUpdate);
   }, [userId]);
 
   // Manual refresh function

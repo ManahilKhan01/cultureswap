@@ -9,8 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import { skillCategories } from "@/data/mockData";
 import { swapService } from "@/lib/swapService";
 import { profileService } from "@/lib/profileService";
@@ -36,7 +34,6 @@ interface SwapWithProfile {
 
 const DiscoverSkeleton = () => (
   <div className="min-h-screen bg-background">
-    <Navbar isLoggedIn={true} />
     <main className="container mx-auto px-4 py-8">
       {/* Skeleton Header */}
       <div className="mb-8 space-y-4">
@@ -85,7 +82,6 @@ const DiscoverSkeleton = () => (
         ))}
       </div>
     </main>
-    <Footer />
   </div>
 );
 
@@ -228,8 +224,7 @@ const Discover = () => {
   if (loading && swaps.length === 0) return <DiscoverSkeleton />;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar isLoggedIn={true} />
+    <>
 
       <main className="container mx-auto px-4 py-8">
         {/* Header */}
@@ -458,8 +453,7 @@ const Discover = () => {
         )}
       </main>
 
-      <Footer />
-    </div>
+    </>
   );
 };
 

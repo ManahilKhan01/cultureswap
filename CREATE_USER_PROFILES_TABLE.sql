@@ -36,13 +36,20 @@ ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "profiles_view_all" ON user_profiles FOR SELECT USING (true);
 
 -- Users can only insert their own profile
-CREATE POLICY "profiles_insert_own" ON user_profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "profiles_insert_own" ON user_profiles 
+FOR INSERT TO authenticated 
+WITH CHECK (auth.uid() = id);
 
 -- Users can only update their own profile
-CREATE POLICY "profiles_update_own" ON user_profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "profiles_update_own" ON user_profiles 
+FOR UPDATE TO authenticated 
+USING (auth.uid() = id)
+WITH CHECK (auth.uid() = id);
 
 -- Users cannot delete their profile
-CREATE POLICY "profiles_no_delete" ON user_profiles FOR DELETE USING (false);
+CREATE POLICY "profiles_no_delete" ON user_profiles 
+FOR DELETE TO authenticated 
+USING (false);
 
 -- ============================================================================
 -- TRIGGER: Update updated_at timestamp

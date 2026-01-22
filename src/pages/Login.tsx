@@ -52,7 +52,7 @@ const Login = () => {
       if (authData.user) {
         // Get user profile
         const { data: userProfile } = await supabase
-          .from("users")
+          .from("user_profiles")
           .select("*")
           .eq("id", authData.user.id)
           .single();
@@ -80,9 +80,9 @@ const Login = () => {
   };
 
   return (
-    <div 
+    <div
       className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat"
-      style={{ 
+      style={{
         backgroundImage: 'url(/bg.jpg)',
         backgroundColor: "#FBF5EA"
       }}
@@ -139,8 +139,8 @@ const Login = () => {
                 </button>
               </div>
               <div className="text-right">
-                <Link 
-                  to="/forgot-password" 
+                <Link
+                  to="/forgot-password"
                   className="text-sm text-blue-600 hover:underline font-medium"
                 >
                   Forgot Password?

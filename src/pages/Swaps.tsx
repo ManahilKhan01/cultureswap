@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -397,22 +395,17 @@ const Swaps = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Navbar isLoggedIn={true} />
-        <main className="flex-1 container mx-auto px-4 py-8 flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-terracotta mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading your swaps...</p>
-          </div>
-        </main>
-        <Footer />
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-terracotta mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading your swaps...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Navbar isLoggedIn={true} />
+    <>
 
       <main className="flex-1 container mx-auto px-4 py-8">
         {/* Page Header */}
@@ -573,8 +566,7 @@ const Swaps = () => {
         </Tabs>
       </main>
 
-      <Footer />
-    </div>
+    </>
   );
 };
 

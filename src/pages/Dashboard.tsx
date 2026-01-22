@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import { supabase } from "@/lib/supabase";
 import { profileService } from "@/lib/profileService";
 import { swapService } from "@/lib/swapService";
@@ -118,7 +116,6 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar isLoggedIn={true} />
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
           <Loader2 className="h-8 w-8 animate-spin text-terracotta" />
         </div>
@@ -127,8 +124,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar isLoggedIn={true} />
+    <>
 
       <main className="container mx-auto px-4 py-8">
         {/* Welcome Section */}
@@ -355,8 +351,7 @@ const Dashboard = () => {
         </div>
       </main>
 
-      <Footer />
-    </div>
+    </>
   );
 };
 
