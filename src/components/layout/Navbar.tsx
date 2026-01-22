@@ -91,7 +91,7 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
           // Load notifications
           const unreadNotifs = await notificationService.getUnreadNotifications(user.id);
           setNotifications(unreadNotifs);
-          setUnreadCount(unreadNotifs.length);
+          setUnreadCount(0); // Initialize as zero as per user request
 
           // Load sender profiles
           const profiles: Record<string, any> = {};
@@ -313,9 +313,13 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                         })}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
-                          <Link to="/messages" className="w-full text-center text-sm font-medium text-terracotta hover:text-terracotta/80 cursor-pointer">
+                          <Button
+                            variant="ghost"
+                            className="w-full text-center text-sm font-bold text-terracotta hover:text-terracotta/80 hover:bg-terracotta/5 px-0 py-2 cursor-pointer h-auto"
+                            onClick={() => navigate("/messages")}
+                          >
                             View All Messages
-                          </Link>
+                          </Button>
                         </DropdownMenuItem>
                       </>
                     )}

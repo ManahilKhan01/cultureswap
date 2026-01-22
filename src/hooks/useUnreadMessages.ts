@@ -147,8 +147,8 @@ export const useUnreadMessages = (userId: string | null) => {
   useEffect(() => {
     if (!userId) return;
 
-    // Initial load
-    refreshUnreadCounts();
+    // Initial load - Commented out to start with zero as per user requirement
+    // refreshUnreadCounts();
 
     // Subscribe to new messages for current user
     const newMsgChannel = supabase
