@@ -206,13 +206,13 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between">
+        <div className="flex items-center justify-between py-4">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <img
               src="/logo.svg"
               alt="CultureSwap Logo"
-              className="h-14 w-14 object-contain"
+              className="h-[45px] w-[165px] object-contain"
             />
           </Link>
 

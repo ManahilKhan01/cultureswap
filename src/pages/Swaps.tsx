@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -36,6 +36,7 @@ interface Swap {
 }
 
 const Swaps = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [swaps, setSwaps] = useState<Swap[]>([]);
@@ -425,195 +426,14 @@ const Swaps = () => {
             </p>
           </div>
 
-          {/* Create Swap Dialog */}
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="terracotta" className="gap-2 font-semibold">
-                <Plus className="h-4 w-4" />
-                Create New Swap
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col p-0 border-0 shadow-2xl">
-              {/* Stunning Header */}
-              <div className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-[hsl(var(--terracotta))] via-[hsl(var(--golden))] to-[hsl(var(--teal))] opacity-95"></div>
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/5"></div>
-                
-                <div className="relative px-6 py-4 text-white">
-                  <div className="flex items-center gap-3 mb-1">
-                    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                      <Zap className="w-5 h-5" />
-                    </div>
-                    <DialogTitle className="text-2xl font-bold">Create a Skill Swap</DialogTitle>
-                  </div>
-                  <p className="text-white/90 text-xs font-medium ml-11">Start exchanging skills and connect with the community</p>
-                </div>
-              </div>
-
-              <div className="px-6 py-4 flex-1 overflow-y-auto">
-                <div className="space-y-4">
-                  {/* Section 1: Core Skills */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <BookOpen className="w-4 h-4 text-terracotta" />
-                      <h3 className="text-base font-bold">Your Exchange</h3>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-warm-cream/40 to-warm-cream/20 rounded-lg p-3 border border-warm-cream/60 space-y-3">
-                      <div className="space-y-1">
-                        <Label htmlFor="title" className="font-semibold text-charcoal text-xs flex items-center gap-2">
-                          <Sparkles className="w-3 h-3 text-golden" />
-                          Swap Title *
-                        </Label>
-                        <Input
-                          id="title"
-                          placeholder="e.g., English Language Exchange"
-                          value={formData.title}
-                          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                          disabled={submitting}
-                          className="h-9 text-sm border-2 border-warm-cream hover:border-golden/50 focus:border-terracotta focus:ring-terracotta/20"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <Label htmlFor="skill_offered" className="font-semibold text-charcoal text-xs">
-                            <span className="inline-block w-4 h-4 rounded-full bg-gradient-to-br from-terracotta to-golden flex items-center justify-center text-white text-xs mr-1">✓</span>
-                            I Offer *
-                          </Label>
-                          <Input
-                            id="skill_offered"
-                            placeholder="e.g., English Teaching"
-                            value={formData.skill_offered}
-                            onChange={(e) => setFormData({ ...formData, skill_offered: e.target.value })}
-                            disabled={submitting}
-                            className="h-9 text-sm border-2 border-terracotta/20 hover:border-terracotta/40 focus:border-terracotta focus:ring-terracotta/20"
-                          />
-                        </div>
-
-                        <div className="space-y-1">
-                          <Label htmlFor="skill_wanted" className="font-semibold text-charcoal text-xs">
-                            <span className="inline-block w-4 h-4 rounded-full bg-gradient-to-br from-teal to-teal/80 flex items-center justify-center text-white text-xs mr-1">?</span>
-                            I Learn *
-                          </Label>
-                          <Input
-                            id="skill_wanted"
-                            placeholder="e.g., Spanish Language"
-                            value={formData.skill_wanted}
-                            onChange={(e) => setFormData({ ...formData, skill_wanted: e.target.value })}
-                            disabled={submitting}
-                            className="h-9 text-sm border-2 border-teal/20 hover:border-teal/40 focus:border-teal focus:ring-teal/20"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section 2: Details */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Users className="w-4 h-4 text-golden" />
-                      <h3 className="text-base font-bold">Details</h3>
-                    </div>
-
-                    <div className="bg-gradient-to-br from-soft-sand/30 to-soft-sand/10 rounded-lg p-3 border border-soft-sand/50 space-y-3">
-                      <div className="space-y-1">
-                        <Label htmlFor="description" className="font-semibold text-charcoal text-xs">Description</Label>
-                        <Textarea
-                          id="description"
-                          placeholder="Add more details about your swap..."
-                          value={formData.description}
-                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                          disabled={submitting}
-                          rows={2}
-                          className="text-sm border-2 border-soft-sand/50 hover:border-golden/40 focus:border-golden focus:ring-golden/20 resize-none"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="space-y-1">
-                          <Label htmlFor="category" className="font-semibold text-charcoal text-xs">Category</Label>
-                          <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
-                            <SelectTrigger disabled={submitting} className="h-9 text-sm border-2 border-golden/20 hover:border-golden/40 focus:border-golden focus:ring-golden/20">
-                              <SelectValue placeholder="Category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {skillCategories.map((cat) => (
-                                <SelectItem key={cat.id} value={cat.name}>
-                                  {cat.icon} {cat.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-1">
-                          <Label htmlFor="duration" className="font-semibold text-charcoal text-xs">Duration</Label>
-                          <Select value={formData.duration} onValueChange={(v) => setFormData({ ...formData, duration: v })}>
-                            <SelectTrigger disabled={submitting} className="h-9 text-sm border-2 border-teal/20 hover:border-teal/40 focus:border-teal focus:ring-teal/20">
-                              <SelectValue placeholder="Duration" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="1 hour">1 hour</SelectItem>
-                              <SelectItem value="2 hours">2 hours</SelectItem>
-                              <SelectItem value="3 hours">3 hours</SelectItem>
-                              <SelectItem value="5 hours">5 hours</SelectItem>
-                              <SelectItem value="10 hours">10 hours</SelectItem>
-                              <SelectItem value="20+ hours">20+ hours</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-1">
-                          <Label htmlFor="format" className="font-semibold text-charcoal text-xs">Format</Label>
-                          <Select value={formData.format} onValueChange={(v) => setFormData({ ...formData, format: v })}>
-                            <SelectTrigger disabled={submitting} className="h-9 text-sm border-2 border-terracotta/20 hover:border-terracotta/40 focus:border-terracotta focus:ring-terracotta/20">
-                              <SelectValue placeholder="Format" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="online">🖥️ Online</SelectItem>
-                              <SelectItem value="in-person">🤝 In-Person</SelectItem>
-                              <SelectItem value="both">🔄 Both</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Dialog Footer */}
-              <div className="px-6 py-3 bg-gradient-to-t from-white to-white/50 border-t border-soft-sand flex gap-2 justify-end">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setDialogOpen(false)} 
-                  disabled={submitting}
-                  className="h-9 px-4 font-semibold text-sm border-2 border-gray-200 hover:bg-gray-50"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="terracotta"
-                  onClick={handleCreateSwap}
-                  disabled={submitting}
-                  className="h-9 px-4 font-semibold text-sm gap-2 bg-gradient-to-r from-terracotta to-terracotta/90 hover:from-terracotta hover:to-terracotta shadow-lg"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="h-3 w-3" />
-                      Create Swap
-                    </>
-                  )}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button
+            variant="terracotta"
+            className="gap-2 font-semibold"
+            onClick={() => navigate("/swap/create")}
+          >
+            <Plus className="h-4 w-4" />
+            Create New Swap
+          </Button>
         </div>
 
         {/* Stats Cards */}

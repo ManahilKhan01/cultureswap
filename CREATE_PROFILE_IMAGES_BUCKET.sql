@@ -44,7 +44,7 @@ USING (bucket_id = 'user-profiles');
 -- Run these queries to verify the setup:
 
 -- Check if bucket exists
--- SELECT * FROM storage.buckets WHERE id = 'user-profiles';
+-- SELECT * FROM storage.buckets WHERE id = 'user-profiles';1Z
 
 -- Check RLS policies
 -- SELECT * FROM pg_policies WHERE tablename = 'objects' AND schemaname = 'storage';
