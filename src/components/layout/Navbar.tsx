@@ -227,60 +227,62 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                       <div className="p-4 text-center text-muted-foreground text-sm">
                         Loading conversations...
                       </div>
-                    ) : conversations.length === 0 ? (
-                      <div className="p-4 text-center text-muted-foreground text-sm">
-                        No conversations yet
-                      </div>
                     ) : (
                       <>
-                        {conversations.map((conv) => {
-                          const profile = conversationProfiles[conv.otherUserId];
-                          const isUnread = conv.lastMessage?.receiver_id === currentUser?.id && !conv.lastMessage?.is_read;
+                        {conversations.length === 0 ? (
+                          <div className="p-4 text-center text-muted-foreground text-sm">
+                            No conversations yet
+                          </div>
+                        ) : (
+                          conversations.map((conv) => {
+                            const profile = conversationProfiles[conv.otherUserId];
+                            const isUnread = conv.lastMessage?.receiver_id === currentUser?.id && !conv.lastMessage?.is_read;
 
-                          return (
-                            <DropdownMenuItem
-                              key={conv.id}
-                              className="p-3 cursor-pointer hover:bg-muted"
-                              onClick={async () => {
-                                // Mark conversation as read if it's unread
-                                if (isUnread && conv.id) {
-                                  try {
-                                    await markConversationAsRead(conv.id);
-                                  } catch (error) {
-                                    console.error('Error marking conversation as read:', error);
+                            return (
+                              <DropdownMenuItem
+                                key={conv.id}
+                                className="p-3 cursor-pointer hover:bg-muted"
+                                onClick={async () => {
+                                  // Mark conversation as read if it's unread
+                                  if (isUnread && conv.id) {
+                                    try {
+                                      await markConversationAsRead(conv.id);
+                                    } catch (error) {
+                                      console.error('Error marking conversation as read:', error);
+                                    }
                                   }
-                                }
-                                navigate(`/messages?user=${conv.otherUserId}`);
-                              }}
-                            >
-                              <div className="flex items-start gap-3 w-full">
-                                <img
-                                  src={getCacheBustedImageUrl(profile?.profile_image_url)}
-                                  alt="User"
-                                  className="h-10 w-10 rounded-full object-cover flex-shrink-0"
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <p className={`font-medium text-sm truncate ${isUnread ? 'font-bold' : ''}`}>
-                                      {profile?.full_name || 'User'}
-                                    </p>
-                                    <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
-                                      {new Date(conv.lastMessage?.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    {isUnread && (
-                                      <div className="h-2 w-2 rounded-full bg-terracotta flex-shrink-0" />
-                                    )}
-                                    <p className={`text-xs truncate ${isUnread ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
-                                      {conv.lastMessage?.content || 'No messages yet'}
-                                    </p>
+                                  navigate(`/messages?user=${conv.otherUserId}`);
+                                }}
+                              >
+                                <div className="flex items-start gap-3 w-full">
+                                  <img
+                                    src={getCacheBustedImageUrl(profile?.profile_image_url)}
+                                    alt="User"
+                                    className="h-10 w-10 rounded-full object-cover flex-shrink-0"
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <p className={`font-medium text-sm truncate ${isUnread ? 'font-bold' : ''}`}>
+                                        {profile?.full_name || 'User'}
+                                      </p>
+                                      <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
+                                        {new Date(conv.lastMessage?.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      {isUnread && (
+                                        <div className="h-2 w-2 rounded-full bg-terracotta flex-shrink-0" />
+                                      )}
+                                      <p className={`text-xs truncate ${isUnread ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                                        {conv.lastMessage?.content || 'No messages yet'}
+                                      </p>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            </DropdownMenuItem>
-                          );
-                        })}
+                              </DropdownMenuItem>
+                            );
+                          })
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
                           <Button

@@ -16,6 +16,22 @@ export const profileService = {
     return data?.[0] || null;
   },
 
+  // Get all user profiles (excluding current user optionally)
+  async getAllProfiles(excludeUserId?: string) {
+    let query = supabase
+      .from('user_profiles')
+      .select('*')
+      .order('full_name', { ascending: true });
+
+    if (excludeUserId) {
+      query = query.neq('id', excludeUserId);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  },
+
   // Create user profile (for new signups)
   async createProfile(
     userId: string,
