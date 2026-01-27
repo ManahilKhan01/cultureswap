@@ -1,6 +1,27 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, Send, Loader2, Handshake, ChevronLeft, MoreVertical, CheckCheck, Paperclip, X, Download, FileText, Image as ImageIcon, File, Star, Archive, MessageCircle, Bell } from "lucide-react";
+import {
+  Search,
+  MoreVertical,
+  MessageCircle,
+  Star,
+  Archive,
+  Handshake,
+  ChevronLeft,
+  ChevronDown,
+  Send,
+  Paperclip,
+  CheckCheck,
+  FileText,
+  Download,
+  X,
+  Bell,
+  Loader2,
+  Sparkles,
+  User,
+  Image as ImageIcon,
+  File
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,7 +58,9 @@ const Messages = () => {
   const [otherUserProfile, setOtherUserProfile] = useState<any>(null);
   const [userProfiles, setUserProfiles] = useState<Record<string, any>>({});
   const [currentSwap, setCurrentSwap] = useState<any>(null);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [createOfferOpen, setCreateOfferOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [attachments, setAttachments] = useState<Record<string, any[]>>({});
@@ -45,7 +68,6 @@ const Messages = () => {
   const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'starred' | 'archived' | 'offers' | 'assistant'>('all');
   const [starredChats, setStarredChats] = useState<Set<string>>(new Set());
   const [archivedChats, setArchivedChats] = useState<Set<string>>(new Set());
-  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
 
   // Use the unread messages hook for real-time tracking
   const { markConversationAsRead } = useUnreadMessages(currentUser?.id || null);
@@ -750,76 +772,48 @@ const Messages = () => {
                     <h1 className="text-xl font-bold font-display text-foreground">
                       Messages
                     </h1>
-                  </div>
-                  <div className="relative">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-full"
-                      onClick={() => setMenuOpenId(menuOpenId ? null : 'menu')}
-                    >
-                      <MoreVertical className="h-5 w-5" />
-                    </Button>
-                    {menuOpenId === 'menu' && (
-                      <div className="absolute right-0 mt-1 w-48 bg-white border border-border rounded-lg shadow-lg z-50">
-                        <button
-                          onClick={handleOpenAssistantChat}
-                          className="w-full text-left px-4 py-2.5 hover:bg-terracotta/5 text-sm flex items-center gap-2 transition-colors border-b border-border text-terracotta font-semibold"
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                          Start Assistant Chat
-                        </button>
-                        <button
-                          onClick={() => {
-                            setActiveFilter(activeFilter === 'unread' ? 'all' : 'unread');
-                            setMenuOpenId(null);
-                          }}
-                          className={`w-full text-left px-4 py-2.5 hover:bg-muted text-sm flex items-center gap-2 transition-colors ${activeFilter === 'unread' ? 'bg-terracotta/10 text-terracotta font-semibold' : ''}`}
-                        >
-                          <Bell className="h-4 w-4" />
-                          Unread
-                        </button>
-                        <button
-                          onClick={() => {
-                            setActiveFilter(activeFilter === 'starred' ? 'all' : 'starred');
-                            setMenuOpenId(null);
-                          }}
-                          className={`w-full text-left px-4 py-2.5 hover:bg-muted text-sm flex items-center gap-2 transition-colors ${activeFilter === 'starred' ? 'bg-terracotta/10 text-terracotta font-semibold' : ''}`}
-                        >
-                          <Star className="h-4 w-4" />
-                          Starred
-                        </button>
-                        <button
-                          onClick={() => {
-                            setActiveFilter(activeFilter === 'offers' ? 'all' : 'offers');
-                            setMenuOpenId(null);
-                          }}
-                          className={`w-full text-left px-4 py-2.5 hover:bg-muted text-sm flex items-center gap-2 transition-colors ${activeFilter === 'offers' ? 'bg-terracotta/10 text-terracotta font-semibold' : ''}`}
-                        >
-                          <Handshake className="h-4 w-4" />
-                          Custom Offers
-                        </button>
-                        <button
-                          onClick={() => {
-                            setActiveFilter(activeFilter === 'assistant' ? 'all' : 'assistant');
-                            setMenuOpenId(null);
-                          }}
-                          className={`w-full text-left px-4 py-2.5 hover:bg-muted text-sm flex items-center gap-2 transition-colors ${activeFilter === 'assistant' ? 'bg-terracotta/10 text-terracotta font-semibold' : ''}`}
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                          Assistant Chats
-                        </button>
-                        <button
-                          onClick={() => {
-                            setActiveFilter(activeFilter === 'archived' ? 'all' : 'archived');
-                            setMenuOpenId(null);
-                          }}
-                          className={`w-full text-left px-4 py-2.5 hover:bg-muted text-sm flex items-center gap-2 transition-colors border-t border-border ${activeFilter === 'archived' ? 'bg-terracotta/10 text-terracotta font-semibold' : ''}`}
-                        >
-                          <Archive className="h-4 w-4" />
-                          Archived
-                        </button>
-                        {activeFilter !== 'all' && (
+                    {/* Filter Dropdown */}
+                    <div className="relative">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="rounded-lg px-2 h-8 hover:bg-muted flex items-center gap-1.5 text-muted-foreground"
+                        onClick={() => setMenuOpenId(menuOpenId === 'filter-menu' ? null : 'filter-menu')}
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                      {menuOpenId === 'filter-menu' && (
+                        <div className="absolute left-0 mt-1 w-48 bg-white border border-border rounded-lg shadow-lg z-50 overflow-hidden">
+                          <button
+                            onClick={() => {
+                              setActiveFilter('unread');
+                              setMenuOpenId(null);
+                            }}
+                            className={`w-full text-left px-4 py-2.5 hover:bg-muted text-sm flex items-center gap-2 transition-colors ${activeFilter === 'unread' ? 'bg-terracotta/10 text-terracotta font-semibold' : ''}`}
+                          >
+                            <Bell className="h-4 w-4" />
+                            Unread
+                          </button>
+                          <button
+                            onClick={() => {
+                              setActiveFilter('starred');
+                              setMenuOpenId(null);
+                            }}
+                            className={`w-full text-left px-4 py-2.5 hover:bg-muted text-sm flex items-center gap-2 transition-colors border-t border-border/50 ${activeFilter === 'starred' ? 'bg-terracotta/10 text-terracotta font-semibold' : ''}`}
+                          >
+                            <Star className="h-4 w-4" />
+                            Starred
+                          </button>
+                          <button
+                            onClick={() => {
+                              setActiveFilter('archived');
+                              setMenuOpenId(null);
+                            }}
+                            className={`w-full text-left px-4 py-2.5 hover:bg-muted text-sm flex items-center gap-2 transition-colors border-t border-border/50 ${activeFilter === 'archived' ? 'bg-terracotta/10 text-terracotta font-semibold' : ''}`}
+                          >
+                            <Archive className="h-4 w-4" />
+                            Archived
+                          </button>
                           <button
                             onClick={() => {
                               setActiveFilter('all');
@@ -830,10 +824,20 @@ const Messages = () => {
                             <X className="h-4 w-4" />
                             Clear Filter
                           </button>
-                        )}
-                      </div>
-                    )}
+                        </div>
+                      )}
+                    </div>
                   </div>
+                  {/* AI Assistant Quick Access */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-full px-2 h-8 hover:bg-blue-50 flex items-center gap-1.5"
+                    onClick={handleOpenAssistantChat}
+                    title="Open AI Assistant"
+                  >
+                    <Sparkles className="h-4 w-4 text-blue-500" />
+                  </Button>
                 </div>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -947,7 +951,7 @@ const Messages = () => {
                                 e.stopPropagation();
                                 setMenuOpenId(menuOpenId === conv.id ? null : conv.id);
                               }}
-                              className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+                              className="p-1.5 rounded-lg transition-colors hover:bg-muted"
                             >
                               <MoreVertical className="h-4 w-4 text-muted-foreground" />
                             </button>
@@ -1011,11 +1015,29 @@ const Messages = () => {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className={`font-semibold leading-none mb-1 ${isAssistantUser(otherUserProfile) ? 'text-blue-700' : ''}`}>
+                        <p className={`font-semibold leading-none mb-1.5 ${isAssistantUser(otherUserProfile) ? 'text-blue-700' : ''}`}>
                           {isAssistantUser(otherUserProfile) && '🤖 '}{otherUserProfile?.full_name || 'User'}
                         </p>
-                        <p className={`text-xs truncate ${isAssistantUser(otherUserProfile) ? 'text-blue-600' : 'text-muted-foreground'}`}>
-                          {isAssistantUser(otherUserProfile) ? 'AI Assistant' : otherUserProfile?.city || 'CultureSwap user'}
+                        <p className={`text-[11px] font-medium truncate flex items-center gap-1.5 ${isAssistantUser(otherUserProfile) ? 'text-blue-600' : 'text-muted-foreground'}`}>
+                          {isAssistantUser(otherUserProfile) ? (
+                            <>
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
+                              AI Assistant
+                            </>
+                          ) : (
+                            <>
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                              Local time: {(() => {
+                                const timezone = otherUserProfile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+                                return new Date().toLocaleTimeString('en-US', {
+                                  timeZone: timezone,
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                  hour12: true
+                                });
+                              })()}
+                            </>
+                          )}
                         </p>
                       </div>
                     </div>
