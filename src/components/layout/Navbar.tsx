@@ -237,11 +237,12 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                           conversations.map((conv) => {
                             const profile = conversationProfiles[conv.otherUserId];
                             const isUnread = conv.lastMessage?.receiver_id === currentUser?.id && !conv.lastMessage?.is_read;
+                            const isAssistant = profile?.full_name?.toLowerCase().includes('assistant') || profile?.email === 'assistant@cultureswap.app';
 
                             return (
                               <DropdownMenuItem
                                 key={conv.id}
-                                className="p-3 cursor-pointer hover:bg-muted"
+                                className={`p-3 cursor-pointer hover:bg-muted ${isAssistant ? 'bg-blue-50/50' : ''}`}
                                 onClick={async () => {
                                   // Mark conversation as read if it's unread
                                   if (isUnread && conv.id) {
@@ -255,15 +256,22 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                                 }}
                               >
                                 <div className="flex items-start gap-3 w-full">
-                                  <img
-                                    src={getCacheBustedImageUrl(profile?.profile_image_url)}
-                                    alt="User"
-                                    className="h-10 w-10 rounded-full object-cover flex-shrink-0"
-                                  />
+                                  <div className="relative flex-shrink-0">
+                                    <img
+                                      src={getCacheBustedImageUrl(profile?.profile_image_url)}
+                                      alt="User"
+                                      className={`h-10 w-10 rounded-full object-cover shadow-sm ${isAssistant ? 'ring-2 ring-blue-400 bg-blue-100' : ''}`}
+                                    />
+                                    {isAssistant && (
+                                      <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-white flex items-center justify-center">
+                                        <span className="text-white text-[8px] font-bold">✨</span>
+                                      </div>
+                                    )}
+                                  </div>
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between mb-1">
-                                      <p className={`font-medium text-sm truncate ${isUnread ? 'font-bold' : ''}`}>
-                                        {profile?.full_name || 'User'}
+                                      <p className={`font-medium text-sm truncate ${isUnread ? 'font-bold' : ''} ${isAssistant ? 'text-blue-700' : ''}`}>
+                                        {isAssistant && '🤖 '}{profile?.full_name || 'User'}
                                       </p>
                                       <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
                                         {new Date(conv.lastMessage?.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

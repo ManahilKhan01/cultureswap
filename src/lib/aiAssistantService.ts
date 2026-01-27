@@ -15,7 +15,7 @@ export const aiAssistantService = {
           .select('*')
           .eq('id', cachedAssistantId)
           .single();
-        
+
         if (profile) return profile;
       }
 
@@ -34,7 +34,7 @@ export const aiAssistantService = {
       // If no assistant exists, we need to create one
       // Try to get current user to use as base for assistant ID
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         throw new Error('No authenticated user found');
       }
@@ -45,6 +45,7 @@ export const aiAssistantService = {
         id: user.id, // Will be overridden by system
         email: ASSISTANT_EMAIL,
         full_name: ASSISTANT_NAME,
+        profile_image_url: '/Ai.svg',
         bio: 'AI Assistant for CultureSwap. I am here to help you with cultural exchange and swap services!',
         is_verified: true,
         country: 'Global',
@@ -87,6 +88,7 @@ export const aiAssistantService = {
           id: finalAssistantId,
           email: ASSISTANT_EMAIL,
           full_name: ASSISTANT_NAME,
+          profile_image_url: '/Ai.svg',
           is_verified: true,
           country: 'Global',
           city: 'Virtual',
@@ -105,6 +107,7 @@ export const aiAssistantService = {
         id: finalAssistantId,
         email: ASSISTANT_EMAIL,
         full_name: ASSISTANT_NAME,
+        profile_image_url: '/Ai.svg',
         is_verified: true,
         country: 'Global',
         city: 'Virtual',
@@ -112,15 +115,16 @@ export const aiAssistantService = {
       };
     } catch (error) {
       console.error('Error in getOrCreateAssistantUser:', error);
-      
+
       // Absolute fallback: return a virtual assistant profile
       const fallbackId = '00000000-0000-4000-a000-000000000001';
       cachedAssistantId = fallbackId;
-      
+
       return {
         id: fallbackId,
         email: ASSISTANT_EMAIL,
         full_name: ASSISTANT_NAME,
+        profile_image_url: '/Ai.svg',
         is_verified: true,
         country: 'Global',
         city: 'Virtual',
@@ -138,9 +142,9 @@ export const aiAssistantService = {
       // For assistant chats, we skip the conversations table entirely
       // because assistant IDs aren't real auth users and would violate FK constraints
       // Instead, return a virtual conversation ID that works with message-based lookup
-      
+
       console.log('Using message-based conversation for assistant');
-      
+
       // Return a deterministic ID based on user + assistant
       const virtualConvId = `assistant-conv-${userId}`;
       return virtualConvId;
@@ -155,8 +159,8 @@ export const aiAssistantService = {
     try {
       // Prepare context from conversation history
       const recentMessages = conversationHistory.slice(-10); // Last 10 messages for context
-      
-      const context = recentMessages.map(msg => 
+
+      const context = recentMessages.map(msg =>
         `${msg.sender_name || 'User'}: ${msg.content}`
       ).join('\n');
 

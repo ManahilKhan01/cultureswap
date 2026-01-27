@@ -733,7 +733,7 @@ const Messages = () => {
     return name.includes(searchQuery.toLowerCase());
   });
 
-  const canCreateOffer = selectedConversation && currentUser;
+  const canCreateOffer = selectedConversation && currentUser && !isAssistantUser(otherUserProfile);
 
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] bg-background">
@@ -921,7 +921,7 @@ const Messages = () => {
                               </div>
                             )}
                           </div>
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 pr-8">
                             <div className="flex items-center justify-between mb-0.5 gap-2">
                               <div className="flex items-center gap-2 flex-1 min-w-0">
                                 {isStarred && <Star className="h-3.5 w-3.5 flex-shrink-0 text-golden fill-golden" />}

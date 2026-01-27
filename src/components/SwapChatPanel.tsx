@@ -218,15 +218,28 @@ export const SwapChatPanel = ({
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         {otherUserAvatar && (
-                            <img
-                                src={otherUserAvatar}
-                                alt={otherUserName}
-                                className="h-10 w-10 rounded-full object-cover ring-2 ring-border"
-                            />
+                            <div className="relative">
+                                <img
+                                    src={otherUserAvatar}
+                                    alt={otherUserName}
+                                    className={`h-10 w-10 rounded-full object-cover ring-2 ${otherUserName?.toLowerCase().includes('assistant')
+                                        ? 'ring-blue-400 bg-blue-100'
+                                        : 'ring-border'
+                                        }`}
+                                />
+                                {otherUserName?.toLowerCase().includes('assistant') && (
+                                    <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-white text-[10px] flex items-center justify-center text-white font-bold">✨</div>
+                                )}
+                            </div>
                         )}
                         <div>
-                            <CardTitle className="text-lg">{otherUserName}</CardTitle>
-                            <p className="text-xs text-muted-foreground">Swap Chat</p>
+                            <CardTitle className={`text-lg ${otherUserName?.toLowerCase().includes('assistant') ? 'text-blue-700' : ''}`}>
+                                {otherUserName?.toLowerCase().includes('assistant') && '🤖 '}
+                                {otherUserName}
+                            </CardTitle>
+                            <p className={`text-xs ${otherUserName?.toLowerCase().includes('assistant') ? 'text-blue-600 font-medium' : 'text-muted-foreground'}`}>
+                                {otherUserName?.toLowerCase().includes('assistant') ? 'AI Assistant' : 'Swap Chat'}
+                            </p>
                         </div>
                     </div>
                     {onClose && (
@@ -277,13 +290,13 @@ export const SwapChatPanel = ({
                                                     <div
                                                         className={`rounded-2xl px-4 py-2.5 shadow-sm ${isMe
                                                             ? 'bg-terracotta text-white rounded-br-sm'
-                                                            : 'bg-white text-foreground rounded-bl-sm border border-border/50'
+                                                            : `rounded-bl-sm border ${otherUserName?.toLowerCase().includes('assistant') ? 'bg-blue-50 border-blue-200 text-foreground' : 'bg-white border-border/50 text-foreground'}`
                                                             }`}
                                                     >
                                                         <p className="text-sm leading-relaxed whitespace-pre-wrap">
                                                             {message.content}
                                                         </p>
-                                                        <div className={`text-[10px] mt-1 flex items-center gap-1 ${isMe ? 'text-white/80 justify-end' : 'text-muted-foreground'
+                                                        <div className={`text-[10px] mt-1 flex items-center gap-1 ${isMe ? 'text-white/80 justify-end' : otherUserName?.toLowerCase().includes('assistant') ? 'text-blue-600' : 'text-muted-foreground'
                                                             }`}>
                                                             {formatTime(message.created_at)}
                                                             {isMe && <CheckCheck className="h-3 w-3" />}

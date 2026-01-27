@@ -60,8 +60,8 @@ export const getCacheBustedImageUrl = (imageUrl: string | null | undefined): str
   // If already has cache-busting parameter, return as-is
   if (imageUrl.includes('?v=')) return imageUrl;
 
-  // If it's the default placeholder, no need for cache-busting
-  if (imageUrl.includes('/download.png')) return imageUrl;
+  // If it's the default placeholder or AI assistant icon, no need for cache-busting
+  if (imageUrl.includes('/download.png') || imageUrl.includes('/Ai.svg')) return imageUrl;
 
   // Add a stable timestamp to force cache invalidation only when global state changes
   const separator = imageUrl.includes('?') ? '&' : '?';
