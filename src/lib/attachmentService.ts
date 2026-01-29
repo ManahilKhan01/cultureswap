@@ -89,6 +89,24 @@ export const attachmentService = {
         }
     },
 
+    // Get attachments for multiple messages (bulk fetch)
+    async getAttachmentsByConversation(messageIds: string[]) {
+        if (!messageIds.length) return [];
+        try {
+            const { data, error } = await supabase
+                .from('message_attachments')
+                .select('*')
+                .in('message_id', messageIds)
+                .order('created_at', { ascending: true });
+
+            if (error) throw error;
+            return data || [];
+        } catch (error) {
+            console.error('attachmentService.getAttachmentsByConversation error:', error);
+            throw error;
+        }
+    },
+
     // Delete an attachment
     async deleteAttachment(attachmentId: string) {
         try {

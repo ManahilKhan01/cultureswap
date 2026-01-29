@@ -9,6 +9,7 @@ import { historyService } from "@/lib/historyService";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { OfferCard } from "@/components/OfferCard";
+import { ChatMessage } from "@/components/ChatMessage";
 
 interface SwapChatPanelProps {
     swapId: string;
@@ -146,7 +147,7 @@ export const SwapChatPanel = ({
                 receiver_id: otherUserId,
                 conversation_id: conversationId!,
                 swap_id: swapId || undefined,
-                content: messageText.trim() || "(File attachment)"
+                content: messageText.trim() || ""
             });
 
             if (newMessage) {
@@ -196,6 +197,22 @@ export const SwapChatPanel = ({
         } finally {
             setSending(false);
         }
+    };
+
+    const handleDownloadAll = async (msgAttachments: any[]) => {
+        for (const attachment of msgAttachments) {
+            try {
+                const url = await attachmentService.getDownloadUrl(attachment.id);
+                window.open(url, '_blank');
+                await new Promise(resolve => setTimeout(resolve, 500));
+            } catch (error) {
+                console.error("Error downloading file:", error);
+            }
+        }
+        toast({
+            title: "Downloading...",
+            description: `Starting download for ${msgAttachments.length} files.`,
+        });
     };
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -272,85 +289,44 @@ export const SwapChatPanel = ({
                                 const isMe = message.sender_id === currentUserId;
                                 const msgAttachments = attachments[message.id] || [];
                                 const hasOffer = !!message.offer_id;
+                                const isAssistant = otherUserName?.toLowerCase().includes('assistant');
 
-                                return (
-                                    <div
-                                        key={message.id}
-                                        className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2`}
-                                    >
-                                        <div className="max-w-[85%] space-y-1">
-                                            {hasOffer ? (
+                                // Construct a profile object for ChatMessage
+                                const senderProfile = isMe ? {
+                                    full_name: "You",
+                                    profile_image_url: null // Will fallback to default in ChatMessage if needed
+                                } : {
+                                    full_name: otherUserName,
+                                    profile_image_url: otherUserAvatar
+                                };
+
+                                if (hasOffer) {
+                                    return (
+                                        <div
+                                            key={message.id}
+                                            className={`flex ${isMe ? 'justify-end' : 'justify-start'} mb-6 animate-in fade-in slide-in-from-bottom-2`}
+                                        >
+                                            <div className="max-w-[85%]">
                                                 <OfferCard
                                                     offerId={message.offer_id}
                                                     currentUserId={currentUserId}
                                                     onOfferUpdated={handleOfferUpdated}
                                                 />
-                                            ) : (
-                                                <>
-                                                    <div
-                                                        className={`rounded-2xl px-4 py-2.5 shadow-sm ${isMe
-                                                            ? 'bg-terracotta text-white rounded-br-sm'
-                                                            : `rounded-bl-sm border ${otherUserName?.toLowerCase().includes('assistant') ? 'bg-blue-50 border-blue-200 text-foreground' : 'bg-white border-border/50 text-foreground'}`
-                                                            }`}
-                                                    >
-                                                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                                                            {message.content}
-                                                        </p>
-                                                        <div className={`text-[10px] mt-1 flex items-center gap-1 ${isMe ? 'text-white/80 justify-end' : otherUserName?.toLowerCase().includes('assistant') ? 'text-blue-600' : 'text-muted-foreground'
-                                                            }`}>
-                                                            {formatTime(message.created_at)}
-                                                            {isMe && <CheckCheck className="h-3 w-3" />}
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Attachments */}
-                                                    {msgAttachments.length > 0 && (
-                                                        <div className="space-y-1">
-                                                            {msgAttachments.map((attachment: any) => (
-                                                                <div
-                                                                    key={attachment.id}
-                                                                    className={`rounded-lg overflow-hidden ${isMe ? 'ml-auto' : 'mr-auto'
-                                                                        }`}
-                                                                >
-                                                                    {attachmentService.isImage(attachment.file_type) ? (
-                                                                        <div className="relative group/img">
-                                                                            <img
-                                                                                src={attachment.url}
-                                                                                alt={attachment.file_name}
-                                                                                className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-95 shadow-sm border border-border/20 transition-all"
-                                                                                onClick={() => window.open(attachment.url, '_blank')}
-                                                                            />
-                                                                            <a
-                                                                                href={attachment.url}
-                                                                                download={attachment.file_name}
-                                                                                onClick={(e) => e.stopPropagation()}
-                                                                                className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full opacity-0 group-hover/img:opacity-100 transition-opacity hover:bg-black/70"
-                                                                            >
-                                                                                <Download className="h-3 w-3" />
-                                                                            </a>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <a
-                                                                            href={attachment.url}
-                                                                            target="_blank"
-                                                                            rel="noopener noreferrer"
-                                                                            className="flex items-center gap-2 p-3 bg-muted/50 rounded-xl hover:bg-muted text-sm group transition-all border border-border/10"
-                                                                        >
-                                                                            <FileText className="h-4 w-4 text-muted-foreground group-hover:text-terracotta transition-colors" />
-                                                                            <span className="truncate flex-1">{attachment.file_name}</span>
-                                                                            <div className="h-7 w-7 rounded-full bg-background/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                                <Download className="h-4 w-4" />
-                                                                            </div>
-                                                                        </a>
-                                                                    )}
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </>
-                                            )}
+                                            </div>
                                         </div>
-                                    </div>
+                                    );
+                                }
+
+                                return (
+                                    <ChatMessage
+                                        key={message.id}
+                                        message={message}
+                                        isMe={isMe}
+                                        senderProfile={senderProfile}
+                                        attachments={msgAttachments}
+                                        onDownloadAll={handleDownloadAll}
+                                        isAssistant={isAssistant}
+                                    />
                                 );
                             })
                         )}
@@ -386,14 +362,7 @@ export const SwapChatPanel = ({
                             className="hidden"
                             accept="image/*,.pdf,.doc,.docx"
                         />
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => fileInputRef.current?.click()}
-                        >
-                            <Paperclip className="h-5 w-5" />
-                        </Button>
+
                         <div className="flex-1 bg-muted/30 rounded-2xl border border-border px-3 py-1">
                             <Textarea
                                 placeholder="Type your message..."

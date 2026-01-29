@@ -10,8 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import { mockForumTopics, ForumTopic, currentUser } from "@/data/mockData";
 
 const Community = () => {
@@ -27,7 +25,7 @@ const Community = () => {
       toast({ title: "Please fill all fields", variant: "destructive" });
       return;
     }
-    
+
     const newTopic: ForumTopic = {
       id: `f${Date.now()}`,
       title,
@@ -48,8 +46,7 @@ const Community = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar isLoggedIn={true} />
+    <div className="bg-background pb-12">
       <main className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -118,7 +115,6 @@ const Community = () => {
           ))}
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

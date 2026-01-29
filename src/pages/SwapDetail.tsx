@@ -11,8 +11,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import { SwapChatPanel } from "@/components/SwapChatPanel";
 import { SessionManager } from "@/components/SessionManager";
 import { SwapHistory } from "@/components/SwapHistory";
@@ -24,6 +22,76 @@ import { sessionService } from "@/lib/sessionService";
 import { profileService } from "@/lib/profileService";
 import { reviewService } from "@/lib/reviewService";
 import { messageService } from "@/lib/messageService";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const SwapDetailSkeleton = () => (
+  <div className="flex-1 bg-background pb-12 animate-pulse">
+    <main className="container mx-auto px-4 py-8">
+      <Skeleton className="h-10 w-32 mb-6" />
+
+      <div className="grid lg:grid-cols-5 gap-8">
+        <div className="lg:col-span-3 space-y-6">
+          <Card>
+            <CardHeader className="space-y-4">
+              <Skeleton className="h-8 w-[60%]" />
+              <div className="flex gap-2">
+                <Skeleton className="h-6 w-16 rounded-full" />
+                <Skeleton className="h-6 w-20 rounded-full" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-[90%]" />
+              </div>
+              <Skeleton className="h-24 w-full rounded-xl" />
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+                <Skeleton className="h-3 w-full rounded-full" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-8 w-24 rounded-md" />
+            </CardHeader>
+            <CardContent className="grid md:grid-cols-2 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-lg" />
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="lg:col-span-2 space-y-6">
+          {[1, 2].map((i) => (
+            <Card key={i}>
+              <CardHeader><Skeleton className="h-6 w-24" /></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-16 w-16 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-10 flex-1 rounded-md" />
+                  <Skeleton className="h-10 flex-1 rounded-md" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </main>
+  </div>
+);
 
 const SwapDetail = () => {
   const { id } = useParams();
@@ -217,30 +285,13 @@ const SwapDetail = () => {
   const [showCancelReview, setShowCancelReview] = useState(false);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar isLoggedIn={true} />
-        <main className="container mx-auto px-4 py-8 flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-terracotta mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading swap details...</p>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
+  if (loading) return <SwapDetailSkeleton />;
 
   if (!swap) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar isLoggedIn={true} />
-        <main className="container mx-auto px-4 py-8 text-center">
-          <h1 className="font-display text-2xl font-bold mb-4">Swap Not Found</h1>
-          <Button asChild><Link to="/swaps">Back to Swaps</Link></Button>
-        </main>
-        <Footer />
+      <div className="container mx-auto px-4 py-8 text-center">
+        <h1 className="font-display text-2xl font-bold mb-4">Swap Not Found</h1>
+        <Button asChild><Link to="/swaps">Back to Swaps</Link></Button>
       </div>
     );
   }
@@ -388,7 +439,7 @@ const SwapDetail = () => {
       setReviewSubmitted(true);
       setReviewText("");
       setReviewRating(5);
-      
+
       // Redirect to swaps after a short delay
       setTimeout(() => navigate("/swaps"), 1500);
     } catch (err: any) {
@@ -428,7 +479,7 @@ const SwapDetail = () => {
       // Get or create conversation with the swap creator
       const convId = await messageService.getOrCreateConversation(user.id, swap.user_id);
       setConversationId(convId);
-      
+
       // Open the CreateOfferDialog which will handle the full flow
       setCreateOfferOpen(true);
     } catch (error: any) {
@@ -447,7 +498,7 @@ const SwapDetail = () => {
       const updated = await swapService.getSwapById(id!);
       if (updated) {
         setSwap(updated);
-        
+
         // If partner was set, load their profile
         if (updated.partner_id && updated.partner_id !== currentUserId) {
           const profile = await profileService.getProfile(updated.partner_id);
@@ -476,8 +527,7 @@ const SwapDetail = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar isLoggedIn={true} />
+    <div className="flex-1 bg-background pb-12">
       <main className="container mx-auto px-4 py-8">
         <Button variant="ghost" asChild className="mb-6">
           <Link to="/swaps"><ArrowLeft className="h-4 w-4 mr-2" />Back to Swaps</Link>
@@ -539,53 +589,53 @@ const SwapDetail = () => {
 
             {/* Show Schedule & Details only if partner exists (deal is active) AND not viewing from Discover */}
             {partner && source !== 'discover' && (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-lg">Schedule & Details</CardTitle>
-                <Button
-                  variant="terracotta"
-                  size="sm"
-                  onClick={() => setIsChatOpen(true)}
-                >
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  Messages
-                </Button>
-              </CardHeader>
-              <CardContent className="grid md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
-                  <Calendar className="h-5 w-5 text-terracotta" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Nearest Session</p>
-                    <p className="font-medium">
-                      {nearestSession
-                        ? `${new Date(nearestSession.scheduled_at).toLocaleDateString()} ${new Date(nearestSession.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                        : "No upcoming sessions"}
-                    </p>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                  <CardTitle className="text-lg">Schedule & Details</CardTitle>
+                  <Button
+                    variant="terracotta"
+                    size="sm"
+                    onClick={() => setIsChatOpen(true)}
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Messages
+                  </Button>
+                </CardHeader>
+                <CardContent className="grid md:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+                    <Calendar className="h-5 w-5 text-terracotta" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Nearest Session</p>
+                      <p className="font-medium">
+                        {nearestSession
+                          ? `${new Date(nearestSession.scheduled_at).toLocaleDateString()} ${new Date(nearestSession.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                          : "No upcoming sessions"}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
-                  <Video className="h-5 w-5 text-teal" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Number of Sessions</p>
-                    <p className="font-medium">{sessionCount} sessions</p>
+                  <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+                    <Video className="h-5 w-5 text-teal" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Number of Sessions</p>
+                      <p className="font-medium">{sessionCount} sessions</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
-                  <Video className="h-5 w-5 text-golden" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Format</p>
-                    <p className="font-medium capitalize">{swap.format || "online"}</p>
+                  <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+                    <Video className="h-5 w-5 text-golden" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Format</p>
+                      <p className="font-medium capitalize">{swap.format || "online"}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
-                  <Clock className="h-5 w-5 text-navy" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Hours</p>
-                    <p className="font-medium">{swap.duration || swap.total_hours || "N/A"} hours</p>
+                  <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+                    <Clock className="h-5 w-5 text-navy" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Hours</p>
+                      <p className="font-medium">{swap.duration || swap.total_hours || "N/A"} hours</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
             )}
           </div>
 
@@ -666,7 +716,7 @@ const SwapDetail = () => {
                   <p className="text-sm text-muted-foreground">
                     Interested in this skill exchange? Click below to create an offer and start the swap!
                   </p>
-                  <Button 
+                  <Button
                     className="w-full bg-green-600 hover:bg-green-700 text-white"
                     onClick={handleCreateOffer}
                   >
@@ -690,123 +740,123 @@ const SwapDetail = () => {
 
             {/* Show Actions Card if partner exists AND not viewing from Discover */}
             {partner && source !== 'discover' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="terracotta" className="w-full">Schedule Next Session</Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Schedule Next Session</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="date">Date</Label>
-                        <Input id="date" type="date" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="time">Time</Label>
-                        <Input id="time" type="time" value={sessionTime} onChange={(e) => setSessionTime(e.target.value)} />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setScheduleOpen(false)}>Cancel</Button>
-                      <Button variant="terracotta" onClick={handleScheduleSession}>Schedule</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-
-                <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full" disabled={isCreator}>Leave Review</Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Leave a Review</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label>Rating</Label>
-                        <div className="flex gap-1">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <button key={star} onClick={() => setReviewRating(star)}>
-                              <Star className={`h-8 w-8 cursor-pointer transition-colors ${star <= reviewRating ? "fill-golden text-golden" : "text-muted hover:text-golden"}`} />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="review">Your Review</Label>
-                        <Textarea id="review" rows={4} placeholder="Share your experience..." value={reviewText} onChange={(e) => setReviewText(e.target.value)} />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setReviewOpen(false)}>Cancel</Button>
-                      <Button variant="terracotta" onClick={handleLeaveReview}>Submit Review</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-
-                {/* Cancel Swap - Review Dialog */}
-                <Dialog open={showCancelReview} onOpenChange={setShowCancelReview}>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Leave a Review for Your Swap Partner</DialogTitle>
-                      <DialogDescription>
-                        Before leaving, please share your experience with {partner?.name || "your partner"}. Your feedback helps maintain our community quality.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label>Rating</Label>
-                        <div className="flex gap-1">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <button key={star} onClick={() => setReviewRating(star)}>
-                              <Star className={`h-8 w-8 cursor-pointer transition-colors ${star <= reviewRating ? "fill-golden text-golden" : "text-muted hover:text-golden"}`} />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="cancelReview">Your Review</Label>
-                        <Textarea id="cancelReview" rows={4} placeholder="Share your experience..." value={reviewText} onChange={(e) => setReviewText(e.target.value)} />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => {
-                        setShowCancelReview(false);
-                        navigate("/swaps");
-                      }}>Skip Review</Button>
-                      <Button variant="terracotta" onClick={handleLeaveCancelReview}>Submit Review</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-
-                {swap.status !== "completed" && (
-                  <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
                     <DialogTrigger asChild>
-                      <Button variant="ghost" className="w-full text-destructive">Cancel Swap</Button>
+                      <Button variant="terracotta" className="w-full">Schedule Next Session</Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>Cancel Swap</DialogTitle>
-                        <DialogDescription>
-                          Are you sure you want to cancel this swap? This action cannot be undone.
-                        </DialogDescription>
+                        <DialogTitle>Schedule Next Session</DialogTitle>
                       </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="date">Date</Label>
+                          <Input id="date" type="date" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="time">Time</Label>
+                          <Input id="time" type="time" value={sessionTime} onChange={(e) => setSessionTime(e.target.value)} />
+                        </div>
+                      </div>
                       <DialogFooter>
-                        <Button variant="outline" onClick={() => setCancelOpen(false)}>Keep Swap</Button>
-                        <Button variant="destructive" onClick={handleCancelSwap}>Cancel Swap</Button>
+                        <Button variant="outline" onClick={() => setScheduleOpen(false)}>Cancel</Button>
+                        <Button variant="terracotta" onClick={handleScheduleSession}>Schedule</Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
-                )}
-              </CardContent>
-            </Card>
+
+                  <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="w-full" disabled={isCreator}>Leave Review</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Leave a Review</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label>Rating</Label>
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button key={star} onClick={() => setReviewRating(star)}>
+                                <Star className={`h-8 w-8 cursor-pointer transition-colors ${star <= reviewRating ? "fill-golden text-golden" : "text-muted hover:text-golden"}`} />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="review">Your Review</Label>
+                          <Textarea id="review" rows={4} placeholder="Share your experience..." value={reviewText} onChange={(e) => setReviewText(e.target.value)} />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setReviewOpen(false)}>Cancel</Button>
+                        <Button variant="terracotta" onClick={handleLeaveReview}>Submit Review</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+
+                  {/* Cancel Swap - Review Dialog */}
+                  <Dialog open={showCancelReview} onOpenChange={setShowCancelReview}>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Leave a Review for Your Swap Partner</DialogTitle>
+                        <DialogDescription>
+                          Before leaving, please share your experience with {partner?.name || "your partner"}. Your feedback helps maintain our community quality.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label>Rating</Label>
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button key={star} onClick={() => setReviewRating(star)}>
+                                <Star className={`h-8 w-8 cursor-pointer transition-colors ${star <= reviewRating ? "fill-golden text-golden" : "text-muted hover:text-golden"}`} />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="cancelReview">Your Review</Label>
+                          <Textarea id="cancelReview" rows={4} placeholder="Share your experience..." value={reviewText} onChange={(e) => setReviewText(e.target.value)} />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => {
+                          setShowCancelReview(false);
+                          navigate("/swaps");
+                        }}>Skip Review</Button>
+                        <Button variant="terracotta" onClick={handleLeaveCancelReview}>Submit Review</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+
+                  {swap.status !== "completed" && (
+                    <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" className="w-full text-destructive">Cancel Swap</Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Cancel Swap</DialogTitle>
+                          <DialogDescription>
+                            Are you sure you want to cancel this swap? This action cannot be undone.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setCancelOpen(false)}>Keep Swap</Button>
+                          <Button variant="destructive" onClick={handleCancelSwap}>Cancel Swap</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                </CardContent>
+              </Card>
             )}
 
             {/* Session Manager - Only show if sessions exist */}
@@ -838,7 +888,6 @@ const SwapDetail = () => {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

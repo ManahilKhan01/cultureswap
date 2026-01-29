@@ -3,13 +3,59 @@ import { ArrowLeft, MapPin, Star, Calendar, Globe, Clock, MessageCircle, Loader2
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { profileService } from "@/lib/profileService";
 import { reviewService } from "@/lib/reviewService";
 import { useProfileUpdates } from "@/hooks/useProfileUpdates";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const UserProfileSkeleton = () => (
+  <div className="pb-12 bg-background animate-pulse">
+    <main className="container mx-auto px-4 py-8">
+      <div className="h-10 w-24 bg-muted rounded mb-6" />
+
+      <div className="grid lg:grid-cols-3 gap-8">
+        {/* Profile Card Skeleton */}
+        <div className="lg:col-span-1 space-y-6">
+          <Card>
+            <CardContent className="pt-6 text-center space-y-4">
+              <Skeleton className="h-32 w-32 rounded-full mx-auto" />
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-32 mx-auto" />
+                <Skeleton className="h-4 w-48 mx-auto" />
+              </div>
+              <Skeleton className="h-5 w-40 mx-auto" />
+              <Skeleton className="h-10 w-full rounded-md" />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><Skeleton className="h-6 w-20" /></CardHeader>
+            <CardContent className="space-y-3">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-[80%]" />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content Skeleton */}
+        <div className="lg:col-span-2 space-y-6">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardHeader><Skeleton className="h-6 w-24" /></CardHeader>
+              <CardContent className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-[90%]" />
+                <Skeleton className="h-4 w-[75%]" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </main>
+  </div>
+);
 
 const UserProfile = () => {
   const { id } = useParams();
@@ -46,37 +92,19 @@ const UserProfile = () => {
 
   const loading = profileLoading || reviewsLoading;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar isLoggedIn={true} />
-        <main className="container mx-auto px-4 py-8 flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-terracotta mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading profile...</p>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
+  if (loading) return <UserProfileSkeleton />;
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar isLoggedIn={true} />
-        <main className="container mx-auto px-4 py-8 text-center">
-          <h1 className="font-display text-2xl font-bold mb-4">User Not Found</h1>
-          <Button asChild><Link to="/swaps">Back to Swaps</Link></Button>
-        </main>
-        <Footer />
+      <div className="container mx-auto px-4 py-8 text-center">
+        <h1 className="font-display text-2xl font-bold mb-4">User Not Found</h1>
+        <Button asChild><Link to="/swaps">Back to Swaps</Link></Button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar isLoggedIn={true} />
+    <div className="pb-12 bg-background">
       <main className="container mx-auto px-4 py-8">
         <Button variant="ghost" asChild className="mb-6">
           <Link to="/swaps"><ArrowLeft className="h-4 w-4 mr-2" />Back</Link>
@@ -87,10 +115,10 @@ const UserProfile = () => {
           <div className="lg:col-span-1 space-y-6">
             <Card>
               <CardContent className="pt-6 text-center">
-                <img 
-                  src={user.profile_image_url || "/download.png"} 
-                  alt={user.full_name || "User"} 
-                  className="h-32 w-32 rounded-full object-cover mx-auto ring-4 ring-terracotta/20" 
+                <img
+                  src={user.profile_image_url || "/download.png"}
+                  alt={user.full_name || "User"}
+                  className="h-32 w-32 rounded-full object-cover mx-auto ring-4 ring-terracotta/20"
                 />
                 <h1 className="font-display text-2xl font-bold mt-4">{user.full_name || "User"}</h1>
                 <p className="text-muted-foreground flex items-center justify-center gap-1 mt-1">
@@ -168,8 +196,8 @@ const UserProfile = () => {
                           <p className="font-medium">{review.reviewer_name || "Anonymous"}</p>
                           <div className="flex gap-1 mt-1">
                             {[...Array(5)].map((_, i) => (
-                              <Star 
-                                key={i} 
+                              <Star
+                                key={i}
                                 className={`h-4 w-4 ${i < (review.rating || 0) ? "fill-golden text-golden" : "text-muted"}`}
                               />
                             ))}
@@ -188,7 +216,6 @@ const UserProfile = () => {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

@@ -15,6 +15,7 @@ interface ProfileData {
   languages?: string[];
   skills_offered?: string[];
   skills_wanted?: string[];
+  created_at?: string;
   updated_at?: string;
 }
 

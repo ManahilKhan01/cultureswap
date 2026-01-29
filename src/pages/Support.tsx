@@ -2,8 +2,6 @@ import { Search, HelpCircle, MessageCircle, FileText, Shield } from "lucide-reac
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 
 const Support = () => {
   const categories = [
@@ -21,8 +19,7 @@ const Support = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar isLoggedIn={false} />
+    <div className="bg-background">
       <main className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
           <h1 className="font-display text-4xl font-bold mb-4">How can we help?</h1>
@@ -58,7 +55,6 @@ const Support = () => {
           </Accordion>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

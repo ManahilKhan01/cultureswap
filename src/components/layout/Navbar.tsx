@@ -175,14 +175,14 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4">
+      <div className="container px-0">
         <div className="flex items-center justify-between py-4">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2 transition-all duration-300 hover:opacity-80 active:scale-95 group">
             <img
               src="/logo.svg"
               alt="CultureSwap Logo"
-              className="h-[45px] w-[165px] object-contain"
+              className="h-[45px] w-[165px] object-contain transition-transform duration-300 group-hover:scale-105"
             />
           </Link>
 
@@ -213,7 +213,7 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                     <Button variant="ghost" size="icon" className="relative">
                       <MessageCircle className="h-5 w-5" />
                       {unreadMessages > 0 && (
-                        <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 flex items-center justify-center bg-terracotta text-white text-[10px]">
+                        <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 flex items-center justify-center bg-terracotta text-white text-[10px] shadow-sm ring-1 ring-white">
                           {unreadMessages > 9 ? '9+' : unreadMessages}
                         </Badge>
                       )}
@@ -295,7 +295,7 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                         <DropdownMenuItem asChild>
                           <Button
                             variant="ghost"
-                            className="w-full text-center text-sm font-bold text-terracotta hover:text-terracotta/80 hover:bg-terracotta/5 px-0 py-2 cursor-pointer h-auto"
+                            className="w-full text-center text-sm font-bold text-terracotta hover:text-terracotta-dark hover:bg-terracotta/10 px-0 py-2 cursor-pointer h-auto transition-colors"
                             onClick={() => navigate("/messages")}
                           >
                             View All Messages
@@ -422,8 +422,14 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
           {/* Mobile Menu Button */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="relative">
                 <Menu className="h-6 w-6" />
+                {(unreadMessages > 0 || unreadCount > 0) && (
+                  <span className="absolute top-2 right-2 flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-terracotta opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-terracotta"></span>
+                  </span>
+                )}
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-80">
@@ -437,6 +443,48 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                 )}
 
                 <div className="flex flex-col gap-1">
+                  {isLoggedIn && (
+                    <>
+                      <Link
+                        to="/messages"
+                        onClick={() => setIsOpen(false)}
+                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors flex items-center justify-between ${isActive("/messages")
+                          ? "bg-primary/10 text-primary"
+                          : "text-foreground hover:bg-muted"
+                          }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <MessageCircle className="h-5 w-5" />
+                          <span>Messages</span>
+                        </div>
+                        {unreadMessages > 0 && (
+                          <Badge className="bg-terracotta text-white rounded-full px-2 py-0.5 text-[10px]">
+                            {unreadMessages > 9 ? '9+' : unreadMessages}
+                          </Badge>
+                        )}
+                      </Link>
+
+                      <Link
+                        to="/notifications"
+                        onClick={() => setIsOpen(false)}
+                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors flex items-center justify-between ${isActive("/notifications")
+                          ? "bg-primary/10 text-primary"
+                          : "text-foreground hover:bg-muted"
+                          }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Bell className="h-5 w-5" />
+                          <span>Notifications</span>
+                        </div>
+                        {unreadCount > 0 && (
+                          <Badge className="bg-terracotta text-white rounded-full px-2 py-0.5 text-[10px]">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                          </Badge>
+                        )}
+                      </Link>
+                    </>
+                  )}
+
                   {isLoggedIn && navLinks.map((link) => (
                     <Link
                       key={link.name}
@@ -450,7 +498,6 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                       {link.name}
                     </Link>
                   ))}
-
                 </div>
 
                 <div className="mt-auto pt-4 border-t border-border">

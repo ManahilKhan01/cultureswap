@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import { mockNotifications, Notification } from "@/data/mockData";
 
 const Notifications = () => {
@@ -42,8 +40,7 @@ const Notifications = () => {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar isLoggedIn={true} />
+    <div className="bg-background">
       <main className="container mx-auto px-4 py-8 max-w-3xl">
         <Button variant="ghost" asChild className="mb-6">
           <Link to="/dashboard"><ArrowLeft className="h-4 w-4 mr-2" />Back to Dashboard</Link>
@@ -93,7 +90,6 @@ const Notifications = () => {
           </CardContent>
         </Card>
       </main>
-      <Footer />
     </div>
   );
 };

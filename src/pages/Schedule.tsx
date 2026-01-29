@@ -3,8 +3,6 @@ import { ArrowLeft, Calendar, Clock, Video, MapPin, ChevronRight } from "lucide-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import { mockUsers } from "@/data/mockData";
 
 const Schedule = () => {
@@ -22,8 +20,7 @@ const Schedule = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar isLoggedIn={true} />
+    <div className="bg-background">
       <main className="container mx-auto px-4 py-8">
         <Button variant="ghost" asChild className="mb-6">
           <Link to="/dashboard"><ArrowLeft className="h-4 w-4 mr-2" />Back to Dashboard</Link>
@@ -123,7 +120,6 @@ const Schedule = () => {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

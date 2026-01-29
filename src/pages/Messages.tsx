@@ -29,6 +29,8 @@ import {
   Video,
   Clock,
   MessageSquareMore,
+  Pencil,
+  Minus,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -44,13 +46,47 @@ import { useToast } from "@/hooks/use-toast";
 import { CreateOfferDialog } from "@/components/CreateOfferDialog";
 import { OfferCard } from "@/components/OfferCard";
 import { CameraModal } from "@/components/CameraModal";
+import { ChatMessage } from "@/components/ChatMessage";
 import { chatManagementService } from "@/lib/chatManagementService";
 import { aiAssistantService } from "@/lib/aiAssistantService";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { getCacheBustedImageUrl } from "@/lib/cacheUtils";
 
+import { Skeleton } from "@/components/ui/skeleton";
+
+const MessageListSkeleton = () => (
+  <div className="p-2 space-y-2">
+    {[1, 2, 3, 4, 5, 6].map((i) => (
+      <div key={i} className="flex items-center gap-3 p-3">
+        <Skeleton className="h-11 w-11 rounded-full shrink-0" />
+        <div className="flex-1 space-y-2">
+          <div className="flex justify-between">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-8" />
+          </div>
+          <Skeleton className="h-3 w-full" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const AutoReplySkeleton = () => (
+  <div className="space-y-4 animate-in fade-in duration-300">
+    <div className="p-4 rounded-xl bg-muted/20 border border-muted/30 space-y-2">
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-[90%]" />
+      <Skeleton className="h-4 w-[75%]" />
+    </div>
+    <div className="flex gap-2">
+      <Skeleton className="h-11 flex-1 rounded-xl" />
+      <Skeleton className="h-11 flex-[2] rounded-xl" />
+    </div>
+  </div>
+);
+
 const Messages = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -62,6 +98,7 @@ const Messages = () => {
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [messagesLoading, setMessagesLoading] = useState(false);
   const [messageText, setMessageText] = useState("");
   const [sending, setSending] = useState(false);
   const [otherUserProfile, setOtherUserProfile] = useState<any>(null);
@@ -82,6 +119,20 @@ const Messages = () => {
   const [activeQuickSubPanel, setActiveQuickSubPanel] = useState<'main' | 'responses' | 'auto-reply' | 'camera'>('main');
   const [autoReplyPreview, setAutoReplyPreview] = useState("");
   const [isGeneratingAutoReply, setIsGeneratingAutoReply] = useState(false);
+  const [quickResponses, setQuickResponses] = useState<string[]>(() => {
+    const saved = localStorage.getItem('customQuickResponses');
+    return saved ? JSON.parse(saved) : [
+      "I will text you later.",
+      "I will let you know.",
+      "Sounds good, thanks!",
+      "Let me check and get back to you.",
+      "Sure, that works for me."
+    ];
+  });
+  const [editingResponseIndex, setEditingResponseIndex] = useState<number | null>(null);
+  const [nextResponseText, setNextResponseText] = useState("");
+  const [isAddingResponse, setIsAddingResponse] = useState(false);
+  const [editResponseValue, setEditResponseValue] = useState("");
 
 
 
@@ -97,7 +148,7 @@ const Messages = () => {
 
   // Mark messages as read when conversation is selected
   useEffect(() => {
-    if (!selectedConversation?.id || !currentUser) return;
+    if (!selectedConversation?.id || selectedConversation.id === 'loading' || !currentUser) return;
 
     // Mark all unread messages in this conversation as read
     const markAsRead = async () => {
@@ -148,7 +199,7 @@ const Messages = () => {
         // Unread: where current user is receiver and has unread messages
         filtered = filtered.filter(conv => {
           const lastMsg = conv.lastMessage;
-          return lastMsg.receiver_id === currentUser?.id && !lastMsg.is_read;
+          return lastMsg.receiver_id === currentUser?.id && !lastMsg.read;
         });
         break;
       case 'offers':
@@ -324,7 +375,15 @@ const Messages = () => {
         }
       }
       setUserProfiles(profiles);
-      setConversations(allConversations);
+
+      // Sort conversations by last message timestamp (descending)
+      const sortedConversations = [...allConversations].sort((a, b) => {
+        const timeA = new Date(a.lastMessage.created_at).getTime();
+        const bTime = new Date(b.lastMessage.created_at).getTime();
+        return bTime - timeA;
+      });
+
+      setConversations(sortedConversations);
 
       // Load chat metadata (starred and archived)
       if (uId) {
@@ -337,59 +396,92 @@ const Messages = () => {
     }
   };
 
+  // Effect 1: Initial load of auth and conversation list
   useEffect(() => {
-    const loadInitialData = async () => {
+    const init = async () => {
       try {
         setLoading(true);
-
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Not authenticated");
         setCurrentUser(user);
-
         await loadConversations(user.id);
-
-        if (userIdParam) {
-          const otherProfile = await profileService.getProfile(userIdParam);
-          setOtherUserProfile(otherProfile);
-
-          // Get or create conversation ID
-          const convId = await messageService.getOrCreateConversation(user.id, userIdParam);
-          const convMessages = await messageService.getMessagesByConversation(convId);
-
-          if (swapIdParam) {
-            const swap = await swapService.getSwapById(swapIdParam);
-            setCurrentSwap(swap);
-          }
-
-          setMessages(convMessages);
-
-          // Load attachments for all messages
-          const attachmentsMap: Record<string, any[]> = {};
-          for (const msg of convMessages) {
-            const msgAttachments = await attachmentService.getAttachmentsByMessage(msg.id);
-            if (msgAttachments.length > 0) {
-              attachmentsMap[msg.id] = msgAttachments;
-            }
-          }
-          setAttachments(attachmentsMap);
-
-          setSelectedConversation({
-            id: convId,
-            otherUserId: userIdParam,
-            otherProfile,
-            swapId: swapIdParam,
-          });
-        }
       } catch (error) {
-        console.error('Error loading initial data (full error):', error);
-        toast({ title: "Error", description: "Failed to load messages", variant: "destructive" });
+        console.error('Error in initial load:', error);
       } finally {
         setLoading(false);
       }
     };
+    init();
+  }, []);
 
-    loadInitialData();
-  }, [userIdParam, swapIdParam]);
+  // Effect 2: Load specific chat messages when search params change
+  useEffect(() => {
+    const loadChatData = async () => {
+      if (!currentUser) return;
+
+      try {
+        if (userIdParam) {
+          setMessagesLoading(true);
+
+          // 1. Instantly update profile info and selected state if we have it in cache
+          const existingProfile = userProfiles[userIdParam];
+          const profile = existingProfile || await profileService.getProfile(userIdParam);
+
+          if (!existingProfile) {
+            setUserProfiles(prev => ({ ...prev, [userIdParam]: profile }));
+          }
+
+          setOtherUserProfile(profile);
+
+          // 2. Get conversation and messages
+          const convId = await messageService.getOrCreateConversation(currentUser.id, userIdParam);
+          const convMessages = await messageService.getMessagesByConversation(convId);
+
+          // 3. Update swap context if present
+          if (swapIdParam) {
+            const swap = await swapService.getSwapById(swapIdParam);
+            setCurrentSwap(swap);
+          } else {
+            setCurrentSwap(null);
+          }
+
+          // 4. Load attachments in bulk
+          const attachmentsMap: Record<string, any[]> = {};
+          if (convMessages.length > 0) {
+            const messageIds = convMessages.map(m => m.id);
+            const allAttachments = await attachmentService.getAttachmentsByConversation(messageIds);
+
+            // Group attachments by message ID
+            for (const att of allAttachments) {
+              if (!attachmentsMap[att.message_id]) {
+                attachmentsMap[att.message_id] = [];
+              }
+              attachmentsMap[att.message_id].push(att);
+            }
+          }
+
+          // 5. Commit state updates in one go to prevent flickering
+          setMessages(convMessages);
+          setAttachments(attachmentsMap);
+          setSelectedConversation({
+            id: convId,
+            otherUserId: userIdParam,
+            otherProfile: profile,
+            swapId: swapIdParam,
+          });
+        } else {
+          setSelectedConversation(null);
+          setMessages([]);
+        }
+      } catch (error) {
+        console.error('Error loading chat detail:', error);
+      } finally {
+        setMessagesLoading(false);
+      }
+    };
+
+    loadChatData();
+  }, [userIdParam, swapIdParam, currentUser]);
 
   // Real-time subscription for global messages (updates conversation list)
   useEffect(() => {
@@ -605,6 +697,51 @@ const Messages = () => {
     setQuickActionsOpen(false);
   };
 
+  const handleAddResponse = () => {
+    if (!nextResponseText.trim()) return;
+    const updated = [...quickResponses, nextResponseText.trim()];
+    setQuickResponses(updated);
+    localStorage.setItem('customQuickResponses', JSON.stringify(updated));
+    setNextResponseText("");
+    setIsAddingResponse(false);
+    toast({ title: "Success", description: "Quick response added" });
+  };
+
+  const handleDeleteResponse = (index: number) => {
+    const updated = quickResponses.filter((_, i) => i !== index);
+    setQuickResponses(updated);
+    localStorage.setItem('customQuickResponses', JSON.stringify(updated));
+    toast({ title: "Success", description: "Quick response deleted" });
+  };
+
+  const handleUpdateResponse = (index: number) => {
+    if (!editResponseValue.trim()) return;
+    const updated = [...quickResponses];
+    updated[index] = editResponseValue.trim();
+    setQuickResponses(updated);
+    localStorage.setItem('customQuickResponses', JSON.stringify(updated));
+    setEditingResponseIndex(null);
+    setEditResponseValue("");
+    toast({ title: "Success", description: "Quick response updated" });
+  };
+
+  const handleDownloadAll = async (msgAttachments: any[]) => {
+    for (const attachment of msgAttachments) {
+      try {
+        const url = await attachmentService.getDownloadUrl(attachment.id);
+        window.open(url, '_blank');
+        // Small delay to avoid browser blocking multiple tabs
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (error) {
+        console.error("Error downloading file:", error);
+      }
+    }
+    toast({
+      title: "Downloading...",
+      description: `Starting download for ${msgAttachments.length} files.`,
+    });
+  };
+
   const handleSendMessage = async () => {
     if (!messageText.trim() && selectedFiles.length === 0) return;
 
@@ -623,7 +760,7 @@ const Messages = () => {
           conversation_id: selectedConversation.id,
           sender_id: currentUser.id,
           receiver_id: selectedConversation.otherUserId,
-          content: messageText.trim() || "(File attachment)",
+          content: messageText.trim() || "",
           created_at: new Date().toISOString(),
           is_read: true,
         };
@@ -637,7 +774,7 @@ const Messages = () => {
           receiver_id: selectedConversation.otherUserId,
           conversation_id: selectedConversation.id,
           swap_id: selectedConversation.swapId || undefined,
-          content: messageText.trim() || "(File attachment)",
+          content: messageText.trim() || "",
         });
 
         if (newMessage) {
@@ -830,14 +967,14 @@ const Messages = () => {
   const canCreateOffer = selectedConversation && currentUser && !isAssistantUser(otherUserProfile);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] bg-background">
+    <div className="flex flex-col h-[calc(100dvh-72px)] md:h-[calc(100vh-80px)] bg-background overflow-hidden">
 
       <div className="flex-1 overflow-hidden">
-        <div className="container mx-auto h-full py-4 px-4 md:py-8">
-          <div className="bg-card rounded-2xl border border-border shadow-xl h-full flex overflow-hidden">
+        <div className="container mx-auto h-full py-0 md:py-4 px-0 md:px-4">
+          <div className="bg-card md:rounded-2xl border-none md:border border-border shadow-none md:shadow-xl h-full flex overflow-hidden">
 
             {/* Left Panel: Conversations List */}
-            <div className={`w-full md:w-80 lg:w-96 flex flex-col border-r border-border bg-muted/10 ${selectedConversation && 'hidden md:flex'}`}>
+            <div className={`w-full md:w-80 lg:w-96 flex flex-col border-r border-border bg-muted/10 ${selectedConversation ? 'hidden md:flex' : 'flex'}`}>
               <div className="p-4 border-b border-border space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -961,59 +1098,65 @@ const Messages = () => {
 
               <div className="flex-1 overflow-auto">
                 {loading ? (
-                  <div className="p-8 text-center">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-terracotta" />
-                  </div>
+                  <MessageListSkeleton />
                 ) : filteredConversations.length === 0 ? (
                   <div className="p-8 text-center text-muted-foreground">
                     <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-20" />
                     <p className="text-sm">No conversations found</p>
                   </div>
                 ) : (
-                  filteredConversations.map((conv, idx) => {
+                  filteredConversations.map((conv) => {
                     const profile = userProfiles[conv.otherUserId];
                     const isSelected = selectedConversation?.otherUserId === conv.otherUserId;
                     const isStarred = starredChats.has(conv.id);
                     const isArchived = archivedChats.has(conv.id);
-                    const isUnread = conv.lastMessage.receiver_id === currentUser?.id && !conv.lastMessage.is_read;
+                    const isUnread = conv.lastMessage.receiver_id === currentUser?.id && !conv.lastMessage.read;
                     const isAssistant = isAssistantUser(profile);
 
                     return (
-                      <div key={idx} className="relative group">
+                      <div key={conv.id} className="relative group px-2 mb-1">
                         <button
-                          onClick={() => selectConversation(conv)}
-                          className={`w-full p-4 flex items-center gap-3 transition-all border-b border-border/50 text-left ${isAssistant ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-muted/50'} ${isSelected ? 'bg-primary/5 border-l-4 border-l-terracotta' : ''}`}
+                          onClick={() => setSearchParams({ user: conv.otherUserId })}
+                          className={`w-full p-3 flex items-center gap-3 transition-all rounded-xl text-left ${isSelected
+                            ? 'bg-terracotta/10 ring-1 ring-terracotta/20 shadow-sm'
+                            : isAssistant ? 'bg-blue-50/50 hover:bg-blue-50' : 'hover:bg-muted/50'
+                            }`}
                         >
                           <div className="relative flex-shrink-0">
                             <img
                               key={getCacheBustedImageUrl(profile?.profile_image_url)}
                               src={getCacheBustedImageUrl(profile?.profile_image_url)}
                               alt="Avatar"
-                              className={`h-12 w-12 rounded-full object-cover ring-2 shadow-sm ${isAssistant ? 'ring-blue-400 bg-blue-100' : 'ring-background'}`}
+                              className={`h-11 w-11 rounded-full object-cover ring-2 shadow-sm ${isSelected ? 'ring-terracotta/30' : isAssistant ? 'ring-blue-400 bg-blue-100' : 'ring-background'
+                                }`}
                             />
                             {isAssistant && (
-                              <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-white flex items-center justify-center" title="AI Assistant">
-                                <span className="text-white text-xs font-bold">✨</span>
+                              <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-white flex items-center justify-center">
+                                <span className="text-white text-[8px] font-bold">✨</span>
                               </div>
                             )}
+                            {isUnread && !isSelected && (
+                              <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-terracotta border-2 border-white" />
+                            )}
                           </div>
-                          <div className="flex-1 min-w-0 pr-8">
+                          <div className="flex-1 min-w-0 pr-6">
                             <div className="flex items-center justify-between mb-0.5 gap-2">
-                              <div className="flex items-center gap-2 flex-1 min-w-0">
-                                {isStarred && <Star className="h-3.5 w-3.5 flex-shrink-0 text-golden fill-golden" />}
-                                <p className={`font-semibold truncate ${isAssistant ? 'text-blue-700' : 'text-foreground'} ${isUnread ? 'font-bold' : ''}`}>
+                              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                <p className={`text-sm font-bold truncate ${isAssistant ? 'text-blue-700' : 'text-foreground'} ${isUnread ? 'font-black' : ''}`}>
                                   {isAssistant && '🤖 '}{profile?.full_name || 'User'}
                                 </p>
+                                {isStarred && <Star className="h-3 w-3 flex-shrink-0 text-golden fill-golden" />}
                               </div>
-                              <span className="text-[10px] uppercase font-medium text-muted-foreground flex-shrink-0">
+                              <span className="text-[9px] font-bold text-muted-foreground/60 flex-shrink-0 uppercase">
                                 {formatTime(conv.lastMessage.created_at)}
                               </span>
                             </div>
-                            <p className={`text-xs truncate ${isSelected ? 'text-primary' : isAssistant ? 'text-blue-600 font-medium' : isUnread ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                            <p className={`text-xs truncate font-medium ${isSelected ? 'text-terracotta' : isAssistant ? 'text-blue-600' : isUnread ? 'font-bold text-foreground' : 'text-muted-foreground/80'}`}>
                               {conv.lastMessage.content}
                             </p>
                           </div>
                         </button>
+
 
                         {/* Chat Context Menu */}
                         <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-40">
@@ -1055,20 +1198,23 @@ const Messages = () => {
             </div>
 
             {/* Right Panel: Chat Window */}
-            <div className={`flex-1 flex flex-col bg-background/50 ${!selectedConversation && 'hidden md:flex'}`}>
+            <div className={`flex-1 flex flex-col bg-background/50 ${!selectedConversation ? 'hidden md:flex' : 'flex'}`}>
               {selectedConversation ? (
                 <>
                   {/* Chat Header */}
                   <div className={`p-3 px-4 md:p-4 border-b border-border flex items-center justify-between sticky top-0 backdrop-blur-sm z-10 ${isAssistantUser(otherUserProfile)
                     ? 'bg-gradient-to-r from-blue-50 to-blue-100/50 border-blue-200'
                     : 'bg-white/40'
-                    }`}>
+                    } border-b border-border shadow-sm`}>
                     <div className="flex items-center gap-3">
                       <Button
                         variant="ghost"
                         size="icon"
                         className="md:hidden -ml-2 rounded-full"
-                        onClick={() => setSelectedConversation(null)}
+                        onClick={() => {
+                          setSelectedConversation(null);
+                          setSearchParams({});
+                        }}
                       >
                         <ChevronLeft className="h-6 w-6" />
                       </Button>
@@ -1128,66 +1274,47 @@ const Messages = () => {
                   </div>
 
                   {/* Messages Stream */}
-                  <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-soft-sand/20">
+                  <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-soft-sand/20 relative">
+                    {messagesLoading && (
+                      <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px] flex items-center justify-center z-20">
+                        <Loader2 className="h-8 w-8 animate-spin text-terracotta" />
+                      </div>
+                    )}
                     {messages.length > 0 ? (
                       messages.map((message, index) => {
                         const isMe = message.sender_id === currentUser?.id;
                         const hasOffer = !!message.offer_id;
+                        const msgAttachments = attachments[message.id] || [];
+                        const senderProfile = isMe ? currentUser : userProfiles[message.sender_id] || otherUserProfile;
+                        const isAssistant = isAssistantUser(senderProfile);
 
-                        return (
-                          <div
-                            key={message.id}
-                            className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2`}
-                          >
-                            <div className="max-w-[85%] md:max-w-[70%]">
-                              {hasOffer ? (
+                        if (hasOffer) {
+                          return (
+                            <div
+                              key={message.id}
+                              className={`flex ${isMe ? 'justify-end' : 'justify-start'} mb-6 animate-in fade-in slide-in-from-bottom-2`}
+                            >
+                              <div className="max-w-[85%] md:max-w-[70%]">
                                 <OfferCard
                                   offerId={message.offer_id}
                                   currentUserId={currentUser?.id || ''}
                                   onOfferUpdated={handleOfferCreated}
                                 />
-                              ) : (
-                                <div className="space-y-1">
-                                  <div
-                                    className={`rounded-2xl px-4 py-2.5 shadow-sm ${isMe
-                                      ? 'bg-terracotta text-white rounded-br-sm'
-                                      : `rounded-bl-sm border ${isAssistantUser(otherUserProfile) ? 'bg-blue-50 border-blue-200 text-foreground' : 'bg-white border-border/50 text-foreground'}`
-                                      }`}
-                                  >
-                                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                                    <div className={`text-[10px] mt-1 flex items-center gap-1 ${isMe ? 'text-white/80 justify-end' : isAssistantUser(otherUserProfile) ? 'text-blue-600' : 'text-muted-foreground'}`}>
-                                      {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                      {isMe && <CheckCheck className="h-3 w-3" />}
-                                    </div>
-                                  </div>
-                                  {/* Attachments */}
-                                  {attachments[message.id]?.map((attachment: any) => (
-                                    <div key={attachment.id} className="rounded-lg overflow-hidden">
-                                      {attachmentService.isImage(attachment.file_type) ? (
-                                        <img
-                                          src={attachment.url}
-                                          alt={attachment.file_name}
-                                          className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90"
-                                          onClick={() => window.open(attachment.url, '_blank')}
-                                        />
-                                      ) : (
-                                        <a
-                                          href={attachment.url}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg hover:bg-muted text-sm"
-                                        >
-                                          <FileText className="h-4 w-4" />
-                                          <span className="truncate">{attachment.file_name}</span>
-                                          <Download className="h-3 w-3 ml-auto" />
-                                        </a>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
+                              </div>
                             </div>
-                          </div>
+                          );
+                        }
+
+                        return (
+                          <ChatMessage
+                            key={message.id}
+                            message={message}
+                            isMe={isMe}
+                            senderProfile={senderProfile}
+                            attachments={msgAttachments}
+                            onDownloadAll={handleDownloadAll}
+                            isAssistant={isAssistant}
+                          />
                         );
                       })
                     ) : (
@@ -1282,7 +1409,7 @@ const Messages = () => {
                           )}
 
                           {activeQuickSubPanel === 'responses' && (
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                               <div className="flex items-center justify-between mb-2">
                                 <h4 className="text-sm font-bold flex items-center gap-2">
                                   <Zap className="h-4 w-4 text-blue-600" />
@@ -1297,22 +1424,89 @@ const Messages = () => {
                                   Back
                                 </Button>
                               </div>
-                              <div className="flex flex-col gap-2">
-                                {[
-                                  "I will text you later.",
-                                  "I will let you know.",
-                                  "Sounds good, thanks!",
-                                  "Let me check and get back to you.",
-                                  "Sure, that works for me."
-                                ].map((resp, i) => (
-                                  <button
-                                    key={i}
-                                    onClick={() => handleQuickResponse(resp)}
-                                    className="text-left p-3 rounded-lg bg-muted/30 hover:bg-blue-50 hover:text-blue-700 text-sm transition-colors border border-transparent hover:border-blue-200"
-                                  >
-                                    {resp}
-                                  </button>
+
+                              <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1">
+                                {quickResponses.map((resp, i) => (
+                                  <div key={i} className="group relative flex items-center gap-2">
+                                    {editingResponseIndex === i ? (
+                                      <div className="flex-1 flex gap-2 animate-in fade-in zoom-in-95 duration-200">
+                                        <Input
+                                          value={editResponseValue}
+                                          onChange={(e) => setEditResponseValue(e.target.value)}
+                                          className="flex-1 h-10 py-2 border-terracotta/30 focus-visible:ring-terracotta"
+                                          autoFocus
+                                        />
+                                        <Button size="icon" variant="terracotta" className="h-10 w-10 shrink-0" onClick={() => handleUpdateResponse(i)}>
+                                          <CheckCheck className="h-4 w-4" />
+                                        </Button>
+                                        <Button size="icon" variant="ghost" className="h-10 w-10 shrink-0" onClick={() => setEditingResponseIndex(null)}>
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <button
+                                          onClick={() => handleQuickResponse(resp)}
+                                          className="flex-1 text-left p-3 rounded-lg bg-muted/30 hover:bg-blue-50 hover:text-blue-700 text-sm transition-all border border-transparent hover:border-blue-200 truncate"
+                                        >
+                                          {resp}
+                                        </button>
+                                        <div className="flex shrink-0 gap-1 pr-1">
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-muted-foreground hover:text-blue-600 hover:bg-blue-50"
+                                            onClick={() => {
+                                              setEditingResponseIndex(i);
+                                              setEditResponseValue(resp);
+                                            }}
+                                            title="Edit response"
+                                          >
+                                            <Pencil className="h-3.5 w-3.5" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                            onClick={() => handleDeleteResponse(i)}
+                                            title="Delete response"
+                                          >
+                                            <Minus className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
                                 ))}
+
+                                {/* Add New Section */}
+                                {isAddingResponse ? (
+                                  <div className="mt-2 flex gap-2 animate-in slide-in-from-bottom-2 duration-300">
+                                    <Input
+                                      placeholder="Type new response..."
+                                      value={nextResponseText}
+                                      onChange={(e) => setNextResponseText(e.target.value)}
+                                      onKeyDown={(e) => e.key === 'Enter' && handleAddResponse()}
+                                      className="flex-1 h-11 border-terracotta/30 focus-visible:ring-terracotta"
+                                      autoFocus
+                                    />
+                                    <Button variant="terracotta" className="h-11 px-6 shadow-sm" onClick={handleAddResponse}>
+                                      Add
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setIsAddingResponse(false)}>
+                                      <X className="h-5 w-5" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    className="mt-2 w-full h-12 border-dashed border-2 border-muted-foreground/30 text-muted-foreground hover:text-terracotta hover:border-terracotta/50 hover:bg-terracotta/5 rounded-xl transition-all"
+                                    onClick={() => setIsAddingResponse(true)}
+                                  >
+                                    <Plus className="h-5 w-5 mr-2" />
+                                    Add Custom Response
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           )}
@@ -1335,10 +1529,7 @@ const Messages = () => {
                               </div>
 
                               {isGeneratingAutoReply ? (
-                                <div className="flex flex-col items-center justify-center py-6 gap-3">
-                                  <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-                                  <p className="text-sm text-muted-foreground animate-pulse">Generating reply...</p>
-                                </div>
+                                <AutoReplySkeleton />
                               ) : (
                                 <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
                                   <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 italic text-sm text-blue-800 leading-relaxed shadow-inner min-h-[60px]">
@@ -1420,16 +1611,8 @@ const Messages = () => {
                         >
                           {quickActionsOpen ? <CircleX className="h-6 w-6" /> : <CirclePlus className="h-6 w-6" />}
                         </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="flex-shrink-0"
-                        >
-                          <Paperclip className="h-5 w-5" />
-                        </Button>
-                        <div className="flex-1 flex items-end bg-background/50 rounded-2xl border border-border px-3">
+
+                        <div className="flex-1 flex items-end bg-background/50 rounded-2xl border border-border px-3 focus-within:ring-1 focus-within:ring-terracotta/30 transition-all">
                           <Textarea
                             placeholder="Type your message..."
                             value={messageText}

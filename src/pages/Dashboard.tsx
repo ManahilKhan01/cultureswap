@@ -1,15 +1,108 @@
-import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
-import { ArrowRight, Calendar, MessageCircle, Star, TrendingUp, Users, Award, Clock, ChevronRight, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { supabase } from "@/lib/supabase";
-import { profileService } from "@/lib/profileService";
-import { swapService } from "@/lib/swapService";
-import { messageService } from "@/lib/messageService";
-import { reviewService } from "@/lib/reviewService";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const DashboardSkeleton = () => (
+  <main className="container mx-auto px-4 py-8 animate-pulse">
+    {/* Welcome Section Skeleton */}
+    <div className="mb-8">
+      <div className="h-10 w-64 bg-muted rounded-lg mb-2" />
+      <div className="h-4 w-96 bg-muted rounded" />
+    </div>
+
+    {/* Stats Grid Skeleton */}
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {[1, 2, 3, 4].map((i) => (
+        <Card key={i}>
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <div className="h-4 w-20 bg-muted rounded" />
+                <div className="h-8 w-12 bg-muted rounded" />
+                <div className="h-3 w-16 bg-muted rounded" />
+              </div>
+              <div className="h-10 w-10 rounded-lg bg-muted" />
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+
+    <div className="grid lg:grid-cols-3 gap-8">
+      <div className="lg:col-span-2 space-y-8">
+        {/* Upcoming Sessions Skeleton */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="h-6 w-40 bg-muted rounded" />
+            <div className="h-8 w-16 bg-muted rounded" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-border/50">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-xl bg-muted" />
+                  <div className="space-y-2">
+                    <div className="h-4 w-32 bg-muted rounded" />
+                    <div className="h-3 w-24 bg-muted rounded" />
+                  </div>
+                </div>
+                <div className="h-6 w-16 bg-muted rounded-full" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Recommended Swaps Skeleton */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="h-6 w-48 bg-muted rounded" />
+            <div className="h-8 w-24 bg-muted rounded" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-start gap-4 p-4 rounded-xl border border-border">
+                <div className="h-12 w-12 rounded-full bg-muted" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-40 bg-muted rounded" />
+                  <div className="h-3 w-32 bg-muted rounded" />
+                  <div className="flex gap-2">
+                    <div className="h-5 w-16 bg-muted rounded-full" />
+                    <div className="h-5 w-16 bg-muted rounded-full" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="space-y-6">
+        {/* Profile Progress Skeleton */}
+        <Card>
+          <CardHeader>
+            <div className="h-6 w-32 bg-muted rounded" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <div className="h-3 w-16 bg-muted rounded" />
+                <div className="h-3 w-8 bg-muted rounded" />
+              </div>
+              <div className="h-2 w-full bg-muted rounded" />
+            </div>
+            <div className="space-y-2">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-muted" />
+                  <div className="h-3 w-32 bg-muted rounded" />
+                </div>
+              ))}
+            </div>
+            <div className="h-10 w-full bg-muted rounded" />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  </main>
+);
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -113,15 +206,7 @@ const Dashboard = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="flex items-center justify-center h-[calc(100vh-64px)]">
-          <Loader2 className="h-8 w-8 animate-spin text-terracotta" />
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <>

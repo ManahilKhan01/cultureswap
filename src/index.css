@@ -141,6 +141,14 @@
     @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
   }
 
+  .hover-darken {
+    @apply transition-colors duration-200 hover:text-foreground active:text-foreground;
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-105 active:scale-95;
+  }
+
   .card-shadow {
     box-shadow: 0 4px 20px -4px hsl(var(--terracotta) / 0.15);
   }
@@ -162,7 +170,11 @@
 
   .btn-glow::before {
     content: '';
-    @apply absolute inset-0 bg-gradient-to-r from-terracotta/20 to-teal/20 opacity-0 transition-opacity duration-300;
+    @apply absolute inset-0 bg-gradient-to-r from-terracotta/10 to-teal/10 opacity-0 transition-opacity duration-300 pointer-events-none;
+  }
+
+  .btn-glow:hover {
+    @apply text-foreground;
   }
 
   .btn-glow:hover::before {

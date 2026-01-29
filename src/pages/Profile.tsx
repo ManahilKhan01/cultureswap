@@ -238,7 +238,7 @@ const Profile = () => {
                   <div className="h-1 w-full bg-teal/10 translate-y-[-1px] group-hover:bg-teal/30 transition-colors" />
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2 text-teal">
-                      <Loader2 className="h-5 w-5" /> Skills I Want to Learn
+                      <Sparkles className="h-5 w-5" /> Skills I Want to Learn
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -327,7 +327,7 @@ const Profile = () => {
               <CardContent className="py-8 text-center relative z-10">
                 <p className="text-4xl font-display font-bold mb-1 drop-shadow-sm">
                   {bgLoading ? (
-                    <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+                    <Skeleton className="h-8 w-12 mx-auto bg-white/20" />
                   ) : swapsCount}
                 </p>
                 <p className="text-terracotta-foreground/90 text-sm font-medium uppercase tracking-widest">Swaps Completed</p>
