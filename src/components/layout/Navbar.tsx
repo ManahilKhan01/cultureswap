@@ -236,7 +236,7 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                         ) : (
                           conversations.map((conv) => {
                             const profile = conversationProfiles[conv.otherUserId];
-                            const isUnread = conv.lastMessage?.receiver_id === currentUser?.id && !conv.lastMessage?.is_read;
+                            const isUnread = conv.lastMessage?.receiver_id === currentUser?.id && !conv.lastMessage?.read;
                             const isAssistant = profile?.full_name?.toLowerCase().includes('assistant') || profile?.email === 'assistant@cultureswap.app';
 
                             return (

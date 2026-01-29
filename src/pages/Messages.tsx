@@ -199,7 +199,7 @@ const Messages = () => {
         // Unread: where current user is receiver and has unread messages
         filtered = filtered.filter(conv => {
           const lastMsg = conv.lastMessage;
-          return lastMsg.receiver_id === currentUser?.id && !lastMsg.read;
+          return lastMsg?.receiver_id === currentUser?.id && lastMsg?.read === false;
         });
         break;
       case 'offers':
@@ -1110,7 +1110,7 @@ const Messages = () => {
                     const isSelected = selectedConversation?.otherUserId === conv.otherUserId;
                     const isStarred = starredChats.has(conv.id);
                     const isArchived = archivedChats.has(conv.id);
-                    const isUnread = conv.lastMessage.receiver_id === currentUser?.id && !conv.lastMessage.read;
+                    const isUnread = conv.lastMessage?.receiver_id === currentUser?.id && conv.lastMessage?.read === false;
                     const isAssistant = isAssistantUser(profile);
 
                     return (

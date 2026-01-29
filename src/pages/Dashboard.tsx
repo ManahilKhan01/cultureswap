@@ -1,3 +1,25 @@
+import { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
+import { profileService } from "@/lib/profileService";
+import { swapService } from "@/lib/swapService";
+import { messageService } from "@/lib/messageService";
+import { reviewService } from "@/lib/reviewService";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import {
+  Users,
+  Star,
+  MessageCircle,
+  Award,
+  ArrowRight,
+  ChevronRight,
+  Calendar,
+  Clock,
+  TrendingUp
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const DashboardSkeleton = () => (
