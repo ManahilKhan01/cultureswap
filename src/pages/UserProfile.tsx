@@ -116,7 +116,7 @@ const UserProfile = () => {
             <Card>
               <CardContent className="pt-6 text-center">
                 <img
-                  src={user.profile_image_url || "/download.png"}
+                  src={user.profile_image_url || "/profile.svg"}
                   alt={user.full_name || "User"}
                   className="h-32 w-32 rounded-full object-cover mx-auto ring-4 ring-terracotta/20"
                 />

@@ -375,7 +375,7 @@ const Discover = () => {
                   <div className="flex items-start gap-4 mb-4">
                     {profile ? (
                       <img
-                        src={profile.profile_image_url || "/download.png"}
+                        src={profile.profile_image_url || "/profile.svg"}
                         alt={profile.full_name || "User"}
                         className="h-12 w-12 rounded-full object-cover border-2 border-white shadow-sm transition-opacity duration-300"
                       />

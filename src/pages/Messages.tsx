@@ -17,7 +17,6 @@ import {
   X,
   Bell,
   Loader2,
-  Sparkles,
   User,
   Image as ImageIcon,
   File,
@@ -49,6 +48,7 @@ import { CameraModal } from "@/components/CameraModal";
 import { ChatMessage } from "@/components/ChatMessage";
 import { chatManagementService } from "@/lib/chatManagementService";
 import { aiAssistantService } from "@/lib/aiAssistantService";
+import { presenceService } from "@/lib/presenceService";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { getCacheBustedImageUrl } from "@/lib/cacheUtils";
 
@@ -89,6 +89,16 @@ const Messages = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Presence state
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const unsubscribe = presenceService.subscribe((users) => {
+      setOnlineUsers(new Set(users));
+    });
+    return () => unsubscribe();
+  }, []);
 
   const userIdParam = searchParams.get('user');
   const swapIdParam = searchParams.get('swap');
@@ -367,14 +377,23 @@ const Messages = () => {
       const allConversations = await messageService.getConversations(uId);
 
       // Load profiles for all other users in conversations
-      const profiles: Record<string, any> = { ...userProfiles };
-      for (const conv of allConversations) {
-        if (!profiles[conv.otherUserId]) {
-          const profile = await profileService.getProfile(conv.otherUserId);
-          profiles[conv.otherUserId] = profile;
-        }
+      // Load profiles for all other users in conversations
+      const missingProfileIds = allConversations
+        .map(conv => conv.otherUserId)
+        .filter(id => !userProfiles[id]);
+
+      if (missingProfileIds.length > 0) {
+        const fetchedProfiles = await profileService.getManyProfiles(missingProfileIds);
+
+        const newProfiles = { ...userProfiles };
+        fetchedProfiles.forEach((profile: any) => {
+          if (profile && profile.id) {
+            newProfiles[profile.id] = profile;
+          }
+        });
+
+        setUserProfiles(newProfiles);
       }
-      setUserProfiles(profiles);
 
       // Sort conversations by last message timestamp (descending)
       const sortedConversations = [...allConversations].sort((a, b) => {
@@ -979,7 +998,12 @@ const Messages = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <h1 className="text-xl font-bold font-display text-foreground">
-                      Messages
+                      {activeFilter === 'all' ? 'Messages' :
+                        activeFilter === 'starred' ? 'Starred Chats' :
+                          activeFilter === 'archived' ? 'Archived Chats' :
+                            activeFilter === 'unread' ? 'Unread Messages' :
+                              activeFilter === 'offers' ? 'Custom Offers' :
+                                activeFilter === 'assistant' ? 'Assistant Chats' : 'Messages'}
                     </h1>
                     {/* Filter Dropdown */}
                     <div className="relative">
@@ -1045,7 +1069,7 @@ const Messages = () => {
                     onClick={handleOpenAssistantChat}
                     title="Open AI Assistant"
                   >
-                    <Sparkles className="h-4 w-4 text-blue-500" />
+                    <img src="/Ai.svg" alt="AI" className="h-[25px] w-[25px]" />
                   </Button>
                 </div>
                 <div className="relative">
@@ -1057,43 +1081,6 @@ const Messages = () => {
                     className="pl-9 bg-background/50 border-muted focus-visible:ring-terracotta"
                   />
                 </div>
-                {/* Filter Indicator */}
-                {activeFilter !== 'all' && (
-                  <div className="px-4 py-2 bg-terracotta/5 border-b border-border">
-                    <div className="flex items-center gap-2 text-sm">
-                      {activeFilter === 'starred' && (
-                        <>
-                          <Star className="h-4 w-4 text-terracotta fill-terracotta" />
-                          <span className="text-terracotta font-medium">Starred Chats</span>
-                        </>
-                      )}
-                      {activeFilter === 'archived' && (
-                        <>
-                          <Archive className="h-4 w-4 text-terracotta" />
-                          <span className="text-terracotta font-medium">Archived Chats</span>
-                        </>
-                      )}
-                      {activeFilter === 'unread' && (
-                        <>
-                          <Bell className="h-4 w-4 text-terracotta" />
-                          <span className="text-terracotta font-medium">Unread Messages</span>
-                        </>
-                      )}
-                      {activeFilter === 'offers' && (
-                        <>
-                          <Handshake className="h-4 w-4 text-terracotta" />
-                          <span className="text-terracotta font-medium">Custom Offers</span>
-                        </>
-                      )}
-                      {activeFilter === 'assistant' && (
-                        <>
-                          <MessageCircle className="h-4 w-4 text-terracotta" />
-                          <span className="text-terracotta font-medium">Assistant Chats</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="flex-1 overflow-auto">
@@ -1226,10 +1213,8 @@ const Messages = () => {
                           className={`h-10 w-10 rounded-full object-cover shadow-sm ring-1 ${isAssistantUser(otherUserProfile) ? 'ring-blue-400 bg-blue-100' : 'ring-border'
                             }`}
                         />
-                        {isAssistantUser(otherUserProfile) ? (
+                        {isAssistantUser(otherUserProfile) && (
                           <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-white text-[10px] flex items-center justify-center text-white font-bold">✨</div>
-                        ) : (
-                          <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-white"></div>
                         )}
                       </div>
                       <div className="min-w-0">
@@ -1244,7 +1229,9 @@ const Messages = () => {
                             </>
                           ) : (
                             <>
-                              <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                              {onlineUsers.has(otherUserProfile?.id) && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                              )}
                               Local time: {(() => {
                                 const timezone = otherUserProfile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
                                 return new Date().toLocaleTimeString('en-US', {
@@ -1631,7 +1618,7 @@ const Messages = () => {
                                 handleSendMessage();
                               }
                             }}
-                            className="flex-1 resize-none border-none outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus:shadow-none px-1 py-3 text-sm min-h-[44px] max-h-[120px] bg-transparent"
+                            className="flex-1 resize-none border-0 shadow-none outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:shadow-none px-1 py-3 text-sm min-h-[44px] max-h-[120px] bg-transparent"
                             rows={1}
                           />
                         </div>

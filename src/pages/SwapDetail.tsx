@@ -161,7 +161,7 @@ const SwapDetail = () => {
                 setSwapCreator({
                   id: swapData.user_id,
                   name: creatorProfile.full_name || "User",
-                  avatar: creatorProfile.profile_image_url || "/download.png",
+                  avatar: creatorProfile.profile_image_url || "/profile.svg",
                   location: creatorProfile.city || "Location",
                   country: creatorProfile.country || "Country",
                   rating: creatorRating,
@@ -183,7 +183,7 @@ const SwapDetail = () => {
                 setPartner({
                   id: partnerId,
                   name: profile.full_name || "User",
-                  avatar: profile.profile_image_url || "/download.png",
+                  avatar: profile.profile_image_url || "/profile.svg",
                   location: profile.city || "Location",
                   country: profile.country || "Country",
                   rating: avgRating,
@@ -219,7 +219,7 @@ const SwapDetail = () => {
           setSwapCreator({
             ...swapCreator,
             name: updatedProfile.full_name || "User",
-            avatar: updatedProfile.profile_image_url || "/download.png",
+            avatar: updatedProfile.profile_image_url || "/profile.svg",
             location: updatedProfile.city || "Location",
             country: updatedProfile.country || "Country",
             rating: updatedRating,
@@ -234,7 +234,7 @@ const SwapDetail = () => {
           setPartner({
             ...partner,
             name: updatedProfile.full_name || "User",
-            avatar: updatedProfile.profile_image_url || "/download.png",
+            avatar: updatedProfile.profile_image_url || "/profile.svg",
             location: updatedProfile.city || "Location",
             country: updatedProfile.country || "Country",
             rating: updatedRating,
@@ -507,7 +507,7 @@ const SwapDetail = () => {
             setPartner({
               id: updated.partner_id,
               name: profile.full_name || "User",
-              avatar: profile.profile_image_url || "/download.png",
+              avatar: profile.profile_image_url || "/profile.svg",
               location: profile.city || "Location",
               country: profile.country || "Country",
               rating: avgRating,

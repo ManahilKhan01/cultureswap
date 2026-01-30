@@ -353,7 +353,7 @@ const Swaps = () => {
               {hasPartner && otherUser ? (
                 <>
                   <img
-                    src={otherUser.profile_image_url || "/download.png"}
+                    src={otherUser.profile_image_url || "/profile.svg"}
                     alt={otherUser.full_name || "Partner"}
                     className="h-12 w-12 rounded-full object-cover ring-2 ring-border"
                   />

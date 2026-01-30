@@ -31,7 +31,7 @@ export const authService = {
           id: data.user.id,
           email,
           full_name: fullName,
-          profile_image_url: '/download.png',
+          profile_image_url: '/profile.svg',
         },
       ]);
 

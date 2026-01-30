@@ -395,34 +395,36 @@ const Dashboard = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Profile Progress */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-display text-lg">Profile Completion</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span>Progress</span>
-                      <span className="font-semibold">{profileCompletion}%</span>
-                    </div>
-                    <Progress value={profileCompletion} className="h-2" />
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    {completionSteps.map((step) => (
-                      <div key={step.id} className={`flex items-center gap-2 ${step.completed ? 'text-teal' : 'text-muted-foreground'}`}>
-                        <div className={`h-2 w-2 rounded-full ${step.completed ? 'bg-teal' : 'bg-muted'}`} />
-                        {step.label} {step.completed ? '✓' : ''}
+            {/* Profile Progress - Only show if incomplete */}
+            {profileCompletion < 100 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-display text-lg">Profile Completion</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span>Progress</span>
+                        <span className="font-semibold">{profileCompletion}%</span>
                       </div>
-                    ))}
+                      <Progress value={profileCompletion} className="h-2" />
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      {completionSteps.map((step) => (
+                        <div key={step.id} className={`flex items-center gap-2 ${step.completed ? 'text-teal' : 'text-muted-foreground'}`}>
+                          <div className={`h-2 w-2 rounded-full ${step.completed ? 'bg-teal' : 'bg-muted'}`} />
+                          {step.label} {step.completed ? '✓' : ''}
+                        </div>
+                      ))}
+                    </div>
+                    <Button variant="outline" className="w-full" asChild>
+                      <Link to="/profile">Complete Profile</Link>
+                    </Button>
                   </div>
-                  <Button variant="outline" className="w-full" asChild>
-                    <Link to="/profile">Complete Profile</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Quick Actions */}
             <Card>

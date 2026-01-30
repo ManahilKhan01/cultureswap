@@ -14,7 +14,7 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [profileImage, setProfileImage] = useState<File | null>(null);
-  const [profileImagePreview, setProfileImagePreview] = useState<string>("/download.png");
+  const [profileImagePreview, setProfileImagePreview] = useState<string>("/profile.svg");
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -79,7 +79,7 @@ const Signup = () => {
             id: authData.user.id,
             email: formData.email,
             full_name: formData.fullName,
-            profile_image_url: "/download.png", // Default placeholder image
+            profile_image_url: "/profile.svg", // Default placeholder image
             languages: [],
             skills_offered: [],
             skills_wanted: [],

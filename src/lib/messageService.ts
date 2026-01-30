@@ -121,7 +121,8 @@ export const messageService = {
   // Get all conversations for a user
   async getConversations(userId: string) {
     try {
-      const { data, error } = await supabase
+      // 1. Fetch all conversations relation
+      const { data: conversations, error } = await supabase
         .from('conversations')
         .select(`
           id,
@@ -134,6 +135,7 @@ export const messageService = {
 
       if (error) {
         console.error('Error fetching conversations, falling back to messages grouping:', error);
+        // Fallback: Fetch messages directly if conversations table fails
         const { data: legacyMessages, error: legacyError } = await supabase
           .from('messages')
           .select('*')
@@ -154,15 +156,44 @@ export const messageService = {
         return Array.from(conversationMap.values());
       }
 
-      const formattedConversations = await Promise.all(data.map(async (conv) => {
+      // 2. Optimization: Batch fetch recent messages to avoid N+1 queries
+      // We fetch the last 1000 messages. This covers significantly more history, reducing the chance of falling back to individual queries.
+      const { data: recentMessages } = await supabase
+        .from('messages')
+        .select('*') // Keeping * to ensure we don't miss any new fields used by the UI (like type, attachments, etc)
+        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+        .order('created_at', { ascending: false })
+        .limit(1000);
+
+      // Group recent messages by conversation_id in memory
+      const messageMap = new Map<string, any>();
+      if (recentMessages) {
+        for (const msg of recentMessages) {
+          if (msg.conversation_id && !messageMap.has(msg.conversation_id)) {
+            messageMap.set(msg.conversation_id, msg);
+          }
+        }
+      }
+
+      // 3. Map conversations to their last message
+      const formattedConversations = await Promise.all(conversations.map(async (conv) => {
         const otherUserId = conv.user1_id === userId ? conv.user2_id : conv.user1_id;
-        const { data: lastMsg } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('conversation_id', conv.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+
+        // Strategy A: Check if we already have the message from our batch fetch (Fastest & Most Common)
+        let lastMsg = messageMap.get(conv.id);
+
+        // Strategy B: If not in recent batch (Dormant chat), fetch specifically (Slower fallback)
+        if (!lastMsg) {
+          const { data: specificMsg } = await supabase
+            .from('messages')
+            .select('*')
+            .eq('conversation_id', conv.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          lastMsg = specificMsg;
+        }
 
         return {
           id: conv.id,

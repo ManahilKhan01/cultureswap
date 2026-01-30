@@ -76,7 +76,7 @@ const Settings = () => {
               skillsWanted: parseSkills(userProfile.skills_wanted),
             };
             setProfile(profileData);
-            setProfileImage(userProfile.profile_image_url || "/download.png");
+            setProfileImage(userProfile.profile_image_url || "/profile.svg");
 
             // Cache profile for faster next load
             localStorage.setItem('settings_profile_cache', JSON.stringify({
@@ -108,7 +108,7 @@ const Settings = () => {
       try {
         const { profile: cachedProfile, image } = JSON.parse(cached);
         setProfile(cachedProfile);
-        setProfileImage(image || "/download.png");
+        setProfileImage(image || "/profile.svg");
       } catch {
         // Ignore cache errors
       }
@@ -349,7 +349,7 @@ const Settings = () => {
                 {/* Avatar */}
                 <div className="flex items-center gap-4">
                   <img
-                    src={profileImage || "/download.png"}
+                    src={profileImage || "/profile.svg"}
                     alt={profile.name}
                     className="h-20 w-20 rounded-full object-cover border-2 border-border"
                   />

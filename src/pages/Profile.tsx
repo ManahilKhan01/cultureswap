@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, Star, Calendar, Globe, Clock, Award, Edit, MessageCircle, Loader2 } from "lucide-react";
+import { MapPin, Star, Calendar, Globe, Clock, Award, Edit, MessageCircle, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/lib/supabase";
 import { profileService } from "@/lib/profileService";
 import { reviewService } from "@/lib/reviewService";
@@ -58,20 +59,28 @@ const Profile = () => {
         const { data: { user } } = await supabase.auth.getUser();
 
         if (user) {
-          // 1. Load basic profile first (Fastest)
-          const profile = await profileService.getProfile(user.id);
-          if (profile) {
-            setUserProfile(profile);
-            setLoading(false); // Show basic info immediately
+          // Check cache first with validated user ID
+          const cacheHit = checkCache(user.id);
+
+          // 1. Load basic profile first (Fastest) if no cache or background refresh needed
+          if (!cacheHit) {
+            const profile = await profileService.getProfile(user.id);
+            if (profile) {
+              setUserProfile(profile);
+              setLoading(false); // Show basic info immediately
+            }
           }
 
-          // 2. Load heavier data in background (Async)
+          // 2. Load heavier data in background (Async) always to ensure fresh data
           setBgLoading(true);
           Promise.all([
+            // If we didn't get profile from cache/fetch yet, fetch it now
+            !userProfile && !cacheHit ? profileService.getProfile(user.id) : Promise.resolve(null),
             reviewService.getReviewsForUser(user.id),
             reviewService.getAverageRating(user.id),
             swapService.getCompletedSwapsCount(user.id)
-          ]).then(([userReviews, avgRating, completedCount]) => {
+          ]).then(([fetchedProfile, userReviews, avgRating, completedCount]) => {
+            if (fetchedProfile) setUserProfile(fetchedProfile);
             setReviews(userReviews);
             setRating(avgRating);
             setSwapsCount(completedCount);
@@ -79,7 +88,7 @@ const Profile = () => {
 
             // Cache everything for next time
             localStorage.setItem('profile_page_cache', JSON.stringify({
-              profile: profile || userProfile,
+              profile: fetchedProfile || userProfile, // Use latest
               reviews: userReviews,
               rating: avgRating,
               swapsCount: completedCount,
@@ -94,28 +103,28 @@ const Profile = () => {
     };
 
     // Load from cache first for instant display
-    const cached = localStorage.getItem('profile_page_cache');
-    if (cached) {
-      try {
-        const { profile, reviews: cachedReviews, rating: cachedRating, swapsCount: cachedSwaps, timestamp } = JSON.parse(cached);
-        const age = Date.now() - timestamp;
+    const checkCache = (currentUserId: string) => {
+      const cached = localStorage.getItem('profile_page_cache');
+      if (cached) {
+        try {
+          const { profile, reviews: cachedReviews, rating: cachedRating, swapsCount: cachedSwaps, timestamp } = JSON.parse(cached);
+          const age = Date.now() - timestamp;
 
-        // Use cache if less than 2 minutes old
-        if (age < 2 * 60 * 1000) {
-          setUserProfile(profile);
-          setReviews(cachedReviews);
-          setRating(cachedRating);
-          setSwapsCount(cachedSwaps);
-          setLoading(false);
-
-          // Still refresh in background
-          loadProfileData();
-          return;
+          // Use cache if less than 5 minutes old AND belongs to current user
+          if (age < 5 * 60 * 1000 && profile?.id === currentUserId) {
+            setUserProfile(profile);
+            setReviews(cachedReviews);
+            setRating(cachedRating);
+            setSwapsCount(cachedSwaps);
+            setLoading(false);
+            return true;
+          }
+        } catch {
+          // Ignore cache errors
         }
-      } catch {
-        // Ignore cache errors
       }
-    }
+      return false;
+    };
 
     loadProfileData();
   }, []);

@@ -23,6 +23,7 @@ import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 
 import MainLayout from "./components/layout/MainLayout";
+import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <ScrollToTop />
         <Routes>
           {/* Public Landing Page */}
           <Route element={<MainLayout />}>

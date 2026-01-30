@@ -55,13 +55,13 @@ let lastGlobalUpdate = Date.now().toString();
  * Forces browser to reload image only when needed, preventing blinking
  */
 export const getCacheBustedImageUrl = (imageUrl: string | null | undefined): string => {
-  if (!imageUrl) return '/download.png';
+  if (!imageUrl) return '/profile.svg';
 
   // If already has cache-busting parameter, return as-is
   if (imageUrl.includes('?v=')) return imageUrl;
 
   // If it's the default placeholder or AI assistant icon, no need for cache-busting
-  if (imageUrl.includes('/download.png') || imageUrl.includes('/Ai.svg')) return imageUrl;
+  if (imageUrl.includes('/profile.svg') || imageUrl.includes('/Ai.svg')) return imageUrl;
 
   // Add a stable timestamp to force cache invalidation only when global state changes
   const separator = imageUrl.includes('?') ? '&' : '?';

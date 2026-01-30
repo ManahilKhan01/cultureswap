@@ -16,6 +16,27 @@ export const profileService = {
     return data?.[0] || null;
   },
 
+  // Get multiple user profiles by IDs (Batch fetch)
+  async getManyProfiles(userIds: string[]) {
+    try {
+      if (!userIds || userIds.length === 0) return [];
+
+      // Remove duplicates
+      const uniqueIds = [...new Set(userIds)];
+
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .in('id', uniqueIds);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('profileService.getManyProfiles error:', error);
+      return [];
+    }
+  },
+
   // Get all user profiles (excluding current user optionally)
   async getAllProfiles(excludeUserId?: string) {
     let query = supabase
@@ -72,7 +93,7 @@ export const profileService = {
       const oldImageUrl = currentProfile?.profile_image_url;
 
       // Delete old image if it exists and is not the default placeholder
-      if (oldImageUrl && !oldImageUrl.includes('/download.png')) {
+      if (oldImageUrl && !oldImageUrl.includes('/profile.svg')) {
         try {
           // Extract the file path from the URL
           const urlParts = oldImageUrl.split('/profile-images/');
