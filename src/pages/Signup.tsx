@@ -58,8 +58,9 @@ const Signup = () => {
         throw new Error("Passwords do not match");
       }
 
-      if (formData.password.length < 6) {
-        throw new Error("Password must be at least 6 characters");
+      const passwordRegex = /(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9])(?=.{8,})/;
+      if (!passwordRegex.test(formData.password)) {
+        throw new Error("Password must meet the security requirements below");
       }
 
       // Sign up in Supabase Auth
@@ -230,6 +231,25 @@ const Signup = () => {
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
+              </div>
+              <div className="text-xs space-y-1 mt-2 p-2 bg-muted/50 rounded-md">
+                <p className="font-medium mb-1">Password must contain:</p>
+                <div className={`flex items-center gap-2 ${formData.password.length >= 8 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${formData.password.length >= 8 ? 'bg-green-600' : 'bg-gray-300'}`} />
+                  At least 8 characters
+                </div>
+                <div className={`flex items-center gap-2 ${/[A-Z]/.test(formData.password) ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${/[A-Z]/.test(formData.password) ? 'bg-green-600' : 'bg-gray-300'}`} />
+                  One uppercase letter
+                </div>
+                <div className={`flex items-center gap-2 ${/[a-z]/.test(formData.password) ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${/[a-z]/.test(formData.password) ? 'bg-green-600' : 'bg-gray-300'}`} />
+                  One lowercase letter
+                </div>
+                <div className={`flex items-center gap-2 ${/[^a-zA-Z0-9]/.test(formData.password) ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${/[^a-zA-Z0-9]/.test(formData.password) ? 'bg-green-600' : 'bg-gray-300'}`} />
+                  One special character
+                </div>
               </div>
             </div>
 

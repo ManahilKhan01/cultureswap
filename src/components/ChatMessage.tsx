@@ -33,10 +33,13 @@ export const ChatMessage = ({
         }
     };
 
+    // Display name: "Me" for current user, otherwise show their name
+    const displayName = isMe ? "Me" : (senderProfile?.full_name || "User");
+
     return (
-        <div className={`flex flex-col mb-6 group ${isMe ? 'items-end' : 'items-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-            {/* Sender Info Table (Avatar + Name + Timestamp) */}
-            <div className={`flex items-center gap-2 mb-1.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className="flex flex-col mb-6 group items-start animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {/* Sender Info Table (Avatar + Name + Timestamp) - Always left aligned */}
+            <div className="flex items-center gap-2 mb-1.5 flex-row">
                 <div className="relative">
                     <img
                         src={getCacheBustedImageUrl(senderProfile?.profile_image_url)}
@@ -49,9 +52,9 @@ export const ChatMessage = ({
                         </div>
                     )}
                 </div>
-                <div className={`flex items-baseline gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <span className={`text-sm font-bold ${isAssistant ? 'text-blue-700' : 'text-foreground'}`}>
-                        {isAssistant && '🤖 '}{senderProfile?.full_name || "User"}
+                <div className="flex items-baseline gap-2 flex-row">
+                    <span className={`text-sm font-bold ${isAssistant ? 'text-blue-700' : isMe ? 'text-terracotta' : 'text-foreground'}`}>
+                        {isAssistant && '🤖 '}{displayName}
                     </span>
                     <span className="text-[10px] font-medium text-muted-foreground/70">
                         {formattedTime}
@@ -59,14 +62,14 @@ export const ChatMessage = ({
                 </div>
             </div>
 
-            {/* Message Content Container */}
-            <div className={`max-w-[85%] md:max-w-[70%] relative`}>
+            {/* Message Content Container - Always left aligned */}
+            <div className="max-w-[85%] md:max-w-[70%] relative">
                 {/* Text Content */}
                 {message.content && message.content.trim() && (
                     <div
-                        className={`relative rounded-2xl px-4 py-3 shadow-sm ${isMe
-                            ? 'bg-terracotta text-white rounded-tr-none'
-                            : `border ${isAssistant ? 'bg-blue-50 border-blue-100 text-foreground' : 'bg-white border-border/40 text-foreground'} rounded-tl-none`
+                        className={`relative rounded-2xl px-4 py-3 shadow-sm rounded-tl-none ${isMe
+                                ? 'bg-terracotta text-white'
+                                : `border ${isAssistant ? 'bg-blue-50 border-blue-100 text-foreground' : 'bg-white border-border/40 text-foreground'}`
                             }`}
                     >
                         <p className="text-[14.5px] leading-relaxed whitespace-pre-wrap font-medium">
@@ -81,7 +84,7 @@ export const ChatMessage = ({
 
                 {/* Attachments Section */}
                 {attachments.length > 0 && (
-                    <div className={`mt-3 space-y-3 ${isMe ? 'items-end' : 'items-start'}`}>
+                    <div className="mt-3 space-y-3 items-start">
                         {attachments.length > 1 && onDownloadAll && (
                             <Button
                                 variant="outline"
@@ -145,3 +148,4 @@ export const ChatMessage = ({
         </div>
     );
 };
+

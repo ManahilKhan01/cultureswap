@@ -12,13 +12,13 @@ const Footer = () => {
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email) {
       return;
     }
 
     setIsSubscribing(true);
-    
+
     // Simulate subscription process
     setTimeout(() => {
       toast({
@@ -65,10 +65,10 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="bg-navy text-white">
+    <footer className="bg-navy text-white w-full">
       {/* Newsletter Section */}
       <div className="border-b border-white/10">
-        <div className="container mx-auto px-4 py-12">
+        <div className="container mx-auto px-3 sm:px-4 md:px-6 py-8 sm:py-10 md:py-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="text-center md:text-left">
               <h3 className="font-display text-2xl font-semibold mb-2">
@@ -78,18 +78,19 @@ const Footer = () => {
                 Get weekly tips on skill exchange and cultural learning
               </p>
             </div>
-            <div className="flex w-full md:w-auto gap-2">
+            <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3 sm:gap-2">
               <Input
                 type="email"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 w-full md:w-72"
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 w-full sm:min-w-[240px] md:w-72"
               />
-              <Button 
+              <Button
                 variant="terracotta"
                 onClick={handleSubscribe}
                 disabled={isSubscribing || !email}
+                className="w-full sm:w-auto mt-1 sm:mt-0"
               >
                 {isSubscribing ? "Subscribing..." : "Subscribe"}
               </Button>
@@ -98,11 +99,11 @@ const Footer = () => {
         </div>
       </div>
 
-     
+
 
       {/* Bottom Bar */}
       <div className="border-t border-white/10">
-        <div className="container mx-auto px-4 py-6">
+        <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-5 md:py-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/60">
             <p>© {new Date().getFullYear()} CultureSwap. All rights reserved.</p>
             <div className="flex items-center gap-4">

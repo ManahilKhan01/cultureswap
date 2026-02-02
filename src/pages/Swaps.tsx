@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -112,7 +111,7 @@ const Swaps = () => {
   const [profiles, setProfiles] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+
   const [activeTab, setActiveTab] = useState("active");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -222,18 +221,18 @@ const Swaps = () => {
     };
   }, [swaps]);
 
-  // Filter swaps based on search and status
+  // Filter swaps based on search
   const filteredSwaps = swaps.filter((swap) => {
     const matchesSearch =
       (swap.skill_offered?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
       (swap.skill_wanted?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
       (swap.title?.toLowerCase() || "").includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || swap.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
 
   // Group swaps by status
-  const activeSwaps = filteredSwaps.filter(s => s.status === "active" || s.status === "open");
+  const activeSwaps = filteredSwaps.filter(s => s.status === "active");
+  const openSwaps = filteredSwaps.filter(s => s.status === "open"); // NEW: Open only
   const completedSwaps = filteredSwaps.filter(s => s.status === "completed");
   const cancelledSwaps = filteredSwaps.filter(s => s.status === "cancelled");
 
@@ -532,24 +531,16 @@ const Swaps = () => {
               className="pl-10"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-40">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="open">Open</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
+
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-muted/50">
+          <TabsList className="bg-muted/50 flex-wrap h-auto">
+            <TabsTrigger value="my_swaps" className="gap-2">
+              <BookOpen className="h-4 w-4" />
+              My Swaps ({openSwaps.length})
+            </TabsTrigger>
             <TabsTrigger value="active" className="gap-2">
               <Clock className="h-4 w-4" />
               Active ({activeSwaps.length})
@@ -563,6 +554,27 @@ const Swaps = () => {
               Cancelled ({cancelledSwaps.length})
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="my_swaps">
+            {openSwaps.length > 0 ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {openSwaps.map((swap) => (
+                  <SwapCard key={swap.id} swap={swap} />
+                ))}
+              </div>
+            ) : (
+              <Card className="p-12 text-center">
+                <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="font-semibold text-lg mb-2">No Open Swaps</h3>
+                <p className="text-muted-foreground mb-4">
+                  Open swaps are those waiting for a partner.
+                </p>
+                <Button variant="terracotta" asChild>
+                  <Link to="/swap/create">Create New Swap</Link>
+                </Button>
+              </Card>
+            )}
+          </TabsContent>
 
           <TabsContent value="active">
             {activeSwaps.length > 0 ? (

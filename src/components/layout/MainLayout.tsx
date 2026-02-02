@@ -34,7 +34,7 @@ const MainLayout = () => {
     if (loading) return null;
 
     return (
-        <div className="min-h-screen flex flex-col bg-background">
+        <div className="min-h-screen flex flex-col bg-background w-full">
             <Navbar isLoggedIn={isLoggedIn} />
             <main className="flex-grow">
                 <Outlet context={{ isLoggedIn }} />

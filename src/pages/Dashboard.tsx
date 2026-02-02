@@ -31,7 +31,7 @@ const DashboardSkeleton = () => (
     </div>
 
     {/* Stats Grid Skeleton */}
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
       {[1, 2, 3, 4].map((i) => (
         <Card key={i}>
           <CardContent className="p-6">
@@ -263,7 +263,7 @@ const Dashboard = () => {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {stats.map((stat) => (
             <Card key={stat.label} className="hover-lift">
               <CardContent className="p-6">

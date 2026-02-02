@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 
-const ASSISTANT_EMAIL = 'assistant@cultureswap.app';
-const ASSISTANT_NAME = 'CultureSwap Assistant';
+const ASSISTANT_EMAIL = 'swapy@cultureswap.app';
+const ASSISTANT_NAME = 'Swapy';
 let cachedAssistantId: string | null = null;
 
 export const aiAssistantService = {
@@ -46,7 +46,7 @@ export const aiAssistantService = {
         email: ASSISTANT_EMAIL,
         full_name: ASSISTANT_NAME,
         profile_image_url: '/Ai.svg',
-        bio: 'AI Assistant for CultureSwap. I am here to help you with cultural exchange and swap services!',
+        bio: 'Hi, I\'m Swapy! Your AI assistant for CultureSwap. I\'m here to help you with cultural exchange and swap services!',
         is_verified: true,
         country: 'Global',
         city: 'Virtual',
@@ -128,7 +128,7 @@ export const aiAssistantService = {
         is_verified: true,
         country: 'Global',
         city: 'Virtual',
-        bio: 'AI Assistant for CultureSwap',
+        bio: 'Hi, I\'m Swapy! Your AI assistant for CultureSwap.',
       };
     }
   },
@@ -180,7 +180,7 @@ export const aiAssistantService = {
 
     // Greeting
     if (lowerMessage.match(/^(hi|hello|hey|greetings)/)) {
-      return "Hello! 👋 Welcome to CultureSwap! I'm your AI Assistant. I'm here to help you with cultural exchanges, answering questions about swaps, and providing guidance. How can I assist you today?";
+      return "Hello! 👋 Welcome to CultureSwap! I'm Swapy, your AI assistant. I'm here to help you with cultural exchanges, answering questions about swaps, and providing guidance. How can I assist you today?";
     }
 
     // Help requests

@@ -44,18 +44,18 @@
     --terracotta: 16 65% 56%;
     --terracotta-light: 16 65% 70%;
     --terracotta-dark: 16 65% 45%;
-    
+
     --teal: 174 42% 51%;
     --teal-light: 174 42% 65%;
     --teal-dark: 174 42% 40%;
-    
+
     --golden: 43 74% 66%;
     --golden-light: 43 74% 78%;
     --golden-dark: 43 74% 50%;
-    
+
     --navy: 220 47% 25%;
     --navy-light: 220 47% 40%;
-    
+
     --warm-cream: 36 71% 95%;
     --soft-sand: 40 33% 94%;
     --charcoal: 220 13% 18%;
@@ -116,10 +116,15 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground font-sans antialiased overflow-x-hidden;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-display;
   }
 }
@@ -154,8 +159,13 @@
   }
 
   @keyframes shimmer {
-    0% { transform: translateX(-100%) skewX(-15deg); }
-    100% { transform: translateX(200%) skewX(-15deg); }
+    0% {
+      transform: translateX(-100%) skewX(-15deg);
+    }
+
+    100% {
+      transform: translateX(200%) skewX(-15deg);
+    }
   }
 
   .animate-shimmer {

@@ -179,9 +179,12 @@ const Messages = () => {
 
   // Check if a user is an assistant
   const isAssistantUser = (profile: any) => {
-    if (!profile?.full_name) return false;
-    const name = profile.full_name.toLowerCase();
-    return name.includes('assistant') || name.includes('support') || name.includes('system');
+    if (!profile) return false;
+    const name = profile.full_name?.toLowerCase() || '';
+    const email = profile.email?.toLowerCase() || '';
+    return name.includes('assistant') || name.includes('support') || name.includes('system') ||
+      name.includes('swapy') || email.includes('swapy') ||
+      profile.id === '00000000-0000-4000-a000-000000000001';
   };
 
   // Check if conversation is a custom offer (from offers table)
@@ -320,16 +323,38 @@ const Messages = () => {
 
         console.log('Messages loaded:', convMessages.length);
 
-        // Load attachments
+        // If no messages exist, add Swapy's automatic greeting
+        if (convMessages.length === 0) {
+          const greetingMessage = {
+            id: `assistant-greeting-${Date.now()}`,
+            conversation_id: conversationId,
+            sender_id: assistant.id,
+            receiver_id: currentUser.id,
+            content: "Hi, I'm Swapy. How can I assist you?",
+            created_at: new Date().toISOString(),
+            is_read: true,
+            is_assistant: true,
+          };
+          convMessages = [greetingMessage];
+          console.log('Added automatic greeting from Swapy');
+        }
+
+        // Load attachments in bulk for better performance
         const attachmentsMap: Record<string, any[]> = {};
-        for (const msg of convMessages) {
+        if (convMessages.length > 0) {
           try {
-            const msgAttachments = await attachmentService.getAttachmentsByMessage(msg.id);
-            if (msgAttachments.length > 0) {
-              attachmentsMap[msg.id] = msgAttachments;
+            const messageIds = convMessages.map(m => m.id);
+            const allAttachments = await attachmentService.getAttachmentsByConversation(messageIds);
+
+            // Group attachments by message ID
+            for (const att of allAttachments) {
+              if (!attachmentsMap[att.message_id]) {
+                attachmentsMap[att.message_id] = [];
+              }
+              attachmentsMap[att.message_id].push(att);
             }
           } catch (e) {
-            console.warn('Could not load attachments for message:', msg.id);
+            console.warn('Could not load attachments:', e);
           }
         }
 
@@ -350,9 +375,6 @@ const Messages = () => {
         setMessages(convMessages);
         setAttachments(attachmentsMap);
         setCurrentSwap(null);
-
-        // Reload conversations to show assistant chat if newly created
-        await loadConversations(currentUser.id);
 
         toast({
           title: "Success",
@@ -376,22 +398,26 @@ const Messages = () => {
     try {
       const allConversations = await messageService.getConversations(uId);
 
-      // Load profiles for all other users in conversations
-      // Load profiles for all other users in conversations
+      // Load profiles and metadata in parallel for better performance
       const missingProfileIds = allConversations
         .map(conv => conv.otherUserId)
         .filter(id => !userProfiles[id]);
 
-      if (missingProfileIds.length > 0) {
-        const fetchedProfiles = await profileService.getManyProfiles(missingProfileIds);
+      const [fetchedProfiles, metadata] = await Promise.all([
+        missingProfileIds.length > 0
+          ? profileService.getManyProfiles(missingProfileIds)
+          : Promise.resolve([]),
+        chatManagementService.getAllChatMetadata(uId)
+      ]);
 
+      // Update profiles if any were fetched
+      if (fetchedProfiles.length > 0) {
         const newProfiles = { ...userProfiles };
         fetchedProfiles.forEach((profile: any) => {
           if (profile && profile.id) {
             newProfiles[profile.id] = profile;
           }
         });
-
         setUserProfiles(newProfiles);
       }
 
@@ -403,13 +429,8 @@ const Messages = () => {
       });
 
       setConversations(sortedConversations);
-
-      // Load chat metadata (starred and archived)
-      if (uId) {
-        const metadata = await chatManagementService.getAllChatMetadata(uId);
-        setStarredChats(metadata.starredChats as any);
-        setArchivedChats(metadata.archivedChats as any);
-      }
+      setStarredChats(metadata.starredChats as any);
+      setArchivedChats(metadata.archivedChats as any);
     } catch (error) {
       console.error('Error loading conversations:', error);
     }
@@ -983,7 +1004,7 @@ const Messages = () => {
     return name.includes(searchQuery.toLowerCase());
   });
 
-  const canCreateOffer = selectedConversation && currentUser && !isAssistantUser(otherUserProfile);
+  const canCreateOffer = selectedConversation && currentUser && otherUserProfile && !isAssistantUser(otherUserProfile);
 
   return (
     <div className="flex flex-col h-[calc(100dvh-72px)] md:h-[calc(100vh-80px)] bg-background overflow-hidden">
@@ -1189,10 +1210,7 @@ const Messages = () => {
               {selectedConversation ? (
                 <>
                   {/* Chat Header */}
-                  <div className={`p-3 px-4 md:p-4 border-b border-border flex items-center justify-between sticky top-0 backdrop-blur-sm z-10 ${isAssistantUser(otherUserProfile)
-                    ? 'bg-gradient-to-r from-blue-50 to-blue-100/50 border-blue-200'
-                    : 'bg-white/40'
-                    } border-b border-border shadow-sm`}>
+                  <div className="p-3 px-4 md:p-4 border-b border-border flex items-center justify-between sticky top-0 backdrop-blur-sm z-10 bg-white/40 shadow-sm">
                     <div className="flex items-center gap-3">
                       <Button
                         variant="ghost"
@@ -1210,21 +1228,17 @@ const Messages = () => {
                           key={getCacheBustedImageUrl(otherUserProfile?.profile_image_url)}
                           src={getCacheBustedImageUrl(otherUserProfile?.profile_image_url)}
                           alt="Avatar"
-                          className={`h-10 w-10 rounded-full object-cover shadow-sm ring-1 ${isAssistantUser(otherUserProfile) ? 'ring-blue-400 bg-blue-100' : 'ring-border'
-                            }`}
+                          className="h-10 w-10 rounded-full object-cover shadow-sm ring-1 ring-border"
                         />
-                        {isAssistantUser(otherUserProfile) && (
-                          <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-white text-[10px] flex items-center justify-center text-white font-bold">✨</div>
-                        )}
                       </div>
                       <div className="min-w-0">
-                        <p className={`font-semibold leading-none mb-1.5 ${isAssistantUser(otherUserProfile) ? 'text-blue-700' : ''}`}>
-                          {isAssistantUser(otherUserProfile) && '🤖 '}{otherUserProfile?.full_name || 'User'}
+                        <p className="font-semibold leading-none mb-1.5">
+                          {otherUserProfile?.full_name || 'User'}
                         </p>
-                        <p className={`text-[11px] font-medium truncate flex items-center gap-1.5 ${isAssistantUser(otherUserProfile) ? 'text-blue-600' : 'text-muted-foreground'}`}>
+                        <p className="text-[11px] font-medium truncate flex items-center gap-1.5 text-muted-foreground">
                           {isAssistantUser(otherUserProfile) ? (
                             <>
-                              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
+                              <span className="w-1.5 h-1.5 rounded-full bg-terracotta animate-pulse"></span>
                               AI Assistant
                             </>
                           ) : (
@@ -1317,7 +1331,7 @@ const Messages = () => {
                     {/* Quick Actions Panel */}
                     {quickActionsOpen && (
                       <div className="bg-background border-b border-border p-4 animate-in slide-in-from-bottom-2 duration-300">
-                        <div className="container max-w-4xl mx-auto">
+                        <div className="w-full max-w-4xl mx-auto">
                           {activeQuickSubPanel === 'main' && (
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                               <Button
@@ -1549,7 +1563,7 @@ const Messages = () => {
                       </div>
                     )}
 
-                    <div className="p-4">
+                    <div className="py-3 px-2">
                       {/* Selected Files Preview */}
                       {selectedFiles.length > 0 && (
                         <div className="mb-2 space-y-1">
@@ -1570,7 +1584,7 @@ const Messages = () => {
                           ))}
                         </div>
                       )}
-                      <div className="container max-w-4xl mx-auto flex gap-2 items-end">
+                      <div className="w-full px-2 md:px-4 flex gap-2 items-end">
                         <input
                           ref={fileInputRef}
                           type="file"
