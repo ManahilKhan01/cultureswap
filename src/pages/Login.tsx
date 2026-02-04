@@ -138,7 +138,29 @@ const Login = () => {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <div className="text-right">
+
+              {/* Password Requirement Indicators */}
+              <div className="text-xs space-y-1 mt-2 p-2 bg-muted/50 rounded-md">
+                <p className="font-medium mb-1">Password must contain:</p>
+                <div className={`flex items-center gap-2 ${password.length >= 8 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${password.length >= 8 ? 'bg-green-600' : 'bg-gray-300'}`} />
+                  At least 8 characters
+                </div>
+                <div className={`flex items-center gap-2 ${/[A-Z]/.test(password) ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${/[A-Z]/.test(password) ? 'bg-green-600' : 'bg-gray-300'}`} />
+                  One uppercase letter
+                </div>
+                <div className={`flex items-center gap-2 ${/[a-z]/.test(password) ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${/[a-z]/.test(password) ? 'bg-green-600' : 'bg-gray-300'}`} />
+                  One lowercase letter
+                </div>
+                <div className={`flex items-center gap-2 ${/[^a-zA-Z0-9]/.test(password) ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${/[^a-zA-Z0-9]/.test(password) ? 'bg-green-600' : 'bg-gray-300'}`} />
+                  One special character
+                </div>
+              </div>
+
+              <div className="text-right mt-1">
                 <Link
                   to="/forgot-password"
                   className="text-sm text-blue-600 hover:underline font-medium"

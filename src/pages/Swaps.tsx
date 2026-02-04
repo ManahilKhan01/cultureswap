@@ -44,17 +44,6 @@ const SwapsSkeleton = () => (
       <Skeleton className="h-10 w-40 rounded-md" />
     </div>
 
-    {/* Stats Cards Skeleton */}
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-      {[1, 2, 3, 4].map((i) => (
-        <Card key={i}>
-          <CardContent className="p-4 text-center space-y-2">
-            <Skeleton className="h-8 w-12 mx-auto" />
-            <Skeleton className="h-3 w-20 mx-auto" />
-          </CardContent>
-        </Card>
-      ))}
-    </div>
 
     {/* Search and Filters Skeleton */}
     <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -490,35 +479,7 @@ const Swaps = () => {
           </Button>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <Card className="bg-gradient-to-br from-terracotta/10 to-terracotta/5 border-terracotta/20">
-            <CardContent className="p-4 text-center">
-              <div className="text-3xl font-bold text-terracotta">{activeSwaps.length}</div>
-              <p className="text-sm text-muted-foreground">Active Swaps</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-teal/10 to-teal/5 border-teal/20">
-            <CardContent className="p-4 text-center">
-              <div className="text-3xl font-bold text-teal">{completedSwaps.length}</div>
-              <p className="text-sm text-muted-foreground">Completed</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-golden/10 to-golden/5 border-golden/20">
-            <CardContent className="p-4 text-center">
-              <div className="text-3xl font-bold text-golden">{swaps.length}</div>
-              <p className="text-sm text-muted-foreground">Total Swaps</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-navy/10 to-navy/5 border-navy/20">
-            <CardContent className="p-4 text-center">
-              <div className="text-3xl font-bold text-navy">
-                {new Set(swaps.filter(s => s.partner_id).map(s => s.partner_id)).size}
-              </div>
-              <p className="text-sm text-muted-foreground">Partners</p>
-            </CardContent>
-          </Card>
-        </div>
+
 
         {/* Search and Filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">

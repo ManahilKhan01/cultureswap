@@ -21,8 +21,8 @@ import {
   Image as ImageIcon,
   File,
   Plus,
-  CirclePlus,
-  CircleX,
+  PlusCircle,
+  XCircle,
   Zap,
   Camera,
   Video,
@@ -30,6 +30,7 @@ import {
   MessageSquareMore,
   Pencil,
   Minus,
+  Sparkles,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -1610,7 +1611,7 @@ const Messages = () => {
                           }}
                           className={`flex-shrink-0 transition-transform ${quickActionsOpen ? 'rotate-0 text-terracotta' : 'rotate-0 text-muted-foreground'}`}
                         >
-                          {quickActionsOpen ? <CircleX className="h-6 w-6" /> : <CirclePlus className="h-6 w-6" />}
+                          {quickActionsOpen ? <XCircle className="h-6 w-6" /> : <PlusCircle className="h-6 w-6" />}
                         </Button>
 
                         <div className="flex-1 flex items-end bg-background/50 rounded-2xl border border-border px-3 focus-within:ring-1 focus-within:ring-terracotta/30 transition-all">

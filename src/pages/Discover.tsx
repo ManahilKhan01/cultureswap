@@ -182,9 +182,15 @@ const Discover = () => {
   }, []);
 
   const filteredSwaps = swaps.filter((swap) => {
-    const matchesSearch = (swap.title?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-      (swap.skill_offered?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-      (swap.skill_wanted?.toLowerCase() || "").includes(searchQuery.toLowerCase());
+    const profile = profilesMap[swap.user_id];
+
+    // Search by location (city, country) and format (onsite, in-person, hybrid)
+    const searchTerms = searchQuery.toLowerCase();
+
+    const matchesSearch = !searchQuery ||
+      (profile?.city?.toLowerCase() || "").includes(searchTerms) ||
+      (profile?.country?.toLowerCase() || "").includes(searchTerms) ||
+      (swap.format?.toLowerCase() || "").includes(searchTerms);
 
     const matchesCategory = selectedCategory === "all" ||
       swap.category?.toLowerCase() === selectedCategory.toLowerCase();
@@ -255,7 +261,7 @@ const Discover = () => {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search skills, topics, or interests..."
+              placeholder="Search by location (Onsite, In-person, Hybrid)"
               className="pl-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -399,9 +405,6 @@ const Discover = () => {
 
                   <h3 className="font-display text-lg font-semibold mb-2 group-hover:text-terracotta transition-colors flex items-center gap-2">
                     {swap.title}
-                    {swap.status === 'cancelled' && (
-                      <Badge className="bg-red-500/20 text-red-600 border-red-500/30 text-xs font-semibold">Cancelled</Badge>
-                    )}
                   </h3>
                   <p className="text-sm text-muted-foreground mb-4 line-clamp-2 leading-relaxed">
                     {swap.description || "No description provided"}

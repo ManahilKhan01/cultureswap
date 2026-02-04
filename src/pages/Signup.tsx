@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Mail, Lock, User, Upload } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, Upload, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,11 +10,14 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { profileService } from "@/lib/profileService";
 
+import { CameraModal } from "@/components/CameraModal";
+
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string>("/profile.svg");
+  const [showCamera, setShowCamera] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -41,6 +44,19 @@ const Signup = () => {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleCameraCapture = (file: File) => {
+    setProfileImage(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProfileImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    toast({
+      title: "Photo captured",
+      description: "Your profile photo has been updated.",
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -146,32 +162,45 @@ const Signup = () => {
             )}
 
             {/* Profile Image Upload */}
-            <div className="space-y-2">
-              <Label htmlFor="profileImage">Profile Picture (Optional)</Label>
+            <div className="space-y-3">
+              <Label>Profile Picture (Optional)</Label>
               <div className="flex flex-col items-center gap-4">
-                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-300 flex items-center justify-center bg-gray-100">
+                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-300 flex items-center justify-center bg-gray-100 aspect-square">
                   <img
                     src={profileImagePreview}
                     alt="Profile preview"
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <div className="relative w-full">
-                  <Input
-                    id="profileImage"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
+                <div className="grid grid-cols-2 gap-3 w-full">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex items-center justify-center gap-2 h-10 border-dashed"
+                    onClick={() => setShowCamera(true)}
                     disabled={isLoading}
-                    className="hidden"
-                  />
-                  <Label
-                    htmlFor="profileImage"
-                    className="flex items-center justify-center gap-2 w-full p-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition"
                   >
-                    <Upload className="h-4 w-4" />
-                    <span className="text-sm">Click to upload image</span>
-                  </Label>
+                    <Camera className="h-4 w-4" />
+                    <span className="text-xs sm:text-sm">Take Picture</span>
+                  </Button>
+
+                  <div className="relative">
+                    <Input
+                      id="profileImage"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      disabled={isLoading}
+                      className="hidden"
+                    />
+                    <Label
+                      htmlFor="profileImage"
+                      className="flex items-center justify-center gap-2 w-full h-10 px-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md cursor-pointer transition-colors text-xs sm:text-sm font-medium shadow-sm"
+                    >
+                      <Upload className="h-4 w-4" />
+                      Upload
+                    </Label>
+                  </div>
                 </div>
               </div>
             </div>
@@ -295,6 +324,12 @@ const Signup = () => {
           </form>
         </CardContent>
       </Card>
+
+      <CameraModal
+        isOpen={showCamera}
+        onClose={() => setShowCamera(false)}
+        onCapture={handleCameraCapture}
+      />
     </div>
   );
 }

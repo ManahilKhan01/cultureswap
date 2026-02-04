@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { profileService } from "@/lib/profileService";
 import { reviewService } from "@/lib/reviewService";
+import { swapService } from "@/lib/swapService";
 import { useProfileUpdates } from "@/hooks/useProfileUpdates";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -62,6 +63,8 @@ const UserProfile = () => {
   const [reviews, setReviews] = useState<any[]>([]);
   const [rating, setRating] = useState(0);
   const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [latestSwaps, setLatestSwaps] = useState<any[]>([]);
+  const [swapsLoading, setSwapsLoading] = useState(true);
 
   // Use real-time profile updates hook
   const { profile: user, isLoading: profileLoading } = useProfileUpdates(id || null);
@@ -88,9 +91,24 @@ const UserProfile = () => {
     };
 
     loadReviews();
+
+    const loadLatestSwaps = async () => {
+      try {
+        if (!id) return;
+        setSwapsLoading(true);
+        const userSwaps = await swapService.getSwapsByUser(id);
+        setLatestSwaps(userSwaps.slice(0, 3));
+      } catch (error) {
+        console.error("Error loading swaps:", error);
+      } finally {
+        setSwapsLoading(false);
+      }
+    };
+
+    loadLatestSwaps();
   }, [id]);
 
-  const loading = profileLoading || reviewsLoading;
+  const loading = profileLoading || reviewsLoading || swapsLoading;
 
   if (loading) return <UserProfileSkeleton />;
 
@@ -152,8 +170,8 @@ const UserProfile = () => {
             </Card>
           </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* Main Content (Middle Column) */}
+          <div className="lg:col-span-1 space-y-6">
             {user.bio && (
               <Card>
                 <CardHeader><CardTitle className="text-lg">About</CardTitle></CardHeader>
@@ -185,38 +203,65 @@ const UserProfile = () => {
               </Card>
             )}
 
-            {reviews && reviews.length > 0 && (
-              <Card>
-                <CardHeader><CardTitle className="text-lg">Reviews</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                  {reviews.map((review: any) => (
-                    <div key={review.id} className="p-4 rounded-lg bg-muted/50">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="font-medium">{review.reviewer_name || "Anonymous"}</p>
-                          <div className="flex gap-1 mt-1">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`h-4 w-4 ${i < (review.rating || 0) ? "fill-golden text-golden" : "text-muted"}`}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(review.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{review.comment}</p>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
           </div>
-        </div>
-      </main>
-    </div>
+
+          {/* Right Panel: Public View Additions */}
+          <div className="lg:col-span-1 space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+            <Card className="border-border/50 shadow-sm overflow-hidden">
+              <CardHeader className="bg-muted/30 pb-4">
+                <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Latest Swaps</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                {latestSwaps.length > 0 ? (
+                  latestSwaps.map((swap) => (
+                    <div key={swap.id} className="group cursor-default">
+                      <h4 className="text-sm font-semibold group-hover:text-terracotta transition-colors line-clamp-1">{swap.title}</h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="text-[10px] py-0 h-4 border-terracotta/20 text-terracotta">{swap.skill_offered}</Badge>
+                        <span className="text-[10px] text-muted-foreground">for</span>
+                        <Badge variant="outline" className="text-[10px] py-0 h-4 border-teal/20 text-teal">{swap.skill_wanted}</Badge>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No swaps created yet</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/50 shadow-sm overflow-hidden">
+              <CardHeader className="bg-muted/30 pb-4">
+                <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">User Reviews Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                {reviews.length > 0 ? (
+                  reviews.slice(0, 3).map((review) => (
+                    <div key={review.id} className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold">{review.reviewer_name || "User"}</span>
+                        <div className="flex gap-0.5">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className={`h-2.5 w-2.5 ${i < review.rating ? 'fill-golden text-golden' : 'text-muted'}`} />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2 italic">"{review.comment}"</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No reviews yet</p>
+                )}
+                {reviews.length > 3 && (
+                  <p className="text-[10px] text-center text-muted-foreground pt-2 border-t border-border/50">
+                    + {reviews.length - 3} more reviews
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div >
+      </main >
+    </div >
   );
 };
 
