@@ -1,7 +1,7 @@
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
-const ASSISTANT_EMAIL = 'swapy@cultureswap.app';
-const ASSISTANT_NAME = 'Swapy';
+const ASSISTANT_EMAIL = "swapy@cultureswap.app";
+const ASSISTANT_NAME = "Swapy";
 let cachedAssistantId: string | null = null;
 
 export const aiAssistantService = {
@@ -11,9 +11,9 @@ export const aiAssistantService = {
       // Return cached assistant if available
       if (cachedAssistantId) {
         const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', cachedAssistantId)
+          .from("user_profiles")
+          .select("*")
+          .eq("id", cachedAssistantId)
           .single();
 
         if (profile) return profile;
@@ -21,9 +21,9 @@ export const aiAssistantService = {
 
       // First check if assistant exists in user_profiles by email
       const { data: existingAssistant } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('email', ASSISTANT_EMAIL)
+        .from("user_profiles")
+        .select("*")
+        .eq("email", ASSISTANT_EMAIL)
         .maybeSingle();
 
       if (existingAssistant) {
@@ -33,10 +33,12 @@ export const aiAssistantService = {
 
       // If no assistant exists, we need to create one
       // Try to get current user to use as base for assistant ID
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       if (!user) {
-        throw new Error('No authenticated user found');
+        throw new Error("No authenticated user found");
       }
 
       // Use a system UUID format but different from user
@@ -45,19 +47,19 @@ export const aiAssistantService = {
         id: user.id, // Will be overridden by system
         email: ASSISTANT_EMAIL,
         full_name: ASSISTANT_NAME,
-        profile_image_url: '/Ai.svg',
-        bio: 'Hi, I\'m Swapy! Your AI assistant for CultureSwap. I\'m here to help you with cultural exchange and swap services!',
+        profile_image_url: "/Ai.svg",
+        bio: "Hi, I'm Swapy! Your AI assistant for CultureSwap. I'm here to help you with cultural exchange and swap services!",
         is_verified: true,
-        country: 'Global',
-        city: 'Virtual',
+        country: "Global",
+        city: "Virtual",
       };
 
       // Check if we can insert with a system user ID
       // First, let's check the auth users table for a system account
       const { data: authUsers } = await supabase
-        .from('auth.users')
-        .select('id')
-        .eq('email', ASSISTANT_EMAIL)
+        .from("auth.users")
+        .select("id")
+        .eq("email", ASSISTANT_EMAIL)
         .maybeSingle();
 
       let finalAssistantId = authUsers?.id;
@@ -65,12 +67,12 @@ export const aiAssistantService = {
       if (!finalAssistantId) {
         // Create assistant in user_profiles directly with a deterministic ID
         // Use MD5 hash of email but in UUID format
-        finalAssistantId = '00000000-0000-4000-a000-000000000001'; // RFC4122 compliant UUIDv4 format
+        finalAssistantId = "00000000-0000-4000-a000-000000000001"; // RFC4122 compliant UUIDv4 format
       }
 
       // Try to insert the assistant profile
       const { data: newProfile, error: insertError } = await supabase
-        .from('user_profiles')
+        .from("user_profiles")
         .insert([
           {
             ...assistantProfile,
@@ -81,17 +83,20 @@ export const aiAssistantService = {
         .maybeSingle();
 
       if (insertError) {
-        console.warn('Could not create assistant profile, using fallback:', insertError);
+        console.warn(
+          "Could not create assistant profile, using fallback:",
+          insertError,
+        );
         // Return a virtual profile for display purposes
         cachedAssistantId = finalAssistantId;
         return {
           id: finalAssistantId,
           email: ASSISTANT_EMAIL,
           full_name: ASSISTANT_NAME,
-          profile_image_url: '/Ai.svg',
+          profile_image_url: "/Ai.svg",
           is_verified: true,
-          country: 'Global',
-          city: 'Virtual',
+          country: "Global",
+          city: "Virtual",
           bio: assistantProfile.bio,
         };
       }
@@ -107,28 +112,28 @@ export const aiAssistantService = {
         id: finalAssistantId,
         email: ASSISTANT_EMAIL,
         full_name: ASSISTANT_NAME,
-        profile_image_url: '/Ai.svg',
+        profile_image_url: "/Ai.svg",
         is_verified: true,
-        country: 'Global',
-        city: 'Virtual',
+        country: "Global",
+        city: "Virtual",
         bio: assistantProfile.bio,
       };
     } catch (error) {
-      console.error('Error in getOrCreateAssistantUser:', error);
+      console.error("Error in getOrCreateAssistantUser:", error);
 
       // Absolute fallback: return a virtual assistant profile
-      const fallbackId = '00000000-0000-4000-a000-000000000001';
+      const fallbackId = "00000000-0000-4000-a000-000000000001";
       cachedAssistantId = fallbackId;
 
       return {
         id: fallbackId,
         email: ASSISTANT_EMAIL,
         full_name: ASSISTANT_NAME,
-        profile_image_url: '/Ai.svg',
+        profile_image_url: "/Ai.svg",
         is_verified: true,
-        country: 'Global',
-        city: 'Virtual',
-        bio: 'Hi, I\'m Swapy! Your AI assistant for CultureSwap.',
+        country: "Global",
+        city: "Virtual",
+        bio: "Hi, I'm Swapy! Your AI assistant for CultureSwap.",
       };
     }
   },
@@ -136,85 +141,109 @@ export const aiAssistantService = {
   // Get or create assistant conversation for a user
   async getOrCreateAssistantConversation(userId: string) {
     try {
-      const assistant = await this.getOrCreateAssistantUser();
-      const assistantId = assistant.id;
-
       // For assistant chats, we skip the conversations table entirely
       // because assistant IDs aren't real auth users and would violate FK constraints
       // Instead, return a virtual conversation ID that works with message-based lookup
 
-      console.log('Using message-based conversation for assistant');
+      console.log("Using message-based conversation for assistant");
 
       // Return a deterministic ID based on user + assistant
       const virtualConvId = `assistant-conv-${userId}`;
       return virtualConvId;
     } catch (error) {
-      console.error('Error in getOrCreateAssistantConversation:', error);
+      console.error("Error in getOrCreateAssistantConversation:", error);
       throw error;
     }
   },
 
-  // Generate AI response based on user message
-  async generateResponse(userMessage: string, conversationHistory: any[] = []): Promise<string> {
+  // System prompt for OpenAI - STRICT CultureSwap focus
+  getSystemPrompt(): string {
+    return `You are Swapy, the friendly AI assistant for CultureSwap - a platform for cultural and skill exchange.
+
+CRITICAL RULES:
+1. You ONLY answer questions about CultureSwap, cultural exchange, skill sharing, language learning, and related topics.
+2. If someone asks about ANYTHING unrelated (politics, coding help, recipes, general knowledge, etc.), politely decline and redirect them to CultureSwap topics.
+3. Example decline: "That's an interesting question! But I'm Swapy, and I specialize in helping with CultureSwap. 😊 Is there anything about swaps, profiles, or finding partners I can help with?"
+
+ABOUT CULTURESWAP:
+- CultureSwap connects people to exchange skills and cultural knowledge
+- Users can teach what they know (e.g., Spanish, Guitar, Cooking) and learn what they want
+- It's 100% FREE - no money involved, just skill-for-skill exchange
+- Key features: Discover page, Swap Offers, Messaging, User Profiles, Reviews
+
+YOUR PERSONALITY:
+- Friendly and warm 😊
+- Use emojis occasionally (but not excessively)
+- Be concise and helpful
+- Encourage users to explore CultureSwap features
+- If you don't know something specific about the platform, admit it and suggest they check the website`;
+  },
+
+  // Generate AI response using OpenAI API
+  async generateResponse(
+    userMessage: string,
+    conversationHistory: any[] = [],
+  ): Promise<string> {
     try {
       // Prepare context from conversation history
-      const recentMessages = conversationHistory.slice(-10); // Last 10 messages for context
+      const recentMessages = conversationHistory.slice(-10);
 
-      const context = recentMessages.map(msg =>
-        `${msg.sender_name || 'User'}: ${msg.content}`
-      ).join('\n');
+      const context = recentMessages
+        .map((msg) => `${msg.sender_name || "User"}: ${msg.content}`)
+        .join("\n");
 
-      // Use rule-based responses for now (can be replaced with actual LLM integration)
-      const response = this.generateRuleBasedResponse(userMessage, context);
+      // Check for OpenAI API key
+      const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
-      return response;
+      if (apiKey) {
+        // Use OpenAI API
+        try {
+          const response = await this.callOpenAIAPI(
+            userMessage,
+            context,
+            apiKey,
+          );
+          if (response) return response;
+        } catch (apiError) {
+          console.error("OpenAI API error, falling back to rules:", apiError);
+        }
+      }
+
+      // Fallback to rule-based responses
+      return this.generateRuleBasedResponse(userMessage, context);
     } catch (error) {
-      console.error('Error generating response:', error);
+      console.error("Error generating response:", error);
       return this.getDefaultResponse();
     }
   },
 
-  // Rule-based response generator (can be replaced with OpenAI, etc.)
-  generateRuleBasedResponse(message: string, context: string = ''): string {
-    const lowerMessage = message.toLowerCase();
+  // Call Supabase Edge Function that proxies OpenAI
+  async callOpenAIAPI(
+    userMessage: string,
+    context: string,
+    _apiKey: string,
+  ): Promise<string | null> {
+    try {
+      // Call our Supabase Edge Function which handles the OpenAI call server-side
+      const { data, error } = await supabase.functions.invoke("chat-ai", {
+        body: { message: userMessage, context },
+      });
 
-    // Greeting
-    if (lowerMessage.match(/^(hi|hello|hey|greetings)/)) {
-      return "Hello! 👋 Welcome to CultureSwap! I'm Swapy, your AI assistant. I'm here to help you with cultural exchanges, answering questions about swaps, and providing guidance. How can I assist you today?";
+      if (error) {
+        console.error("Supabase function error:", error);
+        return null;
+      }
+
+      return data?.reply || null;
+    } catch (error) {
+      console.error("Error calling chat-ai function:", error);
+      return null;
     }
+  },
 
-    // Help requests
-    if (lowerMessage.includes('help') || lowerMessage.includes('how')) {
-      return "I'd be happy to help! 🌍 I can assist you with:\n\n• Creating and managing cultural swaps\n• Understanding how the platform works\n• Answering questions about cultural exchanges\n• Tips for successful connections\n\nWhat specifically would you like to know about?";
-    }
-
-    // Swap-related questions
-    if (lowerMessage.includes('swap')) {
-      return "Great question about swaps! 🤝 A cultural swap on CultureSwap is when two people exchange skills or cultural knowledge. For example, you might teach Spanish while learning Mandarin.\n\nTo create a swap:\n1. Go to 'Create Swap'\n2. Fill in your skills (what you offer and what you want to learn)\n3. Browse other users' swaps\n4. Connect and start your cultural exchange!\n\nWould you like more details about any part of the process?";
-    }
-
-    // Safety/Trust questions
-    if (lowerMessage.includes('safe') || lowerMessage.includes('trust') || lowerMessage.includes('verify')) {
-      return "Safety and trust are important to us! 🔒 CultureSwap has several features to ensure a safe experience:\n\n• User verification through email\n• Profile ratings and reviews\n• Transparent communication through our chat system\n• Detailed user profiles\n\nAlways take time to review a user's profile and ratings before connecting. Do you have specific safety concerns I can address?";
-    }
-
-    // Profile questions
-    if (lowerMessage.includes('profile')) {
-      return "Your profile is your identity on CultureSwap! 📝 A great profile includes:\n\n• A clear profile picture\n• Your interests and skills\n• Languages you speak\n• What you're looking to learn\n• Any relevant experience\n\nThe more detailed your profile, the better matches you'll find! Would you like tips on what to include?";
-    }
-
-    // Technical issues
-    if (lowerMessage.includes('error') || lowerMessage.includes('bug') || lowerMessage.includes('problem')) {
-      return "I'm sorry you're experiencing an issue! 😔 Please describe what's happening, and I'll do my best to help.\n\nCommon issues and solutions:\n• Can't login? Check your email and password\n• Messages not showing? Try refreshing the page\n• Images not uploading? Ensure the file is under 5MB\n\nWhat specific problem are you encountering?";
-    }
-
-    // Appreciation
-    if (lowerMessage.includes('thank')) {
-      return "You're welcome! 😊 I'm here to help anytime you need. Feel free to reach out with any questions about CultureSwap!";
-    }
-
-    // Default friendly response
-    return "That's an interesting question! 🤔 While I'm still learning, I'm here to help with CultureSwap-related topics. Could you provide more details or rephrase your question? Or would you like to know about:\n\n• How to create a swap\n• Tips for finding the right cultural partner\n• Safety guidelines\n• How to edit your profile\n\nJust let me know!";
+  // Simple fallback response (only used if Claude API fails)
+  generateRuleBasedResponse(message: string, context: string = ""): string {
+    return "I'm having a little trouble connecting right now. 😅 Please try again in a moment, or feel free to explore CultureSwap on your own!";
   },
 
   // Get default fallback response
@@ -226,7 +255,7 @@ export const aiAssistantService = {
   async sendAssistantMessage(
     conversationId: string,
     userId: string,
-    content: string
+    content: string,
   ) {
     try {
       // This is now handled client-side to avoid foreign key issues
@@ -234,7 +263,7 @@ export const aiAssistantService = {
       return {
         id: `assistant-${Date.now()}`,
         conversation_id: conversationId,
-        sender_id: '00000000-0000-4000-a000-000000000001',
+        sender_id: "00000000-0000-4000-a000-000000000001",
         receiver_id: userId,
         content,
         created_at: new Date().toISOString(),
@@ -242,7 +271,7 @@ export const aiAssistantService = {
         is_assistant: true,
       };
     } catch (error) {
-      console.error('Error in sendAssistantMessage:', error);
+      console.error("Error in sendAssistantMessage:", error);
       throw error;
     }
   },
@@ -250,17 +279,17 @@ export const aiAssistantService = {
   // Check if a profile is the assistant
   isAssistantProfile(profile: any): boolean {
     if (!profile) return false;
-    const name = profile.full_name?.toLowerCase() || '';
-    const email = profile.email?.toLowerCase() || '';
+    const name = profile.full_name?.toLowerCase() || "";
+    const email = profile.email?.toLowerCase() || "";
     return (
-      name.includes('assistant') ||
+      name.includes("assistant") ||
       email === ASSISTANT_EMAIL ||
-      profile.id === '00000000-0000-4000-a000-000000000001'
+      profile.id === "00000000-0000-4000-a000-000000000001"
     );
   },
 
   // Check if a conversation is with the assistant
   isAssistantConversation(conversationId: string): boolean {
-    return conversationId.startsWith('assistant-conv-');
+    return conversationId.startsWith("assistant-conv-");
   },
 };
