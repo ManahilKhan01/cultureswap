@@ -530,7 +530,10 @@ const SwapDetail = () => {
     <div className="flex-1 bg-background pb-12">
       <main className="container mx-auto px-4 py-8">
         <Button variant="ghost" asChild className="mb-6">
-          <Link to="/swaps"><ArrowLeft className="h-4 w-4 mr-2" />Back to Swaps</Link>
+          <Link to={source === 'discover' ? "/discover" : "/swaps"}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            {source === 'discover' ? "Back to Discover" : "Back to Swaps"}
+          </Link>
         </Button>
 
         <div className="grid lg:grid-cols-5 gap-8">

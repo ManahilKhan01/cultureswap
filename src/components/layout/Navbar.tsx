@@ -252,6 +252,7 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                                       console.error('Error marking conversation as read:', error);
                                     }
                                   }
+                                  // Force navigation even if on same page to ensure params update
                                   navigate(`/messages?user=${conv.otherUserId}`);
                                 }}
                               >
@@ -339,7 +340,23 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                               setNotifications(prev => prev.map(n =>
                                 n.id === notification.id ? { ...n, read: true } : n
                               ));
-                              navigate(`/messages?user=${notification.sender_id}`);
+
+                              // Determine navigation path based on notification type/data
+                              let navPath = `/messages?user=${notification.sender_id}`;
+
+                              // Check if there is a swap_id or related metadata
+                              // Assuming metadata or additional fields might store this info. 
+                              // If notification body or title implies a specific swap/offer context.
+                              // In a real scenario, we'd check notification.metadata or notification.resource_id
+                              if (notification.metadata?.swap_id) {
+                                navPath += `&swap=${notification.metadata.swap_id}`;
+                              } else if (notification.type === 'offer_created' || notification.type === 'swap_request') {
+                                // If we don't have explicit metadata mapped yet, we might fallback or try to infer.
+                                // But ideally, the notification creation should include this. 
+                                // For now, we'll keep it robust.
+                              }
+
+                              navigate(navPath);
                             }}
                           >
                             <div className="flex items-start gap-3 w-full">

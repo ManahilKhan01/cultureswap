@@ -24,6 +24,7 @@ import NotFound from "./pages/NotFound";
 
 import MainLayout from "./components/layout/MainLayout";
 import ScrollToTop from "./components/ScrollToTop";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -49,17 +50,19 @@ const App = () => (
 
           {/* App Pages with persistent Navbar */}
           <Route element={<MainLayout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/swaps" element={<Swaps />} />
-            <Route path="/swap/create" element={<CreateSwap />} />
-            <Route path="/swap/:id" element={<SwapDetail />} />
-            <Route path="/user/:id" element={<UserProfile />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/messages" element={<Messages />} />
-            <Route path="/community" element={<Community />} />
-            <Route path="/schedule" element={<Schedule />} />
-            <Route path="/notifications" element={<Notifications />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/swaps" element={<Swaps />} />
+              <Route path="/swap/create" element={<CreateSwap />} />
+              <Route path="/swap/:id" element={<SwapDetail />} />
+              <Route path="/user/:id" element={<UserProfile />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/messages" element={<Messages />} />
+              <Route path="/community" element={<Community />} />
+              <Route path="/schedule" element={<Schedule />} />
+              <Route path="/notifications" element={<Notifications />} />
+            </Route>
           </Route>
 
           <Route path="*" element={<NotFound />} />

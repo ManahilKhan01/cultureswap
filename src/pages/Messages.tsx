@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Search,
   MoreVertical,
@@ -88,6 +88,7 @@ const AutoReplySkeleton = () => (
 
 const Messages = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -197,34 +198,54 @@ const Messages = () => {
   const applyFilters = (convs: any[]) => {
     let filtered = [...convs];
 
-    // Remove archived chats unless viewing archived filter
-    if (activeFilter !== 'archived') {
-      filtered = filtered.filter(conv => !archivedChats.has(conv.id));
-    } else {
-      filtered = filtered.filter(conv => archivedChats.has(conv.id));
-    }
-
-    // Apply specific filters
+    // Filter by type
     switch (activeFilter) {
-      case 'starred':
-        filtered = filtered.filter(conv => starredChats.has(conv.id));
-        break;
       case 'unread':
-        // Unread: where current user is receiver and has unread messages
         filtered = filtered.filter(conv => {
           const lastMsg = conv.lastMessage;
           return lastMsg?.receiver_id === currentUser?.id && lastMsg?.read === false;
         });
         break;
+      case 'starred':
+        filtered = filtered.filter(conv => starredChats.has(conv.id));
+        break;
+      case 'archived':
+        filtered = filtered.filter(conv => archivedChats.has(conv.id));
+        break;
       case 'offers':
         filtered = filtered.filter(conv => isCustomOfferConversation(conv));
         break;
       case 'assistant':
-        filtered = filtered.filter(conv => isAssistantUser(userProfiles[conv.otherUserId]));
+        filtered = filtered.filter(conv => {
+          const profile = userProfiles[conv.otherUserId];
+          return isAssistantUser(profile);
+        });
         break;
-      case 'all':
       default:
-        break;
+        // By default show all non-archived
+        filtered = filtered.filter(conv => !archivedChats.has(conv.id));
+    }
+
+    // Apply search query filter
+    if (searchQuery.trim()) {
+      const lowerCaseQuery = searchQuery.toLowerCase();
+      filtered = filtered.filter(conv => {
+        const otherProfile = userProfiles[conv.otherUserId];
+        const name = otherProfile?.full_name?.toLowerCase() || '';
+        const lastMessageContent = conv.lastMessage?.content?.toLowerCase() || '';
+        return name.includes(lowerCaseQuery) || lastMessageContent.includes(lowerCaseQuery);
+      });
+    }
+
+    // CRITICAL: Ensure the currently selected conversation is ALWAYS in the list
+    if (selectedConversation?.otherUserId) {
+      const selectedExists = filtered.some(c => c.otherUserId === selectedConversation.otherUserId);
+      if (!selectedExists) {
+        const selectedFromAll = convs.find(c => c.otherUserId === selectedConversation.otherUserId);
+        if (selectedFromAll) {
+          filtered.push(selectedFromAll);
+        }
+      }
     }
 
     return filtered;
@@ -457,38 +478,73 @@ const Messages = () => {
 
   // Effect 2: Load specific chat messages when search params change
   useEffect(() => {
+    let isMounted = true;
+
     const loadChatData = async () => {
       if (!currentUser) return;
 
+      if (!userIdParam) {
+        setSelectedConversation(null);
+        setMessages([]);
+        setOtherUserProfile(null);
+        return;
+      }
+
+      // Start loading state immediately and clear messages to prevent User A content showing in User B panel
+      setMessagesLoading(true);
+      setMessages([]);
+      setOtherUserProfile(null);
+
       try {
-        if (userIdParam) {
-          setMessagesLoading(true);
-
-          // 1. Instantly update profile info and selected state if we have it in cache
-          const existingProfile = userProfiles[userIdParam];
-          const profile = existingProfile || await profileService.getProfile(userIdParam);
-
-          if (!existingProfile) {
-            setUserProfiles(prev => ({ ...prev, [userIdParam]: profile }));
+        // 1. Get profile (from cache or fetch)
+        let profile = userProfiles[userIdParam];
+        if (!profile) {
+          try {
+            profile = await profileService.getProfile(userIdParam);
+            if (isMounted) {
+              setUserProfiles(prev => ({ ...prev, [userIdParam]: profile }));
+            }
+          } catch (e) {
+            console.error("Failed to load profile", e);
           }
+        }
 
-          setOtherUserProfile(profile);
+        if (!isMounted) return;
+        setOtherUserProfile(profile);
 
-          // 2. Get conversation and messages
-          const convId = await messageService.getOrCreateConversation(currentUser.id, userIdParam);
-          const convMessages = await messageService.getMessagesByConversation(convId);
+        // 2. OPTIMISTIC UPDATE: Trigger view switch immediately
+        // We set a temporary conversation state to ensure the Right Panel becomes visible
+        // while the actual conversation details and messages are fetching.
+        setSelectedConversation({
+          id: 'loading',
+          otherUserId: userIdParam,
+          otherProfile: profile,
+          swapId: swapIdParam,
+          isOptimistic: true
+        });
 
-          // 3. Update swap context if present
-          if (swapIdParam) {
-            const swap = await swapService.getSwapById(swapIdParam);
-            setCurrentSwap(swap);
-          } else {
-            setCurrentSwap(null);
+        // 3. Get conversation and messages
+        const convId = await messageService.getOrCreateConversation(currentUser.id, userIdParam);
+        if (!isMounted) return;
+
+        const convMessages = await messageService.getConversation(currentUser.id, userIdParam);
+        if (!isMounted) return;
+
+        // 4. Update swap context if present
+        let fetchedSwap = null;
+        if (swapIdParam) {
+          fetchedSwap = await swapService.getSwapById(swapIdParam);
+          if (isMounted) {
+            setCurrentSwap(fetchedSwap);
           }
+        } else if (isMounted) {
+          setCurrentSwap(null);
+        }
 
-          // 4. Load attachments in bulk
-          const attachmentsMap: Record<string, any[]> = {};
-          if (convMessages.length > 0) {
+        // 5. Load attachments in bulk
+        const attachmentsMap: Record<string, any[]> = {};
+        if (convMessages.length > 0) {
+          try {
             const messageIds = convMessages.map(m => m.id);
             const allAttachments = await attachmentService.getAttachmentsByConversation(messageIds);
 
@@ -499,29 +555,46 @@ const Messages = () => {
               }
               attachmentsMap[att.message_id].push(att);
             }
+          } catch (e) {
+            console.warn("Failed to load attachments", e);
           }
-
-          // 5. Commit state updates in one go to prevent flickering
-          setMessages(convMessages);
-          setAttachments(attachmentsMap);
-          setSelectedConversation({
-            id: convId,
-            otherUserId: userIdParam,
-            otherProfile: profile,
-            swapId: swapIdParam,
-          });
-        } else {
-          setSelectedConversation(null);
-          setMessages([]);
         }
+
+        if (!isMounted) return;
+
+        // 6. Final State Update
+        setMessages(convMessages);
+        setAttachments(attachmentsMap);
+
+        // Pre-fill message if new conversation regarding a swap
+        if (swapIdParam && convMessages.length === 0 && profile && fetchedSwap?.title) {
+          const userFirstName = profile.full_name ? profile.full_name.split(' ')[0] : 'there';
+          setMessageText(`Hi ${userFirstName}, I'm interested in your swap "${fetchedSwap.title}".`);
+        }
+
+        setSelectedConversation({
+          id: convId,
+          otherUserId: userIdParam,
+          otherProfile: profile,
+          swapId: swapIdParam,
+        });
       } catch (error) {
         console.error('Error loading chat detail:', error);
+        if (isMounted) {
+          toast({ title: "Error", description: "Failed to load chat", variant: "destructive" });
+        }
       } finally {
-        setMessagesLoading(false);
+        if (isMounted) {
+          setMessagesLoading(false);
+        }
       }
     };
 
     loadChatData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [userIdParam, swapIdParam, currentUser]);
 
   // Real-time subscription for global messages (updates conversation list)
@@ -999,13 +1072,18 @@ const Messages = () => {
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
-  const filteredConversations = applyFilters(conversations).filter(conv => {
-    const profile = userProfiles[conv.otherUserId];
-    const name = profile?.full_name?.toLowerCase() || "";
-    return name.includes(searchQuery.toLowerCase());
-  });
+  const filteredConversations = applyFilters(conversations);
 
   const canCreateOffer = selectedConversation && currentUser && otherUserProfile && !isAssistantUser(otherUserProfile);
+
+  if (loading || !currentUser) {
+    return (
+      <div className="flex flex-col h-[calc(100dvh-72px)] md:h-[calc(100vh-80px)] items-center justify-center bg-background">
+        <Loader2 className="h-10 w-10 animate-spin text-terracotta" />
+        <p className="mt-4 text-muted-foreground font-medium">Loading messages...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-[calc(100dvh-72px)] md:h-[calc(100vh-80px)] bg-background overflow-hidden">
@@ -1125,7 +1203,19 @@ const Messages = () => {
                     return (
                       <div key={conv.id} className="relative group px-2 mb-1">
                         <button
-                          onClick={() => setSearchParams({ user: conv.otherUserId })}
+                          onClick={() => {
+                            const profile = userProfiles[conv.otherUserId];
+
+                            // Immediately set selection to loading state for instant UI feedback
+                            setSelectedConversation({
+                              id: 'loading',
+                              otherUserId: conv.otherUserId,
+                              otherProfile: profile,
+                              isOptimistic: true,
+                            });
+
+                            navigate(`/messages?user=${conv.otherUserId}`);
+                          }}
                           className={`w-full p-3 flex items-center gap-3 transition-all rounded-xl text-left ${isSelected
                             ? 'bg-terracotta/10 ring-1 ring-terracotta/20 shadow-sm'
                             : isAssistant ? 'bg-blue-50/50 hover:bg-blue-50' : 'hover:bg-muted/50'
@@ -1157,11 +1247,11 @@ const Messages = () => {
                                 {isStarred && <Star className="h-3 w-3 flex-shrink-0 text-golden fill-golden" />}
                               </div>
                               <span className="text-[9px] font-bold text-muted-foreground/60 flex-shrink-0 uppercase">
-                                {formatTime(conv.lastMessage.created_at)}
+                                {conv.lastMessage?.created_at ? formatTime(conv.lastMessage.created_at) : ""}
                               </span>
                             </div>
                             <p className={`text-xs truncate font-medium ${isSelected ? 'text-terracotta' : isAssistant ? 'text-blue-600' : isUnread ? 'font-bold text-foreground' : 'text-muted-foreground/80'}`}>
-                              {conv.lastMessage.content}
+                              {conv.lastMessage?.content || "No messages yet"}
                             </p>
                           </div>
                         </button>
@@ -1207,448 +1297,474 @@ const Messages = () => {
             </div>
 
             {/* Right Panel: Chat Window */}
-            <div className={`flex-1 flex flex-col bg-background/50 ${!selectedConversation ? 'hidden md:flex' : 'flex'}`}>
+            <div
+              className={`flex-1 flex flex-col bg-background/50 ${!selectedConversation ? 'hidden md:flex' : 'flex'}`}
+            >
               {selectedConversation ? (
                 <>
-                  {/* Chat Header */}
-                  <div className="p-3 px-4 md:p-4 border-b border-border flex items-center justify-between sticky top-0 backdrop-blur-sm z-10 bg-white/40 shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="md:hidden -ml-2 rounded-full"
-                        onClick={() => {
-                          setSelectedConversation(null);
-                          setSearchParams({});
-                        }}
-                      >
-                        <ChevronLeft className="h-6 w-6" />
-                      </Button>
-                      <div className="relative">
-                        <img
-                          key={getCacheBustedImageUrl(otherUserProfile?.profile_image_url)}
-                          src={getCacheBustedImageUrl(otherUserProfile?.profile_image_url)}
-                          alt="Avatar"
-                          className="h-10 w-10 rounded-full object-cover shadow-sm ring-1 ring-border"
-                        />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold leading-none mb-1.5">
-                          {otherUserProfile?.full_name || 'User'}
-                        </p>
-                        <p className="text-[11px] font-medium truncate flex items-center gap-1.5 text-muted-foreground">
-                          {isAssistantUser(otherUserProfile) ? (
-                            <>
-                              <span className="w-1.5 h-1.5 rounded-full bg-terracotta animate-pulse"></span>
-                              AI Assistant
-                            </>
-                          ) : (
-                            <>
-                              {onlineUsers.has(otherUserProfile?.id) && (
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                              )}
-                              Local time: {(() => {
-                                const timezone = otherUserProfile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-                                return new Date().toLocaleTimeString('en-US', {
-                                  timeZone: timezone,
-                                  hour: 'numeric',
-                                  minute: '2-digit',
-                                  hour12: true
-                                });
-                              })()}
-                            </>
-                          )}
-                        </p>
-                      </div>
+                  {selectedConversation?.id === 'loading' ? (
+                    <div className="flex-1 flex items-center justify-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-terracotta" />
                     </div>
+                  ) : (
+                    <>
+                      {/* Chat Header */}
+                      <div className="p-3 px-4 md:p-4 border-b border-border flex items-center justify-between sticky top-0 backdrop-blur-sm z-10 bg-white/40 shadow-sm">
+                        <div className="flex items-center gap-3">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="md:hidden -ml-2 rounded-full"
+                            onClick={() => {
+                              setSelectedConversation(null);
+                              setSearchParams({});
+                            }}
+                          >
+                            <ChevronLeft className="h-6 w-6" />
+                          </Button>
+                          <div className="relative">
+                            <img
+                              key={getCacheBustedImageUrl(otherUserProfile?.profile_image_url)}
+                              src={getCacheBustedImageUrl(otherUserProfile?.profile_image_url)}
+                              alt="Avatar"
+                              className="h-10 w-10 rounded-full object-cover shadow-sm ring-1 ring-border"
+                            />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold leading-none mb-1.5">
+                              {otherUserProfile?.full_name || 'User'}
+                            </p>
+                            <p className="text-[11px] font-medium truncate flex items-center gap-1.5 text-muted-foreground">
+                              {isAssistantUser(otherUserProfile) ? (
+                                <>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-terracotta animate-pulse"></span>
+                                  AI Assistant
+                                </>
+                              ) : (
+                                <>
+                                  {onlineUsers.has(otherUserProfile?.id) && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                  )}
+                                  Local time: {(() => {
+                                    const timezone = otherUserProfile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+                                    return new Date().toLocaleTimeString('en-US', {
+                                      timeZone: timezone,
+                                      hour: 'numeric',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    });
+                                  })()}
+                                </>
+                              )}
+                            </p>
+                          </div>
+                        </div>
 
-                    {canCreateOffer && (
-                      <Button
-                        variant="terracotta"
-                        size="sm"
-                        onClick={() => setCreateOfferOpen(true)}
-                        className="rounded-full px-4 shadow-md transition-transform hover:scale-105"
-                      >
-                        <Handshake className="h-4 w-4 mr-2" />
-                        Send Offer
-                      </Button>
-                    )}
-                  </div>
-
-                  {/* Messages Stream */}
-                  <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-soft-sand/20 relative">
-                    {messagesLoading && (
-                      <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px] flex items-center justify-center z-20">
-                        <Loader2 className="h-8 w-8 animate-spin text-terracotta" />
+                        {canCreateOffer && (
+                          <Button
+                            variant="terracotta"
+                            size="sm"
+                            onClick={() => setCreateOfferOpen(true)}
+                            className="rounded-full px-4 shadow-md transition-transform hover:scale-105"
+                          >
+                            <Handshake className="h-4 w-4 mr-2" />
+                            Send Offer
+                          </Button>
+                        )}
                       </div>
-                    )}
-                    {messages.length > 0 ? (
-                      messages.map((message, index) => {
-                        const isMe = message.sender_id === currentUser?.id;
-                        const hasOffer = !!message.offer_id;
-                        const msgAttachments = attachments[message.id] || [];
-                        const senderProfile = isMe ? currentUser : userProfiles[message.sender_id] || otherUserProfile;
-                        const isAssistant = isAssistantUser(senderProfile);
 
-                        if (hasOffer) {
-                          return (
-                            <div
-                              key={message.id}
-                              className={`flex ${isMe ? 'justify-end' : 'justify-start'} mb-6 animate-in fade-in slide-in-from-bottom-2`}
-                            >
-                              <div className="max-w-[85%] md:max-w-[70%]">
-                                <OfferCard
-                                  offerId={message.offer_id}
-                                  currentUserId={currentUser?.id || ''}
-                                  onOfferUpdated={handleOfferCreated}
-                                />
-                              </div>
+                      {/* Messages Stream */}
+                      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-soft-sand/20 relative">
+                        {/* Swap Context Banner */}
+                        {currentSwap && (
+                          <div className="bg-white/80 backdrop-blur-sm border border-terracotta/20 rounded-lg p-3 mx-4 mb-4 shadow-sm flex items-center justify-between sticky top-0 z-10 animate-in slide-in-from-top-2">
+                            <div>
+                              <p className="text-xs font-bold uppercase text-terracotta tracking-wider mb-0.5">Regarding Swap</p>
+                              <p className="text-sm font-semibold text-foreground truncate max-w-[200px] sm:max-w-md">{currentSwap?.title || 'Swap'}</p>
                             </div>
-                          );
-                        }
+                            <Button variant="ghost" size="sm" className="h-8 w-8 text-muted-foreground" onClick={() => setCurrentSwap(null)}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
 
-                        return (
-                          <ChatMessage
-                            key={message.id}
-                            message={message}
-                            isMe={isMe}
-                            senderProfile={senderProfile}
-                            attachments={msgAttachments}
-                            onDownloadAll={handleDownloadAll}
-                            isAssistant={isAssistant}
-                          />
-                        );
-                      })
-                    ) : (
-                      <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-2 opacity-60">
-                        <MessageCircle className="h-12 w-12 stroke-1" />
-                        <p className="text-sm">No messages yet. Send a greeting!</p>
-                      </div>
-                    )}
-                  </div>
+                        {messagesLoading && (
+                          <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px] flex items-center justify-center z-20">
+                            <Loader2 className="h-8 w-8 animate-spin text-terracotta" />
+                          </div>
+                        )}
+                        {messages.length > 0 ? (
+                          messages.map((message, index) => {
+                            const isMe = message.sender_id === currentUser?.id;
+                            const hasOffer = !!message.offer_id;
+                            const msgAttachments = attachments[message.id] || [];
+                            const senderProfile = isMe ? currentUser : userProfiles[message.sender_id] || otherUserProfile;
+                            const isAssistant = isAssistantUser(senderProfile);
 
-                  {/* Message Input */}
-                  <div className="bg-muted/20 border-t border-border">
-                    {/* Quick Actions Panel */}
-                    {quickActionsOpen && (
-                      <div className="bg-background border-b border-border p-4 animate-in slide-in-from-bottom-2 duration-300">
-                        <div className="w-full max-w-4xl mx-auto">
-                          {activeQuickSubPanel === 'main' && (
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                              <Button
-                                variant="outline"
-                                className="flex flex-col items-center justify-center h-24 gap-2 rounded-xl hover:bg-terracotta/5 hover:border-terracotta/30 group transition-all"
-                                onClick={() => {
-                                  setCreateOfferOpen(true);
-                                  setQuickActionsOpen(false);
-                                }}
-                              >
-                                <div className="h-10 w-10 rounded-full bg-terracotta/10 flex items-center justify-center group-hover:bg-terracotta/20">
-                                  <FileText className="h-5 w-5 text-terracotta" />
-                                </div>
-                                <span className="text-xs font-semibold">Create an offer</span>
-                              </Button>
-
-                              <Button
-                                variant="outline"
-                                className="flex flex-col items-center justify-center h-24 gap-2 rounded-xl hover:bg-blue-50 hover:border-blue-200 group transition-all"
-                                onClick={() => setActiveQuickSubPanel('responses')}
-                              >
-                                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200">
-                                  <Zap className="h-5 w-5 text-blue-600" />
-                                </div>
-                                <span className="text-xs font-semibold">Quick response</span>
-                              </Button>
-
-                              <Button
-                                variant="outline"
-                                className="flex flex-col items-center justify-center h-24 gap-2 rounded-xl hover:bg-teal/5 hover:border-teal/30 group transition-all"
-                                onClick={handleAutoReplyGenerate}
-                              >
-                                <div className="h-10 w-10 rounded-full bg-teal/10 flex items-center justify-center group-hover:bg-teal/20">
-                                  <Clock className="h-5 w-5 text-teal-600" />
-                                </div>
-                                <span className="text-xs font-semibold">Auto Reply</span>
-                              </Button>
-
-                              <Button
-                                variant="outline"
-                                className="flex flex-col items-center justify-center h-24 gap-2 rounded-xl hover:bg-amber/5 hover:border-amber/30 group transition-all"
-                                onClick={() => {
-                                  fileInputRef.current?.setAttribute('accept', 'image/*');
-                                  fileInputRef.current?.click();
-                                  setQuickActionsOpen(false);
-                                }}
-                              >
-                                <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center group-hover:bg-amber-200">
-                                  <ImageIcon className="h-5 w-5 text-amber-600" />
-                                </div>
-                                <span className="text-xs font-semibold">Photo album</span>
-                              </Button>
-
-                              <Button
-                                variant="outline"
-                                className="flex flex-col items-center justify-center h-24 gap-2 rounded-xl hover:bg-indigo/5 hover:border-indigo/30 group transition-all"
-                                onClick={handleInitiateCall}
-                              >
-                                <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center group-hover:bg-indigo-200">
-                                  <Video className="h-5 w-5 text-indigo-600" />
-                                </div>
-                                <span className="text-xs font-semibold">Initiate call</span>
-                              </Button>
-
-                              <Button
-                                variant="outline"
-                                className="flex flex-col items-center justify-center h-24 gap-2 rounded-xl hover:bg-muted group transition-all"
-                                onClick={handleOpenCamera}
-                              >
-                                <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center group-hover:bg-muted/80">
-                                  <Camera className="h-5 w-5 text-muted-foreground" />
-                                </div>
-                                <span className="text-xs font-semibold">Open Camera</span>
-                              </Button>
-                            </div>
-                          )}
-
-                          {activeQuickSubPanel === 'responses' && (
-                            <div className="space-y-4">
-                              <div className="flex items-center justify-between mb-2">
-                                <h4 className="text-sm font-bold flex items-center gap-2">
-                                  <Zap className="h-4 w-4 text-blue-600" />
-                                  Quick Responses
-                                </h4>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setActiveQuickSubPanel('main')}
-                                  className="h-8 text-xs underline"
+                            if (hasOffer) {
+                              return (
+                                <div
+                                  key={message.id}
+                                  className={`flex ${isMe ? 'justify-end' : 'justify-start'} mb-6 animate-in fade-in slide-in-from-bottom-2`}
                                 >
-                                  Back
-                                </Button>
-                              </div>
+                                  <div className="max-w-[85%] md:max-w-[70%]">
+                                    <OfferCard
+                                      offerId={message.offer_id}
+                                      currentUserId={currentUser?.id || ''}
+                                      onOfferUpdated={handleOfferCreated}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            }
 
-                              <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1">
-                                {quickResponses.map((resp, i) => (
-                                  <div key={i} className="group relative flex items-center gap-2">
-                                    {editingResponseIndex === i ? (
-                                      <div className="flex-1 flex gap-2 animate-in fade-in zoom-in-95 duration-200">
+                            return (
+                              <ChatMessage
+                                key={message.id}
+                                message={message}
+                                isMe={isMe}
+                                senderProfile={senderProfile}
+                                attachments={msgAttachments}
+                                onDownloadAll={handleDownloadAll}
+                                isAssistant={isAssistant}
+                              />
+                            );
+                          })
+                        ) : !messagesLoading ? (
+                          <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-2 opacity-60">
+                            <MessageCircle className="h-12 w-12 stroke-1" />
+                            <p className="text-sm">No messages yet. Send a greeting!</p>
+                          </div>
+                        ) : (
+                          // While loading and no messages, show an empty state to keep layout clean
+                          <div className="h-full flex items-center justify-center" />
+                        )}
+                      </div>
+
+                      {/* Message Input Container */}
+                      <div className="bg-muted/20 border-t border-border">
+                        {/* Quick Actions Panel */}
+                        {quickActionsOpen && (
+                          <div className="bg-background border-b border-border p-4 animate-in slide-in-from-bottom-2 duration-300">
+                            <div className="w-full max-w-4xl mx-auto">
+                              {activeQuickSubPanel === 'main' && (
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                  <Button
+                                    variant="outline"
+                                    className="flex flex-col items-center justify-center h-24 gap-2 rounded-xl hover:bg-terracotta/5 hover:border-terracotta/30 group transition-all"
+                                    onClick={() => {
+                                      setCreateOfferOpen(true);
+                                      setQuickActionsOpen(false);
+                                    }}
+                                  >
+                                    <div className="h-10 w-10 rounded-full bg-terracotta/10 flex items-center justify-center group-hover:bg-terracotta/20">
+                                      <FileText className="h-5 w-5 text-terracotta" />
+                                    </div>
+                                    <span className="text-xs font-semibold">Create an offer</span>
+                                  </Button>
+
+                                  <Button
+                                    variant="outline"
+                                    className="flex flex-col items-center justify-center h-24 gap-2 rounded-xl hover:bg-blue-50 hover:border-blue-200 group transition-all"
+                                    onClick={() => setActiveQuickSubPanel('responses')}
+                                  >
+                                    <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200">
+                                      <Zap className="h-5 w-5 text-blue-600" />
+                                    </div>
+                                    <span className="text-xs font-semibold">Quick response</span>
+                                  </Button>
+
+                                  <Button
+                                    variant="outline"
+                                    className="flex flex-col items-center justify-center h-24 gap-2 rounded-xl hover:bg-teal/5 hover:border-teal/30 group transition-all"
+                                    onClick={handleAutoReplyGenerate}
+                                  >
+                                    <div className="h-10 w-10 rounded-full bg-teal/10 flex items-center justify-center group-hover:bg-teal/20">
+                                      <Clock className="h-5 w-5 text-teal-600" />
+                                    </div>
+                                    <span className="text-xs font-semibold">Auto Reply</span>
+                                  </Button>
+
+                                  <Button
+                                    variant="outline"
+                                    className="flex flex-col items-center justify-center h-24 gap-2 rounded-xl hover:bg-amber/5 hover:border-amber/30 group transition-all"
+                                    onClick={() => {
+                                      fileInputRef.current?.setAttribute('accept', 'image/*');
+                                      fileInputRef.current?.click();
+                                      setQuickActionsOpen(false);
+                                    }}
+                                  >
+                                    <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center group-hover:bg-amber-200">
+                                      <ImageIcon className="h-5 w-5 text-amber-600" />
+                                    </div>
+                                    <span className="text-xs font-semibold">Photo album</span>
+                                  </Button>
+
+                                  <Button
+                                    variant="outline"
+                                    className="flex flex-col items-center justify-center h-24 gap-2 rounded-xl hover:bg-indigo/5 hover:border-indigo/30 group transition-all"
+                                    onClick={handleInitiateCall}
+                                  >
+                                    <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center group-hover:bg-indigo-200">
+                                      <Video className="h-5 w-5 text-indigo-600" />
+                                    </div>
+                                    <span className="text-xs font-semibold">Initiate call</span>
+                                  </Button>
+
+                                  <Button
+                                    variant="outline"
+                                    className="flex flex-col items-center justify-center h-24 gap-2 rounded-xl hover:bg-muted group transition-all"
+                                    onClick={handleOpenCamera}
+                                  >
+                                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center group-hover:bg-muted/80">
+                                      <Camera className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                    <span className="text-xs font-semibold">Open Camera</span>
+                                  </Button>
+                                </div>
+                              )}
+
+                              {activeQuickSubPanel === 'responses' && (
+                                <div className="space-y-4">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="text-sm font-bold flex items-center gap-2">
+                                      <Zap className="h-4 w-4 text-blue-600" />
+                                      Quick Responses
+                                    </h4>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => setActiveQuickSubPanel('main')}
+                                      className="h-8 text-xs underline"
+                                    >
+                                      Back
+                                    </Button>
+                                  </div>
+
+                                  <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1">
+                                    {quickResponses.map((resp, i) => (
+                                      <div key={i} className="group relative flex items-center gap-2">
+                                        {editingResponseIndex === i ? (
+                                          <div className="flex-1 flex gap-2 animate-in fade-in zoom-in-95 duration-200">
+                                            <Input
+                                              value={editResponseValue}
+                                              onChange={(e) => setEditResponseValue(e.target.value)}
+                                              className="flex-1 h-10 py-2 border-terracotta/30 focus-visible:ring-terracotta"
+                                              autoFocus
+                                            />
+                                            <Button size="icon" variant="terracotta" className="h-10 w-10 shrink-0" onClick={() => handleUpdateResponse(i)}>
+                                              <CheckCheck className="h-4 w-4" />
+                                            </Button>
+                                            <Button size="icon" variant="ghost" className="h-10 w-10 shrink-0" onClick={() => setEditingResponseIndex(null)}>
+                                              <X className="h-4 w-4" />
+                                            </Button>
+                                          </div>
+                                        ) : (
+                                          <>
+                                            <button
+                                              onClick={() => handleQuickResponse(resp)}
+                                              className="flex-1 text-left p-3 rounded-lg bg-muted/30 hover:bg-blue-50 hover:text-blue-700 text-sm transition-all border border-transparent hover:border-blue-200 truncate"
+                                            >
+                                              {resp}
+                                            </button>
+                                            <div className="flex shrink-0 gap-1 pr-1">
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-muted-foreground hover:text-blue-600 hover:bg-blue-50"
+                                                onClick={() => {
+                                                  setEditingResponseIndex(i);
+                                                  setEditResponseValue(resp);
+                                                }}
+                                                title="Edit response"
+                                              >
+                                                <Pencil className="h-3.5 w-3.5" />
+                                              </Button>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                                onClick={() => handleDeleteResponse(i)}
+                                                title="Delete response"
+                                              >
+                                                <Minus className="h-3.5 w-3.5" />
+                                              </Button>
+                                            </div>
+                                          </>
+                                        )}
+                                      </div>
+                                    ))}
+
+                                    {/* Add New Section */}
+                                    {isAddingResponse ? (
+                                      <div className="mt-2 flex gap-2 animate-in slide-in-from-bottom-2 duration-300">
                                         <Input
-                                          value={editResponseValue}
-                                          onChange={(e) => setEditResponseValue(e.target.value)}
-                                          className="flex-1 h-10 py-2 border-terracotta/30 focus-visible:ring-terracotta"
+                                          placeholder="Type new response..."
+                                          value={nextResponseText}
+                                          onChange={(e) => setNextResponseText(e.target.value)}
+                                          onKeyDown={(e) => e.key === 'Enter' && handleAddResponse()}
+                                          className="flex-1 h-11 border-terracotta/30 focus-visible:ring-terracotta"
                                           autoFocus
                                         />
-                                        <Button size="icon" variant="terracotta" className="h-10 w-10 shrink-0" onClick={() => handleUpdateResponse(i)}>
-                                          <CheckCheck className="h-4 w-4" />
+                                        <Button variant="terracotta" className="h-11 px-6 shadow-sm" onClick={handleAddResponse}>
+                                          Add
                                         </Button>
-                                        <Button size="icon" variant="ghost" className="h-10 w-10 shrink-0" onClick={() => setEditingResponseIndex(null)}>
-                                          <X className="h-4 w-4" />
+                                        <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setIsAddingResponse(false)}>
+                                          <X className="h-5 w-5" />
                                         </Button>
                                       </div>
                                     ) : (
-                                      <>
-                                        <button
-                                          onClick={() => handleQuickResponse(resp)}
-                                          className="flex-1 text-left p-3 rounded-lg bg-muted/30 hover:bg-blue-50 hover:text-blue-700 text-sm transition-all border border-transparent hover:border-blue-200 truncate"
-                                        >
-                                          {resp}
-                                        </button>
-                                        <div className="flex shrink-0 gap-1 pr-1">
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-muted-foreground hover:text-blue-600 hover:bg-blue-50"
-                                            onClick={() => {
-                                              setEditingResponseIndex(i);
-                                              setEditResponseValue(resp);
-                                            }}
-                                            title="Edit response"
-                                          >
-                                            <Pencil className="h-3.5 w-3.5" />
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                            onClick={() => handleDeleteResponse(i)}
-                                            title="Delete response"
-                                          >
-                                            <Minus className="h-3.5 w-3.5" />
-                                          </Button>
-                                        </div>
-                                      </>
+                                      <Button
+                                        variant="outline"
+                                        className="mt-2 w-full h-12 border-dashed border-2 border-muted-foreground/30 text-muted-foreground hover:text-terracotta hover:border-terracotta/50 hover:bg-terracotta/5 rounded-xl transition-all"
+                                        onClick={() => setIsAddingResponse(true)}
+                                      >
+                                        <Plus className="h-5 w-5 mr-2" />
+                                        Add Custom Response
+                                      </Button>
                                     )}
                                   </div>
-                                ))}
+                                </div>
+                              )}
 
-                                {/* Add New Section */}
-                                {isAddingResponse ? (
-                                  <div className="mt-2 flex gap-2 animate-in slide-in-from-bottom-2 duration-300">
-                                    <Input
-                                      placeholder="Type new response..."
-                                      value={nextResponseText}
-                                      onChange={(e) => setNextResponseText(e.target.value)}
-                                      onKeyDown={(e) => e.key === 'Enter' && handleAddResponse()}
-                                      className="flex-1 h-11 border-terracotta/30 focus-visible:ring-terracotta"
-                                      autoFocus
-                                    />
-                                    <Button variant="terracotta" className="h-11 px-6 shadow-sm" onClick={handleAddResponse}>
-                                      Add
-                                    </Button>
-                                    <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setIsAddingResponse(false)}>
-                                      <X className="h-5 w-5" />
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <Button
-                                    variant="outline"
-                                    className="mt-2 w-full h-12 border-dashed border-2 border-muted-foreground/30 text-muted-foreground hover:text-terracotta hover:border-terracotta/50 hover:bg-terracotta/5 rounded-xl transition-all"
-                                    onClick={() => setIsAddingResponse(true)}
-                                  >
-                                    <Plus className="h-5 w-5 mr-2" />
-                                    Add Custom Response
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          {activeQuickSubPanel === 'auto-reply' && (
-                            <div className="space-y-4">
-                              <div className="flex items-center justify-between">
-                                <h4 className="text-sm font-bold flex items-center gap-2">
-                                  <Sparkles className="h-4 w-4 text-blue-500" />
-                                  AI Auto Reply
-                                </h4>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setActiveQuickSubPanel('main')}
-                                  className="h-8 text-xs underline"
-                                >
-                                  Back
-                                </Button>
-                              </div>
-
-                              {isGeneratingAutoReply ? (
-                                <AutoReplySkeleton />
-                              ) : (
-                                <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
-                                  <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 italic text-sm text-blue-800 leading-relaxed shadow-inner min-h-[60px]">
-                                    "{autoReplyPreview}"
-                                  </div>
-                                  <div className="flex gap-2">
+                              {activeQuickSubPanel === 'auto-reply' && (
+                                <div className="space-y-4">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="text-sm font-bold flex items-center gap-2">
+                                      <Sparkles className="h-4 w-4 text-blue-500" />
+                                      AI Auto Reply
+                                    </h4>
                                     <Button
-                                      variant="outline"
-                                      className="flex-1 rounded-xl h-11 text-xs"
-                                      onClick={handleAutoReplyGenerate}
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => setActiveQuickSubPanel('main')}
+                                      className="h-8 text-xs underline"
                                     >
-                                      Regenerate
-                                    </Button>
-                                    <Button
-                                      variant="terracotta"
-                                      className="flex-[2] rounded-xl h-11 text-sm shadow-md"
-                                      onClick={handleAutoReplySend}
-                                    >
-                                      Send AI Reply
+                                      Back
                                     </Button>
                                   </div>
-                                  <p className="text-center text-[10px] text-muted-foreground">
-                                    AI-generated replies are meant for convenience. Please review before sending.
-                                  </p>
+
+                                  {isGeneratingAutoReply ? (
+                                    <AutoReplySkeleton />
+                                  ) : (
+                                    <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
+                                      <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 italic text-sm text-blue-800 leading-relaxed shadow-inner min-h-[60px]">
+                                        "{autoReplyPreview}"
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <Button
+                                          variant="outline"
+                                          className="flex-1 rounded-xl h-11 text-xs"
+                                          onClick={handleAutoReplyGenerate}
+                                        >
+                                          Regenerate
+                                        </Button>
+                                        <Button
+                                          variant="terracotta"
+                                          className="flex-[2] rounded-xl h-11 text-sm shadow-md"
+                                          onClick={handleAutoReplySend}
+                                        >
+                                          Send AI Reply
+                                        </Button>
+                                      </div>
+                                      <p className="text-center text-[10px] text-muted-foreground">
+                                        AI-generated replies are meant for convenience. Please review before sending.
+                                      </p>
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                          </div>
+                        )}
 
-                    <div className="py-3 px-2">
-                      {/* Selected Files Preview */}
-                      {selectedFiles.length > 0 && (
-                        <div className="mb-2 space-y-1">
-                          {selectedFiles.map((file, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center gap-2 p-2 bg-muted/50 rounded text-sm"
-                            >
-                              <Paperclip className="h-3 w-3" />
-                              <span className="flex-1 truncate">{file.name}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {attachmentService.formatFileSize(file.size)}
-                              </span>
-                              <button onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== index))}>
-                                <X className="h-4 w-4" />
-                              </button>
+                        <div className="py-3 px-2">
+                          {/* Selected Files Preview */}
+                          {selectedFiles.length > 0 && (
+                            <div className="mb-2 space-y-1">
+                              {selectedFiles.map((file, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-center gap-2 p-2 bg-muted/50 rounded text-sm"
+                                >
+                                  <Paperclip className="h-3 w-3" />
+                                  <span className="flex-1 truncate">{file.name}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {attachmentService.formatFileSize(file.size)}
+                                  </span>
+                                  <button onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== index))}>
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      )}
-                      <div className="w-full px-2 md:px-4 flex gap-2 items-end">
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          multiple
-                          onChange={(e) => {
-                            const files = Array.from(e.target.files || []);
-                            setSelectedFiles(prev => [...prev, ...files]);
-                          }}
-                          className="hidden"
-                          accept="image/*,.pdf,.doc,.docx"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            if (quickActionsOpen) {
-                              setQuickActionsOpen(false);
-                            } else {
-                              setActiveQuickSubPanel('main');
-                              setQuickActionsOpen(true);
-                            }
-                          }}
-                          className={`flex-shrink-0 transition-transform ${quickActionsOpen ? 'rotate-0 text-terracotta' : 'rotate-0 text-muted-foreground'}`}
-                        >
-                          {quickActionsOpen ? <XCircle className="h-6 w-6" /> : <PlusCircle className="h-6 w-6" />}
-                        </Button>
+                          )}
+                          <div className="w-full px-2 md:px-4 flex gap-2 items-end">
+                            <input
+                              ref={fileInputRef}
+                              type="file"
+                              multiple
+                              onChange={(e) => {
+                                const files = Array.from(e.target.files || []);
+                                setSelectedFiles(prev => [...prev, ...files]);
+                              }}
+                              className="hidden"
+                              accept="image/*,.pdf,.doc,.docx"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                if (quickActionsOpen) {
+                                  setQuickActionsOpen(false);
+                                } else {
+                                  setActiveQuickSubPanel('main');
+                                  setQuickActionsOpen(true);
+                                }
+                              }}
+                              className={`flex-shrink-0 transition-transform ${quickActionsOpen ? 'rotate-0 text-terracotta' : 'rotate-0 text-muted-foreground'}`}
+                            >
+                              {quickActionsOpen ? <XCircle className="h-6 w-6" /> : <PlusCircle className="h-6 w-6" />}
+                            </Button>
 
-                        <div className="flex-1 flex items-end bg-background/50 rounded-2xl border border-border px-3 focus-within:ring-1 focus-within:ring-terracotta/30 transition-all">
-                          <Textarea
-                            placeholder="Type your message..."
-                            value={messageText}
-                            onChange={(e) => {
-                              setMessageText(e.target.value);
-                              // Close quick actions when user starts typing if desired, 
-                              // but requirement says "The quick options panel should not block or override the keyboard"
-                            }}
-                            onFocus={() => {
-                              // Optional: hide quick actions on focus to give space for keyboard
-                              // setQuickActionsOpen(false);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handleSendMessage();
-                              }
-                            }}
-                            className="flex-1 resize-none border-0 shadow-none outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:shadow-none px-1 py-3 text-sm min-h-[44px] max-h-[120px] bg-transparent"
-                            rows={1}
-                          />
+                            <div className="flex-1 flex items-end bg-background/50 rounded-2xl border border-border px-3 focus-within:ring-1 focus-within:ring-terracotta/30 transition-all">
+                              <Textarea
+                                placeholder="Type your message..."
+                                value={messageText}
+                                onChange={(e) => {
+                                  setMessageText(e.target.value);
+                                  // Close quick actions when user starts typing if desired, 
+                                  // but requirement says "The quick options panel should not block or override the keyboard"
+                                }}
+                                onFocus={() => {
+                                  // Optional: hide quick actions on focus to give space for keyboard
+                                  // setQuickActionsOpen(false);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSendMessage();
+                                  }
+                                }}
+                                className="flex-1 resize-none border-0 shadow-none outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:shadow-none px-1 py-3 text-sm min-h-[44px] max-h-[120px] bg-transparent"
+                                rows={1}
+                              />
+                            </div>
+                            <Button
+                              variant="terracotta"
+                              size="icon"
+                              onClick={handleSendMessage}
+                              disabled={sending || (!messageText.trim() && selectedFiles.length === 0)}
+                              className="h-11 w-11 rounded-2xl shadow-md transition-transform active:scale-95 flex-shrink-0"
+                            >
+                              {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                            </Button>
+                          </div>
                         </div>
-                        <Button
-                          variant="terracotta"
-                          size="icon"
-                          onClick={handleSendMessage}
-                          disabled={sending || (!messageText.trim() && selectedFiles.length === 0)}
-                          className="h-11 w-11 rounded-2xl shadow-md transition-transform active:scale-95 flex-shrink-0"
-                        >
-                          {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                        </Button>
                       </div>
-                    </div>
-                  </div>
+                    </>
+                  )}
                 </>
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-muted/10">

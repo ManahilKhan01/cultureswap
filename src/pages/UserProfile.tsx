@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, MapPin, Star, Calendar, Globe, Clock, MessageCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { reviewService } from "@/lib/reviewService";
 import { swapService } from "@/lib/swapService";
 import { useProfileUpdates } from "@/hooks/useProfileUpdates";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SwapCard } from "@/components/SwapCard";
 
 const UserProfileSkeleton = () => (
   <div className="pb-12 bg-background animate-pulse">
@@ -60,6 +61,7 @@ const UserProfileSkeleton = () => (
 
 const UserProfile = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [reviews, setReviews] = useState<any[]>([]);
   const [rating, setRating] = useState(0);
   const [reviewsLoading, setReviewsLoading] = useState(true);
@@ -124,13 +126,14 @@ const UserProfile = () => {
   return (
     <div className="pb-12 bg-background">
       <main className="container mx-auto px-4 py-8">
-        <Button variant="ghost" asChild className="mb-6">
-          <Link to="/swaps"><ArrowLeft className="h-4 w-4 mr-2" />Back</Link>
+
+        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-6">
+          <ArrowLeft className="h-4 w-4 mr-2" />Back
         </Button>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Profile Card */}
-          <div className="lg:col-span-1 space-y-6">
+        <div className="grid lg:grid-cols-12 gap-6">
+          {/* Left Column: Profile Card & Details */}
+          <div className="lg:col-span-4 space-y-6">
             <Card>
               <CardContent className="pt-6 text-center">
                 <img
@@ -168,66 +171,6 @@ const UserProfile = () => {
                 </div>
               </CardContent>
             </Card>
-          </div>
-
-          {/* Main Content (Middle Column) */}
-          <div className="lg:col-span-1 space-y-6">
-            {user.bio && (
-              <Card>
-                <CardHeader><CardTitle className="text-lg">About</CardTitle></CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">{user.bio}</p>
-                </CardContent>
-              </Card>
-            )}
-
-            {user.skills_offered && user.skills_offered.length > 0 && (
-              <Card>
-                <CardHeader><CardTitle className="text-lg">Skills Offered</CardTitle></CardHeader>
-                <CardContent className="flex flex-wrap gap-2">
-                  {user.skills_offered.map((skill: string, idx: number) => (
-                    <Badge key={idx} className="bg-terracotta/10 text-terracotta border-terracotta/30">{skill}</Badge>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-            {user.skills_wanted && user.skills_wanted.length > 0 && (
-              <Card>
-                <CardHeader><CardTitle className="text-lg">Skills Wanted</CardTitle></CardHeader>
-                <CardContent className="flex flex-wrap gap-2">
-                  {user.skills_wanted.map((skill: string, idx: number) => (
-                    <Badge key={idx} className="bg-teal/10 text-teal border-teal/30">{skill}</Badge>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-          </div>
-
-          {/* Right Panel: Public View Additions */}
-          <div className="lg:col-span-1 space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-            <Card className="border-border/50 shadow-sm overflow-hidden">
-              <CardHeader className="bg-muted/30 pb-4">
-                <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Latest Swaps</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6 space-y-4">
-                {latestSwaps.length > 0 ? (
-                  latestSwaps.map((swap) => (
-                    <div key={swap.id} className="group cursor-default">
-                      <h4 className="text-sm font-semibold group-hover:text-terracotta transition-colors line-clamp-1">{swap.title}</h4>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className="text-[10px] py-0 h-4 border-terracotta/20 text-terracotta">{swap.skill_offered}</Badge>
-                        <span className="text-[10px] text-muted-foreground">for</span>
-                        <Badge variant="outline" className="text-[10px] py-0 h-4 border-teal/20 text-teal">{swap.skill_wanted}</Badge>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">No swaps created yet</p>
-                )}
-              </CardContent>
-            </Card>
 
             <Card className="border-border/50 shadow-sm overflow-hidden">
               <CardHeader className="bg-muted/30 pb-4">
@@ -259,9 +202,42 @@ const UserProfile = () => {
               </CardContent>
             </Card>
           </div>
-        </div >
-      </main >
-    </div >
+
+          {/* Right Column: Main Content */}
+          <div className="lg:col-span-8 space-y-6">
+            {user.bio && (
+              <Card>
+                <CardHeader><CardTitle className="text-lg">About</CardTitle></CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">{user.bio}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Latest Swaps */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-terracotta" />
+                Latest Swaps
+              </h3>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {latestSwaps.length > 0 ? (
+                  latestSwaps.slice(0, 3).map((swap) => (
+                    <div key={swap.id} className="h-full">
+                      <SwapCard swap={swap} showProfile={false} />
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-full py-8 text-center bg-muted/30 rounded-lg border border-dashed">
+                    <p className="text-muted-foreground italic">No swaps created yet</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
   );
 };
 

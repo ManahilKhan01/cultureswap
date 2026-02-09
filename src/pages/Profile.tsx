@@ -11,6 +11,7 @@ import { profileService } from "@/lib/profileService";
 import { reviewService } from "@/lib/reviewService";
 import { swapService } from "@/lib/swapService";
 import { getCacheBustedImageUrl } from "@/lib/cacheUtils";
+import { SwapCard } from "@/components/SwapCard";
 
 const ProfileSkeleton = () => (
   <div className="min-h-screen bg-background animate-pulse">
@@ -179,47 +180,6 @@ const Profile = () => {
   return (
     <>
       <main className="container mx-auto px-4 py-8">
-        {/* Profile Header */}
-        <div className="bg-gradient-to-r from-terracotta/10 to-teal/10 rounded-2xl p-8 mb-8 border border-white/20">
-          <div className="flex flex-col md:flex-row gap-6 items-start">
-            <div className="relative group">
-              <img
-                key={getCacheBustedImageUrl(userProfile.profile_image_url)}
-                src={getCacheBustedImageUrl(userProfile.profile_image_url)}
-                alt={userProfile.full_name}
-                className="h-32 w-32 rounded-2xl object-cover border-4 border-white shadow-warm transition-transform duration-500 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 rounded-2xl bg-black/10 opacity-0 group-hover:opacity-10 transition-opacity" />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h1 className="font-display text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-terracotta to-terracotta/70">{userProfile.full_name || "User"}</h1>
-                  <div className="flex items-center gap-4 text-muted-foreground mb-4">
-                    <span className="flex items-center gap-1 hover:text-terracotta transition-colors">
-                      <MapPin className="h-4 w-4" />
-                      {userProfile.city || "City"}, {userProfile.country || "Country"}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Star className="h-4 w-4 fill-golden text-golden" />
-                      {rating > 0 ? rating.toFixed(1) : (bgLoading ? "..." : "0.0")} ({reviews.length} reviews)
-                    </span>
-                  </div>
-                </div>
-                <Button variant="outline" asChild className="hover-lift">
-                  <Link to="/settings"><Edit className="h-4 w-4 mr-2" />Edit Profile</Link>
-                </Button>
-              </div>
-              <p className="text-muted-foreground mb-4 max-w-2xl leading-relaxed">{userProfile.bio || "No bio added yet"}</p>
-              <div className="flex flex-wrap gap-2">
-                {userProfile.languages && userProfile.languages.length > 0 && userProfile.languages.map((lang: string) => (
-                  <Badge key={lang} variant="secondary" className="gap-1 bg-white/50 border-white/40"><Globe className="h-3 w-3" />{lang}</Badge>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* View Toggle */}
         <div className="flex justify-center mb-8">
           <div className="bg-muted/50 p-1 rounded-xl border border-border/50 flex gap-1">
@@ -242,103 +202,252 @@ const Profile = () => {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <Tabs defaultValue={viewMode === 'private' ? 'reviews' : 'skills'} className="w-full">
-              <TabsList className="mb-6 bg-muted/50 p-1 border border-border/50 rounded-xl">
-                {viewMode === 'public' && (
-                  <TabsTrigger value="skills" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Skills</TabsTrigger>
-                )}
-                <TabsTrigger value="reviews" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Reviews</TabsTrigger>
-              </TabsList>
-
-              {viewMode === 'public' && (
-                <TabsContent value="skills" className="space-y-6 focus-visible:outline-none">
-                  <Card className="border-border/50 shadow-sm overflow-hidden group">
-                    <div className="h-1 w-full bg-terracotta/10 translate-y-[-1px] group-hover:bg-terracotta/30 transition-colors" />
-                    <CardHeader>
-                      <CardTitle className="text-lg flex items-center gap-2 text-terracotta">
-                        <Award className="h-5 w-5" /> Skills I Offer
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {userProfile.skills_offered && userProfile.skills_offered.length > 0 ? (
-                          userProfile.skills_offered.map((skill: string) => (
-                            <Badge key={skill} className="bg-terracotta/10 text-terracotta border-0 hover:bg-terracotta hover:text-white transition-all cursor-default scale-100 hover:scale-110 active:scale-95">{skill}</Badge>
-                          ))
-                        ) : (
-                          <p className="text-muted-foreground text-sm italic">No skills added yet</p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-border/50 shadow-sm overflow-hidden group">
-                    <div className="h-1 w-full bg-teal/10 translate-y-[-1px] group-hover:bg-teal/30 transition-colors" />
-                    <CardHeader>
-                      <CardTitle className="text-lg flex items-center gap-2 text-teal">
-                        <Sparkles className="h-5 w-5" /> Skills I Want to Learn
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {userProfile.skills_wanted && userProfile.skills_wanted.length > 0 ? (
-                          userProfile.skills_wanted.map((skill: string) => (
-                            <Badge key={skill} className="bg-teal/10 text-teal border-0 hover:bg-teal hover:text-white transition-all cursor-default scale-100 hover:scale-110 active:scale-95">{skill}</Badge>
-                          ))
-                        ) : (
-                          <p className="text-muted-foreground text-sm italic">No skills added yet</p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              )}
-
-              <TabsContent value="reviews" className="space-y-4 focus-visible:outline-none">
-                {bgLoading ? (
-                  <div className="space-y-4">
-                    {[1, 2].map((i) => (
-                      <div key={i} className="h-32 w-full bg-muted rounded-xl animate-pulse" />
-                    ))}
+        {viewMode === 'public' ? (
+          /* Public View: 2-Column Sidebar Layout */
+          <div className="grid lg:grid-cols-12 gap-6">
+            {/* Left Column: Profile Card & Details */}
+            <div className="lg:col-span-4 space-y-6">
+              <Card>
+                <CardContent className="pt-6 text-center">
+                  <img
+                    src={getCacheBustedImageUrl(userProfile.profile_image_url) || "/profile.svg"}
+                    alt={userProfile.full_name || "User"}
+                    className="h-32 w-32 rounded-full object-cover mx-auto ring-4 ring-terracotta/20"
+                  />
+                  <h1 className="font-display text-2xl font-bold mt-4">{userProfile.full_name || "User"}</h1>
+                  <p className="text-muted-foreground flex items-center justify-center gap-1 mt-1">
+                    <MapPin className="h-4 w-4" />{userProfile.city || "Location"}, {userProfile.country || "Country"}
+                  </p>
+                  <div className="flex items-center justify-center gap-2 mt-2">
+                    <Star className="h-5 w-5 fill-golden text-golden" />
+                    <span className="font-semibold">{rating.toFixed(1)}</span>
+                    <span className="text-muted-foreground">({reviews.length} reviews)</span>
                   </div>
-                ) : reviews.length > 0 ? (
-                  reviews.map((review: any) => (
-                    <Card key={review.id} className="border-border/50 hover:shadow-md transition-shadow">
-                      <CardContent className="pt-6">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="h-10 w-10 rounded-full bg-terracotta/10 flex items-center justify-center font-display text-terracotta font-bold">
-                            {review.reviewer_name?.[0] || 'U'}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-sm">{review.reviewer_name || "User"}</p>
-                            <div className="flex gap-0.5">
-                              {[...Array(5)].map((_, i) => (
-                                <Star key={i} className={`h-3 w-3 ${i < review.rating ? 'fill-golden text-golden' : 'text-muted'}`} />
-                              ))}
-                            </div>
+                  <Button variant="terracotta" className="w-full mt-4" asChild>
+                    <Link to={`/messages?user=${userProfile.id}`}>
+                      <MessageCircle className="h-4 w-4 mr-2" />Send Message
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Details</CardTitle></CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span>Joined {new Date(userProfile.created_at || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-muted-foreground" />
+                    <span>{userProfile.languages?.join(', ') || 'Not specified'}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/50 shadow-sm overflow-hidden">
+                <CardHeader className="bg-muted/30 pb-4">
+                  <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">User Reviews Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-4">
+                  {reviews.length > 0 ? (
+                    reviews.slice(0, 3).map((review) => (
+                      <div key={review.id} className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold">{review.reviewer_name || "User"}</span>
+                          <div className="flex gap-0.5">
+                            {[...Array(5)].map((_, i) => (
+                              <Star key={i} className={`h-2.5 w-2.5 ${i < review.rating ? 'fill-golden text-golden' : 'text-muted'}`} />
+                            ))}
                           </div>
                         </div>
-                        <p className="text-muted-foreground text-sm italic leading-relaxed">"{review.comment}"</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2 italic">"{review.comment}"</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">No reviews yet</p>
+                  )}
+                  {reviews.length > 3 && (
+                    <p className="text-[10px] text-center text-muted-foreground pt-2 border-t border-border/50">
+                      + {reviews.length - 3} more reviews
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Column: Main Content */}
+            <div className="lg:col-span-8 space-y-6">
+              {userProfile.bio && (
+                <Card>
+                  <CardHeader><CardTitle className="text-lg">About</CardTitle></CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground">{userProfile.bio}</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Skills cards removed from Public View */}
+              </div>
+
+              {/* Latest Swaps */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-terracotta" />
+                  Latest Swaps
+                </h3>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {latestSwaps.length > 0 ? (
+                    latestSwaps.slice(0, 3).map((swap) => (
+                      <div key={swap.id} className="h-full">
+                        <SwapCard swap={swap} showProfile={false} />
+                      </div>
+                    ))
+                  ) : (
+                    <div className="col-span-full py-8 text-center bg-muted/30 rounded-lg border border-dashed">
+                      <p className="text-muted-foreground italic">No swaps created yet</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Private View: Existing Banner + 3-Column Layout */
+          <>
+            {/* Profile Header */}
+            <div className="bg-gradient-to-r from-terracotta/10 to-teal/10 rounded-2xl p-8 mb-8 border border-white/20">
+              <div className="flex flex-col md:flex-row gap-6 items-start">
+                <div className="relative group">
+                  <img
+                    key={getCacheBustedImageUrl(userProfile.profile_image_url)}
+                    src={getCacheBustedImageUrl(userProfile.profile_image_url)}
+                    alt={userProfile.full_name}
+                    className="h-32 w-32 rounded-2xl object-cover border-4 border-white shadow-warm transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 rounded-2xl bg-black/10 opacity-0 group-hover:opacity-10 transition-opacity" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h1 className="font-display text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-terracotta to-terracotta/70">{userProfile.full_name || "User"}</h1>
+                      <div className="flex items-center gap-4 text-muted-foreground mb-4">
+                        <span className="flex items-center gap-1 hover:text-terracotta transition-colors">
+                          <MapPin className="h-4 w-4" />
+                          {userProfile.city || "City"}, {userProfile.country || "Country"}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Star className="h-4 w-4 fill-golden text-golden" />
+                          {rating > 0 ? rating.toFixed(1) : (bgLoading ? "..." : "0.0")} ({reviews.length} reviews)
+                        </span>
+                      </div>
+                    </div>
+                    <Button variant="outline" asChild className="hover-lift">
+                      <Link to="/settings"><Edit className="h-4 w-4 mr-2" />Edit Profile</Link>
+                    </Button>
+                  </div>
+                  <p className="text-muted-foreground mb-4 max-w-2xl leading-relaxed">{userProfile.bio || "No bio added yet"}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {userProfile.languages && userProfile.languages.length > 0 && userProfile.languages.map((lang: string) => (
+                      <Badge key={lang} variant="secondary" className="gap-1 bg-white/50 border-white/40"><Globe className="h-3 w-3" />{lang}</Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2">
+                <Tabs defaultValue="reviews" className="w-full">
+                  <TabsList className="mb-6 bg-muted/50 p-1 border border-border/50 rounded-xl">
+                    <TabsTrigger value="reviews" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Reviews</TabsTrigger>
+                    <TabsTrigger value="skills" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Skills</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="skills" className="space-y-6 focus-visible:outline-none">
+                    <Card className="border-border/50 shadow-sm overflow-hidden group">
+                      <div className="h-1 w-full bg-terracotta/10 translate-y-[-1px] group-hover:bg-terracotta/30 transition-colors" />
+                      <CardHeader>
+                        <CardTitle className="text-lg flex items-center gap-2 text-terracotta">
+                          <Award className="h-5 w-5" /> Skills I Offer
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-2">
+                          {userProfile.skills_offered && userProfile.skills_offered.length > 0 ? (
+                            userProfile.skills_offered.map((skill: string) => (
+                              <Badge key={skill} className="bg-terracotta/10 text-terracotta border-0 hover:bg-terracotta hover:text-white transition-all cursor-default scale-100 hover:scale-110 active:scale-95">{skill}</Badge>
+                            ))
+                          ) : (
+                            <p className="text-muted-foreground text-sm italic">No skills added yet</p>
+                          )}
+                        </div>
                       </CardContent>
                     </Card>
-                  ))
-                ) : (
-                  <Card className="border-dashed border-2 bg-transparent">
-                    <CardContent className="py-12 text-center">
-                      <MessageCircle className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-                      <p className="text-muted-foreground">No reviews yet. Start swapping to earn reviews!</p>
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
 
-          <div className="space-y-6">
-            {viewMode === 'public' && (
-              <>
+                    <Card className="border-border/50 shadow-sm overflow-hidden group">
+                      <div className="h-1 w-full bg-teal/10 translate-y-[-1px] group-hover:bg-teal/30 transition-colors" />
+                      <CardHeader>
+                        <CardTitle className="text-lg flex items-center gap-2 text-teal">
+                          <Sparkles className="h-5 w-5" /> Skills I Want to Learn
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-2">
+                          {userProfile.skills_wanted && userProfile.skills_wanted.length > 0 ? (
+                            userProfile.skills_wanted.map((skill: string) => (
+                              <Badge key={skill} className="bg-teal/10 text-teal border-0 hover:bg-teal hover:text-white transition-all cursor-default scale-100 hover:scale-110 active:scale-95">{skill}</Badge>
+                            ))
+                          ) : (
+                            <p className="text-muted-foreground text-sm italic">No skills added yet</p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  <TabsContent value="reviews" className="space-y-4 focus-visible:outline-none">
+                    {bgLoading ? (
+                      <div className="space-y-4">
+                        {[1, 2].map((i) => (
+                          <div key={i} className="h-32 w-full bg-muted rounded-xl animate-pulse" />
+                        ))}
+                      </div>
+                    ) : reviews.length > 0 ? (
+                      reviews.map((review: any) => (
+                        <Card key={review.id} className="border-border/50 hover:shadow-md transition-shadow">
+                          <CardContent className="pt-6">
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="h-10 w-10 rounded-full bg-terracotta/10 flex items-center justify-center font-display text-terracotta font-bold">
+                                {review.reviewer_name?.[0] || 'U'}
+                              </div>
+                              <div>
+                                <p className="font-semibold text-sm">{review.reviewer_name || "User"}</p>
+                                <div className="flex gap-0.5">
+                                  {[...Array(5)].map((_, i) => (
+                                    <Star key={i} className={`h-3 w-3 ${i < review.rating ? 'fill-golden text-golden' : 'text-muted'}`} />
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                            <p className="text-muted-foreground text-sm italic leading-relaxed">"{review.comment}"</p>
+                          </CardContent>
+                        </Card>
+                      ))
+                    ) : (
+                      <Card className="border-dashed border-2 bg-transparent">
+                        <CardContent className="py-12 text-center">
+                          <MessageCircle className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                          <p className="text-muted-foreground">No reviews yet. Start swapping to earn reviews!</p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </div>
+
+              <div className="space-y-6">
                 <Card className="border-border/50 shadow-sm overflow-hidden">
                   <CardHeader className="bg-muted/30 pb-4">
                     <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Profile Details</CardTitle>
@@ -382,64 +491,10 @@ const Profile = () => {
                   <h4 className="font-semibold text-teal-900 mb-1">Culture Explorer</h4>
                   <p className="text-xs text-teal-700/70">Next badge at 5 completed swaps</p>
                 </div>
-
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                  <Card className="border-border/50 shadow-sm overflow-hidden">
-                    <CardHeader className="bg-muted/30 pb-4">
-                      <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Latest Swaps</CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-6 space-y-4">
-                      {latestSwaps.length > 0 ? (
-                        latestSwaps.map((swap) => (
-                          <div key={swap.id} className="group cursor-default">
-                            <h4 className="text-sm font-semibold group-hover:text-terracotta transition-colors line-clamp-1">{swap.title}</h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-[10px] py-0 h-4 border-terracotta/20 text-terracotta">{swap.skill_offered}</Badge>
-                              <span className="text-[10px] text-muted-foreground">for</span>
-                              <Badge variant="outline" className="text-[10px] py-0 h-4 border-teal/20 text-teal">{swap.skill_wanted}</Badge>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground italic">No swaps created yet</p>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-border/50 shadow-sm overflow-hidden">
-                    <CardHeader className="bg-muted/30 pb-4">
-                      <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">User Reviews Summary</CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-6 space-y-4">
-                      {reviews.length > 0 ? (
-                        reviews.slice(0, 3).map((review) => (
-                          <div key={review.id} className="space-y-1">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold">{review.reviewer_name || "User"}</span>
-                              <div className="flex gap-0.5">
-                                {[...Array(5)].map((_, i) => (
-                                  <Star key={i} className={`h-2.5 w-2.5 ${i < review.rating ? 'fill-golden text-golden' : 'text-muted'}`} />
-                                ))}
-                              </div>
-                            </div>
-                            <p className="text-xs text-muted-foreground line-clamp-2 italic">"{review.comment}"</p>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground italic">No reviews yet</p>
-                      )}
-                      {reviews.length > 3 && (
-                        <p className="text-[10px] text-center text-muted-foreground pt-2 border-t border-border/50">
-                          + {reviews.length - 3} more reviews in the reviews tab
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+              </div>
+            </div>
+          </>
+        )}
       </main>
     </>
   );

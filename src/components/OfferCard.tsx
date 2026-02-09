@@ -85,6 +85,10 @@ export const OfferCard = ({ offer: initialOffer, offerId, currentUserId, onOffer
                 title: "Offer Accepted!",
                 description: "The swap is now active. Check your Swaps page!",
             });
+            // Update local state immediately
+            if (offer) {
+                setOffer({ ...offer, status: 'accepted' });
+            }
             onOfferUpdated?.();
         } catch (error: any) {
             toast({
@@ -105,6 +109,10 @@ export const OfferCard = ({ offer: initialOffer, offerId, currentUserId, onOffer
                 title: "Offer Declined",
                 description: "You've declined this offer.",
             });
+            // Update local state immediately
+            if (offer) {
+                setOffer({ ...offer, status: 'rejected' });
+            }
             onOfferUpdated?.();
         } catch (error: any) {
             toast({
@@ -121,19 +129,19 @@ export const OfferCard = ({ offer: initialOffer, offerId, currentUserId, onOffer
         switch (offer.status) {
             case "pending":
                 return (
-                    <Badge variant="outline" className="bg-golden/10 text-golden-dark border-golden/30 animate-pulse">
+                    <Badge variant="outline" className="bg-white/20 text-white border-white/40 animate-pulse">
                         Pending
                     </Badge>
                 );
             case "accepted":
                 return (
-                    <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+                    <Badge variant="outline" className="bg-white/20 text-white border-white/40">
                         Accepted
                     </Badge>
                 );
             case "rejected":
                 return (
-                    <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/30">
+                    <Badge variant="outline" className="bg-white/10 text-white/70 border-white/20">
                         Declined
                     </Badge>
                 );
@@ -258,6 +266,15 @@ export const OfferCard = ({ offer: initialOffer, offerId, currentUserId, onOffer
                         <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
                         <span className="text-[11px] text-muted-foreground font-medium italic">
                             Awaiting response...
+                        </span>
+                    </div>
+                )}
+
+                {offer.status === 'accepted' && (
+                    <div className="flex items-center justify-center gap-2 py-1 animate-in fade-in duration-300">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-bold text-green-600">
+                            Accepted
                         </span>
                     </div>
                 )}
