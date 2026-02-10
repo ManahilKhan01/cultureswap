@@ -9,6 +9,7 @@ export interface OfferData {
   skill_wanted: string;
   category?: string;
   format?: string;
+  address?: string;
   session_days: string[];
   duration: string;
   schedule?: string;
@@ -26,6 +27,7 @@ export interface Offer {
   skill_wanted: string;
   category?: string;
   format?: string;
+  address?: string;
   session_days: string[];
   duration: string;
   schedule?: string;
@@ -59,6 +61,7 @@ export const offerService = {
             skill_wanted: offerData.skill_wanted,
             category: offerData.category,
             format: offerData.format,
+            address: offerData.address || null,
             session_days: offerData.session_days,
             duration: offerData.duration,
             schedule: offerData.schedule,
