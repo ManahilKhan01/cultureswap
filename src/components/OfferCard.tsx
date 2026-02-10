@@ -10,6 +10,8 @@ import {
   Loader2,
   Info,
   Handshake,
+  MapPin,
+  Monitor,
 } from "lucide-react";
 import { offerService, Offer } from "@/lib/offerService";
 import { useToast } from "@/hooks/use-toast";
@@ -30,15 +32,6 @@ const DAY_LABELS: Record<string, string> = {
   friday: "Fri",
   saturday: "Sat",
   sunday: "Sun",
-};
-
-const DURATION_LABELS: Record<string, string> = {
-  "30min": "30 min",
-  "1hr": "1 hour",
-  "1.5hr": "1.5 hours",
-  "2hr": "2 hours",
-  "3hr": "3 hours",
-  custom: "Custom",
 };
 
 export const OfferCard = ({
@@ -277,14 +270,30 @@ export const OfferCard = ({
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" />
-              <span className="text-[10px] font-bold uppercase">Duration</span>
+              {offer.format === "in-person" ? (
+                <MapPin className="h-3.5 w-3.5" />
+              ) : (
+                <Monitor className="h-3.5 w-3.5" />
+              )}
+              <span className="text-[10px] font-bold uppercase">Format</span>
             </div>
-            <p className="text-sm font-semibold">
-              {DURATION_LABELS[offer.duration] || offer.duration}
+            <p className="text-sm font-semibold capitalize">
+              {offer.format || "Online"}
             </p>
           </div>
         </div>
+
+        {offer.format === "in-person" && offer.address && (
+          <div className="flex items-start gap-2 bg-terracotta/5 rounded-lg p-2.5 border border-terracotta/15">
+            <MapPin className="h-3.5 w-3.5 text-terracotta mt-0.5 shrink-0" />
+            <div className="text-xs">
+              <span className="font-semibold text-foreground/80">
+                Location:{" "}
+              </span>
+              <span className="text-muted-foreground">{offer.address}</span>
+            </div>
+          </div>
+        )}
 
         {(offer.schedule || offer.notes) && (
           <div className="bg-muted/30 rounded-xl p-3 border border-border/50">
