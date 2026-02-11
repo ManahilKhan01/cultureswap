@@ -28,6 +28,8 @@ import { supabase } from "@/lib/supabase";
 import { notificationService } from "@/lib/notificationService";
 import { messageService } from "@/lib/messageService";
 import { profileService } from "@/lib/profileService";
+import { presenceService } from "@/lib/presenceService";
+import { StatusDot } from "@/components/StatusDot";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useProfileUpdates } from "@/hooks/useProfileUpdates";
 import { getCacheBustedImageUrl } from "@/lib/cacheUtils";
@@ -75,6 +77,9 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
         } = await supabase.auth.getUser();
         if (user) {
           setCurrentUser(user);
+
+          // Start presence heartbeat
+          presenceService.startHeartbeat();
 
           // Load notifications
           const unreadNotifs = await notificationService.getUnreadNotifications(
@@ -478,12 +483,15 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="gap-2 pl-2 pr-3">
-                      <img
-                        key={userImageUrl}
-                        src={userImageUrl}
-                        alt={userName}
-                        className="h-8 w-8 rounded-full object-cover"
-                      />
+                      <div className="relative">
+                        <img
+                          key={userImageUrl}
+                          src={userImageUrl}
+                          alt={userName}
+                          className="h-8 w-8 rounded-full object-cover"
+                        />
+                        <StatusDot displayStatus="online" size="sm" />
+                      </div>
                       <span className="text-sm font-medium">{userName}</span>
                       <ChevronDown className="h-4 w-4" />
                     </Button>

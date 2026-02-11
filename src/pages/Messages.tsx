@@ -49,7 +49,8 @@ import { CameraModal } from "@/components/CameraModal";
 import { ChatMessage } from "@/components/ChatMessage";
 import { chatManagementService } from "@/lib/chatManagementService";
 import { aiAssistantService } from "@/lib/aiAssistantService";
-import { presenceService } from "@/lib/presenceService";
+import { presenceService, type UserPresence } from "@/lib/presenceService";
+import { StatusDot } from "@/components/StatusDot";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { getCacheBustedImageUrl } from "@/lib/cacheUtils";
 
@@ -92,14 +93,9 @@ const Messages = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Presence state
-  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    const unsubscribe = presenceService.subscribe((users) => {
-      setOnlineUsers(new Set(users));
-    });
-    return () => unsubscribe();
-  }, []);
+  const [presenceMap, setPresenceMap] = useState<Record<string, UserPresence>>(
+    {},
+  );
 
   const userIdParam = searchParams.get("user");
   const swapIdParam = searchParams.get("swap");
@@ -497,6 +493,14 @@ const Messages = () => {
       setConversations(sortedConversations);
       setStarredChats(metadata.starredChats as any);
       setArchivedChats(metadata.archivedChats as any);
+
+      // Fetch presence for all conversation users
+      const allUserIds = allConversations
+        .map((c: any) => c.otherUserId)
+        .filter(Boolean);
+      if (allUserIds.length > 0) {
+        presenceService.getBatchPresence(allUserIds).then(setPresenceMap);
+      }
     } catch (error) {
       console.error("Error loading conversations:", error);
     }
@@ -1419,8 +1423,17 @@ const Messages = () => {
                                 </span>
                               </div>
                             )}
+                            {!isAssistant && (
+                              <StatusDot
+                                displayStatus={
+                                  presenceMap[conv.otherUserId]?.status ||
+                                  "offline"
+                                }
+                                size="sm"
+                              />
+                            )}
                             {isUnread && !isSelected && (
-                              <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-terracotta border-2 border-white" />
+                              <div className="absolute -top-0.5 -left-0.5 h-2.5 w-2.5 rounded-full bg-terracotta border-[1.5px] border-white" />
                             )}
                           </div>
                           <div className="flex-1 min-w-0 pr-6">
@@ -1535,7 +1548,8 @@ const Messages = () => {
                             </>
                           ) : (
                             <>
-                              {onlineUsers.has(otherUserProfile?.id) && (
+                              {presenceMap[otherUserProfile?.id]?.status ===
+                                "online" && (
                                 <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                               )}
                               Local time:{" "}
