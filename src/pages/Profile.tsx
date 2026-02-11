@@ -1,6 +1,17 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, Star, Calendar, Globe, Clock, Award, Edit, MessageCircle, Loader2, Sparkles } from "lucide-react";
+import {
+  MapPin,
+  Star,
+  Calendar,
+  Globe,
+  Clock,
+  Award,
+  Edit,
+  MessageCircle,
+  Loader2,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +22,12 @@ import { profileService } from "@/lib/profileService";
 import { reviewService } from "@/lib/reviewService";
 import { swapService } from "@/lib/swapService";
 import { getCacheBustedImageUrl } from "@/lib/cacheUtils";
+import {
+  presenceService,
+  getStatusLabel,
+  type UserStatus,
+} from "@/lib/presenceService";
+import { StatusDot } from "@/components/StatusDot";
 
 const ProfileSkeleton = () => (
   <div className="min-h-screen bg-background animate-pulse">
@@ -52,13 +69,16 @@ const Profile = () => {
   const [rating, setRating] = useState(0);
   const [swapsCount, setSwapsCount] = useState(0);
   const [bgLoading, setBgLoading] = useState(false);
-  const [viewMode, setViewMode] = useState<'private' | 'public'>('private');
+  const [viewMode, setViewMode] = useState<"private" | "public">("private");
   const [latestSwaps, setLatestSwaps] = useState<any[]>([]);
+  const [userStatus, setUserStatus] = useState<UserStatus>("offline");
 
   useEffect(() => {
     const loadProfileData = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
         if (user) {
           // Check cache first with validated user ID
@@ -77,42 +97,68 @@ const Profile = () => {
           setBgLoading(true);
           Promise.all([
             // If we didn't get profile from cache/fetch yet, fetch it now
-            !userProfile && !cacheHit ? profileService.getProfile(user.id) : Promise.resolve(null),
+            !userProfile && !cacheHit
+              ? profileService.getProfile(user.id)
+              : Promise.resolve(null),
             reviewService.getReviewsForUser(user.id),
             reviewService.getAverageRating(user.id),
             swapService.getCompletedSwapsCount(user.id),
-            swapService.getSwapsByUser(user.id)
-          ]).then(([fetchedProfile, userReviews, avgRating, completedCount, userSwaps]) => {
-            if (fetchedProfile) setUserProfile(fetchedProfile);
-            setReviews(userReviews);
-            setRating(avgRating);
-            setSwapsCount(completedCount);
-            setLatestSwaps(userSwaps.slice(0, 3));
-            setBgLoading(false);
+            swapService.getSwapsByUser(user.id),
+          ])
+            .then(
+              ([
+                fetchedProfile,
+                userReviews,
+                avgRating,
+                completedCount,
+                userSwaps,
+              ]) => {
+                if (fetchedProfile) setUserProfile(fetchedProfile);
+                setReviews(userReviews);
+                setRating(avgRating);
+                setSwapsCount(completedCount);
+                setLatestSwaps(userSwaps.slice(0, 3));
+                setBgLoading(false);
 
-            // Cache everything for next time
-            localStorage.setItem('profile_page_cache', JSON.stringify({
-              profile: fetchedProfile || userProfile, // Use latest
-              reviews: userReviews,
-              rating: avgRating,
-              swapsCount: completedCount,
-              latestSwaps: userSwaps.slice(0, 3),
-              timestamp: Date.now()
-            }));
-          }).catch(() => setBgLoading(false));
+                // Cache everything for next time
+                localStorage.setItem(
+                  "profile_page_cache",
+                  JSON.stringify({
+                    profile: fetchedProfile || userProfile, // Use latest
+                    reviews: userReviews,
+                    rating: avgRating,
+                    swapsCount: completedCount,
+                    latestSwaps: userSwaps.slice(0, 3),
+                    timestamp: Date.now(),
+                  }),
+                );
+              },
+            )
+            .catch(() => setBgLoading(false));
+
+          // Fetch user presence
+          presenceService
+            .getUserPresence(user.id)
+            .then((p) => setUserStatus(p.status));
         }
       } catch (error) {
-        console.error('Error loading profile:', error);
+        console.error("Error loading profile:", error);
         setLoading(false);
       }
     };
 
     // Load from cache first for instant display
     const checkCache = (currentUserId: string) => {
-      const cached = localStorage.getItem('profile_page_cache');
+      const cached = localStorage.getItem("profile_page_cache");
       if (cached) {
         try {
-          const { profile, reviews: cachedReviews, rating: cachedRating, swapsCount: cachedSwaps, timestamp } = JSON.parse(cached);
+          const {
+            profile,
+            reviews: cachedReviews,
+            rating: cachedRating,
+            swapsCount: cachedSwaps,
+            timestamp,
+          } = JSON.parse(cached);
           const age = Date.now() - timestamp;
 
           // Use cache if less than 5 minutes old AND belongs to current user
@@ -142,7 +188,9 @@ const Profile = () => {
       setLoading(true);
       const reloadProfileData = async () => {
         try {
-          const { data: { user } } = await supabase.auth.getUser();
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
           if (user) {
             const profile = await profileService.getProfile(user.id);
             if (profile) {
@@ -151,15 +199,16 @@ const Profile = () => {
             setLoading(false);
           }
         } catch (error) {
-          console.error('Error reloading profile:', error);
+          console.error("Error reloading profile:", error);
           setLoading(false);
         }
       };
       reloadProfileData();
     };
 
-    window.addEventListener('profileUpdated', handleProfileUpdate);
-    return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
+    window.addEventListener("profileUpdated", handleProfileUpdate);
+    return () =>
+      window.removeEventListener("profileUpdated", handleProfileUpdate);
   }, [userProfile]);
 
   if (loading) return <ProfileSkeleton />;
@@ -168,9 +217,15 @@ const Profile = () => {
     return (
       <div className="text-center">
         <main className="container mx-auto px-4 py-8 text-center">
-          <h1 className="font-display text-2xl font-bold mb-4">Profile Not Found</h1>
-          <p className="text-muted-foreground mb-6">Please complete your profile in Settings</p>
-          <Button asChild><Link to="/settings">Go to Settings</Link></Button>
+          <h1 className="font-display text-2xl font-bold mb-4">
+            Profile Not Found
+          </h1>
+          <p className="text-muted-foreground mb-6">
+            Please complete your profile in Settings
+          </p>
+          <Button asChild>
+            <Link to="/settings">Go to Settings</Link>
+          </Button>
         </main>
       </div>
     );
@@ -189,32 +244,65 @@ const Profile = () => {
                 alt={userProfile.full_name}
                 className="h-32 w-32 rounded-2xl object-cover border-4 border-white shadow-warm transition-transform duration-500 group-hover:scale-105"
               />
+              <StatusDot
+                displayStatus={userStatus}
+                size="lg"
+                className="bottom-1 right-1"
+              />
               <div className="absolute inset-0 rounded-2xl bg-black/10 opacity-0 group-hover:opacity-10 transition-opacity" />
             </div>
             <div className="flex-1">
               <div className="flex items-start justify-between">
                 <div>
-                  <h1 className="font-display text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-terracotta to-terracotta/70">{userProfile.full_name || "User"}</h1>
+                  <h1 className="font-display text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-terracotta to-terracotta/70">
+                    {userProfile.full_name || "User"}
+                  </h1>
                   <div className="flex items-center gap-4 text-muted-foreground mb-4">
+                    <span className="flex items-center gap-1.5 text-xs font-medium">
+                      <span
+                        className={`h-2 w-2 rounded-full ${userStatus === "online" ? "bg-green-500" : userStatus === "busy" ? "bg-red-500" : "bg-gray-400"}`}
+                      />
+                      {getStatusLabel(userStatus)}
+                    </span>
                     <span className="flex items-center gap-1 hover:text-terracotta transition-colors">
                       <MapPin className="h-4 w-4" />
-                      {userProfile.city || "City"}, {userProfile.country || "Country"}
+                      {userProfile.city || "City"},{" "}
+                      {userProfile.country || "Country"}
                     </span>
                     <span className="flex items-center gap-1">
                       <Star className="h-4 w-4 fill-golden text-golden" />
-                      {rating > 0 ? rating.toFixed(1) : (bgLoading ? "..." : "0.0")} ({reviews.length} reviews)
+                      {rating > 0
+                        ? rating.toFixed(1)
+                        : bgLoading
+                          ? "..."
+                          : "0.0"}{" "}
+                      ({reviews.length} reviews)
                     </span>
                   </div>
                 </div>
                 <Button variant="outline" asChild className="hover-lift">
-                  <Link to="/settings"><Edit className="h-4 w-4 mr-2" />Edit Profile</Link>
+                  <Link to="/settings">
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Profile
+                  </Link>
                 </Button>
               </div>
-              <p className="text-muted-foreground mb-4 max-w-2xl leading-relaxed">{userProfile.bio || "No bio added yet"}</p>
+              <p className="text-muted-foreground mb-4 max-w-2xl leading-relaxed">
+                {userProfile.bio || "No bio added yet"}
+              </p>
               <div className="flex flex-wrap gap-2">
-                {userProfile.languages && userProfile.languages.length > 0 && userProfile.languages.map((lang: string) => (
-                  <Badge key={lang} variant="secondary" className="gap-1 bg-white/50 border-white/40"><Globe className="h-3 w-3" />{lang}</Badge>
-                ))}
+                {userProfile.languages &&
+                  userProfile.languages.length > 0 &&
+                  userProfile.languages.map((lang: string) => (
+                    <Badge
+                      key={lang}
+                      variant="secondary"
+                      className="gap-1 bg-white/50 border-white/40"
+                    >
+                      <Globe className="h-3 w-3" />
+                      {lang}
+                    </Badge>
+                  ))}
               </div>
             </div>
           </div>
@@ -224,18 +312,18 @@ const Profile = () => {
         <div className="flex justify-center mb-8">
           <div className="bg-muted/50 p-1 rounded-xl border border-border/50 flex gap-1">
             <Button
-              variant={viewMode === 'private' ? 'default' : 'ghost'}
+              variant={viewMode === "private" ? "default" : "ghost"}
               size="sm"
-              onClick={() => setViewMode('private')}
-              className={`rounded-lg transition-all ${viewMode === 'private' ? 'bg-white shadow-sm hover:bg-white text-foreground' : 'text-muted-foreground'}`}
+              onClick={() => setViewMode("private")}
+              className={`rounded-lg transition-all ${viewMode === "private" ? "bg-white shadow-sm hover:bg-white text-foreground" : "text-muted-foreground"}`}
             >
               Private View
             </Button>
             <Button
-              variant={viewMode === 'public' ? 'default' : 'ghost'}
+              variant={viewMode === "public" ? "default" : "ghost"}
               size="sm"
-              onClick={() => setViewMode('public')}
-              className={`rounded-lg transition-all ${viewMode === 'public' ? 'bg-white shadow-sm hover:bg-white text-foreground' : 'text-muted-foreground'}`}
+              onClick={() => setViewMode("public")}
+              className={`rounded-lg transition-all ${viewMode === "public" ? "bg-white shadow-sm hover:bg-white text-foreground" : "text-muted-foreground"}`}
             >
               Public View
             </Button>
@@ -244,16 +332,32 @@ const Profile = () => {
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            <Tabs defaultValue={viewMode === 'private' ? 'reviews' : 'skills'} className="w-full">
+            <Tabs
+              defaultValue={viewMode === "private" ? "reviews" : "skills"}
+              className="w-full"
+            >
               <TabsList className="mb-6 bg-muted/50 p-1 border border-border/50 rounded-xl">
-                {viewMode === 'public' && (
-                  <TabsTrigger value="skills" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Skills</TabsTrigger>
+                {viewMode === "public" && (
+                  <TabsTrigger
+                    value="skills"
+                    className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                  >
+                    Skills
+                  </TabsTrigger>
                 )}
-                <TabsTrigger value="reviews" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Reviews</TabsTrigger>
+                <TabsTrigger
+                  value="reviews"
+                  className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                >
+                  Reviews
+                </TabsTrigger>
               </TabsList>
 
-              {viewMode === 'public' && (
-                <TabsContent value="skills" className="space-y-6 focus-visible:outline-none">
+              {viewMode === "public" && (
+                <TabsContent
+                  value="skills"
+                  className="space-y-6 focus-visible:outline-none"
+                >
                   <Card className="border-border/50 shadow-sm overflow-hidden group">
                     <div className="h-1 w-full bg-terracotta/10 translate-y-[-1px] group-hover:bg-terracotta/30 transition-colors" />
                     <CardHeader>
@@ -263,12 +367,20 @@ const Profile = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
-                        {userProfile.skills_offered && userProfile.skills_offered.length > 0 ? (
+                        {userProfile.skills_offered &&
+                        userProfile.skills_offered.length > 0 ? (
                           userProfile.skills_offered.map((skill: string) => (
-                            <Badge key={skill} className="bg-terracotta/10 text-terracotta border-0 hover:bg-terracotta hover:text-white transition-all cursor-default scale-100 hover:scale-110 active:scale-95">{skill}</Badge>
+                            <Badge
+                              key={skill}
+                              className="bg-terracotta/10 text-terracotta border-0 hover:bg-terracotta hover:text-white transition-all cursor-default scale-100 hover:scale-110 active:scale-95"
+                            >
+                              {skill}
+                            </Badge>
                           ))
                         ) : (
-                          <p className="text-muted-foreground text-sm italic">No skills added yet</p>
+                          <p className="text-muted-foreground text-sm italic">
+                            No skills added yet
+                          </p>
                         )}
                       </div>
                     </CardContent>
@@ -283,12 +395,20 @@ const Profile = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
-                        {userProfile.skills_wanted && userProfile.skills_wanted.length > 0 ? (
+                        {userProfile.skills_wanted &&
+                        userProfile.skills_wanted.length > 0 ? (
                           userProfile.skills_wanted.map((skill: string) => (
-                            <Badge key={skill} className="bg-teal/10 text-teal border-0 hover:bg-teal hover:text-white transition-all cursor-default scale-100 hover:scale-110 active:scale-95">{skill}</Badge>
+                            <Badge
+                              key={skill}
+                              className="bg-teal/10 text-teal border-0 hover:bg-teal hover:text-white transition-all cursor-default scale-100 hover:scale-110 active:scale-95"
+                            >
+                              {skill}
+                            </Badge>
                           ))
                         ) : (
-                          <p className="text-muted-foreground text-sm italic">No skills added yet</p>
+                          <p className="text-muted-foreground text-sm italic">
+                            No skills added yet
+                          </p>
                         )}
                       </div>
                     </CardContent>
@@ -296,31 +416,47 @@ const Profile = () => {
                 </TabsContent>
               )}
 
-              <TabsContent value="reviews" className="space-y-4 focus-visible:outline-none">
+              <TabsContent
+                value="reviews"
+                className="space-y-4 focus-visible:outline-none"
+              >
                 {bgLoading ? (
                   <div className="space-y-4">
                     {[1, 2].map((i) => (
-                      <div key={i} className="h-32 w-full bg-muted rounded-xl animate-pulse" />
+                      <div
+                        key={i}
+                        className="h-32 w-full bg-muted rounded-xl animate-pulse"
+                      />
                     ))}
                   </div>
                 ) : reviews.length > 0 ? (
                   reviews.map((review: any) => (
-                    <Card key={review.id} className="border-border/50 hover:shadow-md transition-shadow">
+                    <Card
+                      key={review.id}
+                      className="border-border/50 hover:shadow-md transition-shadow"
+                    >
                       <CardContent className="pt-6">
                         <div className="flex items-center gap-3 mb-3">
                           <div className="h-10 w-10 rounded-full bg-terracotta/10 flex items-center justify-center font-display text-terracotta font-bold">
-                            {review.reviewer_name?.[0] || 'U'}
+                            {review.reviewer_name?.[0] || "U"}
                           </div>
                           <div>
-                            <p className="font-semibold text-sm">{review.reviewer_name || "User"}</p>
+                            <p className="font-semibold text-sm">
+                              {review.reviewer_name || "User"}
+                            </p>
                             <div className="flex gap-0.5">
                               {[...Array(5)].map((_, i) => (
-                                <Star key={i} className={`h-3 w-3 ${i < review.rating ? 'fill-golden text-golden' : 'text-muted'}`} />
+                                <Star
+                                  key={i}
+                                  className={`h-3 w-3 ${i < review.rating ? "fill-golden text-golden" : "text-muted"}`}
+                                />
                               ))}
                             </div>
                           </div>
                         </div>
-                        <p className="text-muted-foreground text-sm italic leading-relaxed">"{review.comment}"</p>
+                        <p className="text-muted-foreground text-sm italic leading-relaxed">
+                          "{review.comment}"
+                        </p>
                       </CardContent>
                     </Card>
                   ))
@@ -328,7 +464,9 @@ const Profile = () => {
                   <Card className="border-dashed border-2 bg-transparent">
                     <CardContent className="py-12 text-center">
                       <MessageCircle className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-                      <p className="text-muted-foreground">No reviews yet. Start swapping to earn reviews!</p>
+                      <p className="text-muted-foreground">
+                        No reviews yet. Start swapping to earn reviews!
+                      </p>
                     </CardContent>
                   </Card>
                 )}
@@ -337,30 +475,41 @@ const Profile = () => {
           </div>
 
           <div className="space-y-6">
-            {viewMode === 'public' && (
+            {viewMode === "public" && (
               <>
                 <Card className="border-border/50 shadow-sm overflow-hidden">
                   <CardHeader className="bg-muted/30 pb-4">
-                    <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Profile Details</CardTitle>
+                    <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                      Profile Details
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-6 space-y-4">
                     <div className="flex items-center justify-between text-sm group">
                       <span className="flex items-center gap-2 text-muted-foreground">
                         <Globe className="h-4 w-4" /> Languages
                       </span>
-                      <span className="font-medium">{userProfile.languages?.join(", ") || "None"}</span>
+                      <span className="font-medium">
+                        {userProfile.languages?.join(", ") || "None"}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="flex items-center gap-2 text-muted-foreground">
                         <Clock className="h-4 w-4" /> Timezone
                       </span>
-                      <span className="font-medium">{userProfile.timezone || "Not set"}</span>
+                      <span className="font-medium">
+                        {userProfile.timezone || "Not set"}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="flex items-center gap-2 text-muted-foreground">
                         <Calendar className="h-4 w-4" /> Member Since
                       </span>
-                      <span className="font-medium">{new Date(userProfile.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
+                      <span className="font-medium">
+                        {new Date(userProfile.created_at).toLocaleDateString(
+                          "en-US",
+                          { month: "short", year: "numeric" },
+                        )}
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
@@ -371,62 +520,99 @@ const Profile = () => {
                     <p className="text-4xl font-display font-bold mb-1 drop-shadow-sm">
                       {bgLoading ? (
                         <Skeleton className="h-8 w-12 mx-auto bg-white/20" />
-                      ) : swapsCount}
+                      ) : (
+                        swapsCount
+                      )}
                     </p>
-                    <p className="text-terracotta-foreground/90 text-sm font-medium uppercase tracking-widest">Swaps Completed</p>
+                    <p className="text-terracotta-foreground/90 text-sm font-medium uppercase tracking-widest">
+                      Swaps Completed
+                    </p>
                   </CardContent>
                 </Card>
 
                 <div className="bg-teal/5 border border-teal/10 rounded-xl p-6 text-center">
                   <Award className="h-10 w-10 text-teal mx-auto mb-3 opacity-50" />
-                  <h4 className="font-semibold text-teal-900 mb-1">Culture Explorer</h4>
-                  <p className="text-xs text-teal-700/70">Next badge at 5 completed swaps</p>
+                  <h4 className="font-semibold text-teal-900 mb-1">
+                    Culture Explorer
+                  </h4>
+                  <p className="text-xs text-teal-700/70">
+                    Next badge at 5 completed swaps
+                  </p>
                 </div>
 
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                   <Card className="border-border/50 shadow-sm overflow-hidden">
                     <CardHeader className="bg-muted/30 pb-4">
-                      <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Latest Swaps</CardTitle>
+                      <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                        Latest Swaps
+                      </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-6 space-y-4">
                       {latestSwaps.length > 0 ? (
                         latestSwaps.map((swap) => (
                           <div key={swap.id} className="group cursor-default">
-                            <h4 className="text-sm font-semibold group-hover:text-terracotta transition-colors line-clamp-1">{swap.title}</h4>
+                            <h4 className="text-sm font-semibold group-hover:text-terracotta transition-colors line-clamp-1">
+                              {swap.title}
+                            </h4>
                             <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-[10px] py-0 h-4 border-terracotta/20 text-terracotta">{swap.skill_offered}</Badge>
-                              <span className="text-[10px] text-muted-foreground">for</span>
-                              <Badge variant="outline" className="text-[10px] py-0 h-4 border-teal/20 text-teal">{swap.skill_wanted}</Badge>
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] py-0 h-4 border-terracotta/20 text-terracotta"
+                              >
+                                {swap.skill_offered}
+                              </Badge>
+                              <span className="text-[10px] text-muted-foreground">
+                                for
+                              </span>
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] py-0 h-4 border-teal/20 text-teal"
+                              >
+                                {swap.skill_wanted}
+                              </Badge>
                             </div>
                           </div>
                         ))
                       ) : (
-                        <p className="text-sm text-muted-foreground italic">No swaps created yet</p>
+                        <p className="text-sm text-muted-foreground italic">
+                          No swaps created yet
+                        </p>
                       )}
                     </CardContent>
                   </Card>
 
                   <Card className="border-border/50 shadow-sm overflow-hidden">
                     <CardHeader className="bg-muted/30 pb-4">
-                      <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">User Reviews Summary</CardTitle>
+                      <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                        User Reviews Summary
+                      </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-6 space-y-4">
                       {reviews.length > 0 ? (
                         reviews.slice(0, 3).map((review) => (
                           <div key={review.id} className="space-y-1">
                             <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold">{review.reviewer_name || "User"}</span>
+                              <span className="text-xs font-bold">
+                                {review.reviewer_name || "User"}
+                              </span>
                               <div className="flex gap-0.5">
                                 {[...Array(5)].map((_, i) => (
-                                  <Star key={i} className={`h-2.5 w-2.5 ${i < review.rating ? 'fill-golden text-golden' : 'text-muted'}`} />
+                                  <Star
+                                    key={i}
+                                    className={`h-2.5 w-2.5 ${i < review.rating ? "fill-golden text-golden" : "text-muted"}`}
+                                  />
                                 ))}
                               </div>
                             </div>
-                            <p className="text-xs text-muted-foreground line-clamp-2 italic">"{review.comment}"</p>
+                            <p className="text-xs text-muted-foreground line-clamp-2 italic">
+                              "{review.comment}"
+                            </p>
                           </div>
                         ))
                       ) : (
-                        <p className="text-sm text-muted-foreground italic">No reviews yet</p>
+                        <p className="text-sm text-muted-foreground italic">
+                          No reviews yet
+                        </p>
                       )}
                       {reviews.length > 3 && (
                         <p className="text-[10px] text-center text-muted-foreground pt-2 border-t border-border/50">
