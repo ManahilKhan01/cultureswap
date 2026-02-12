@@ -1,5 +1,13 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Globe, Users, Star, Shield, Sparkles, MessageCircle } from "lucide-react";
+import {
+  ArrowRight,
+  Globe,
+  Users,
+  Star,
+  Shield,
+  Sparkles,
+  MessageCircle,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,10 +22,12 @@ const Index = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         setIsLoggedIn(!!user);
       } catch (error) {
-        console.error('Error checking auth:', error);
+        console.error("Error checking auth:", error);
         setIsLoggedIn(false);
       }
     };
@@ -28,35 +38,38 @@ const Index = () => {
     {
       icon: Sparkles,
       title: "AI-Powered Matching",
-      description: "Our smart algorithm finds perfect skill matches based on your interests and learning goals."
+      description:
+        "Our smart algorithm finds perfect skill matches based on your interests and learning goals.",
     },
     {
       icon: Globe,
       title: "Global Community",
-      description: "Connect with learners from 150+ countries and explore diverse cultural traditions."
+      description:
+        "Connect with learners from 150+ countries and explore diverse cultural traditions.",
     },
     {
       icon: Shield,
       title: "Safe & Verified",
-      description: "All members are verified with reviews and ratings to ensure quality exchanges."
+      description:
+        "All members are verified with reviews and ratings to ensure quality exchanges.",
     },
     {
       icon: MessageCircle,
       title: "Real-time Chat",
-      description: "Built-in messaging and video calls make scheduling and learning seamless."
-    }
+      description:
+        "Built-in messaging and video calls make scheduling and learning seamless.",
+    },
   ];
 
   const stats = [
     { value: "50K+", label: "Active Members" },
     { value: "150+", label: "Countries" },
     { value: "100K+", label: "Skills Exchanged" },
-    { value: "4.9", label: "Avg Rating" }
+    { value: "4.9", label: "Avg Rating" },
   ];
 
   return (
     <>
-
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-hero">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNDMjc0NTQiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
@@ -70,8 +83,8 @@ const Index = () => {
               <span className="text-gradient">Share Cultures</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Connect with people worldwide to teach what you know and learn what you love.
-              No money needed—just your passion and curiosity.
+              Connect with people worldwide to teach what you know and learn
+              what you love. No money needed—just your passion and curiosity.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
@@ -95,7 +108,9 @@ const Index = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 max-w-3xl mx-auto">
             {stats.map((stat) => (
               <div key={stat.label} className="text-center">
-                <p className="text-3xl md:text-4xl font-bold text-terracotta">{stat.value}</p>
+                <p className="text-3xl md:text-4xl font-bold text-terracotta">
+                  {stat.value}
+                </p>
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
               </div>
             ))}
@@ -120,25 +135,30 @@ const Index = () => {
               {
                 step: "1",
                 title: "List Your Skills",
-                description: "Share what you can teach and what you want to learn. Our AI finds the best matches."
+                description:
+                  "Share what you can teach and what you want to learn. Our AI finds the best matches.",
               },
               {
                 step: "2",
                 title: "Connect & Chat",
-                description: "Message potential partners, discuss goals, and schedule your exchange sessions."
+                description:
+                  "Message potential partners, discuss goals, and schedule your exchange sessions.",
               },
               {
                 step: "3",
                 title: "Learn & Grow",
-                description: "Exchange skills through video calls or in-person meetings. Earn badges as you progress!"
-              }
+                description:
+                  "Exchange skills through video calls or in-person meetings. Earn badges as you progress!",
+              },
             ].map((item) => (
               <div key={item.step} className="relative">
                 <div className="bg-card rounded-2xl p-8 border border-border hover-lift h-full">
                   <div className="h-12 w-12 rounded-full bg-gradient-to-br from-terracotta to-teal flex items-center justify-center text-white font-bold text-xl mb-6">
                     {item.step}
                   </div>
-                  <h3 className="font-display text-xl font-semibold mb-3">{item.title}</h3>
+                  <h3 className="font-display text-xl font-semibold mb-3">
+                    {item.title}
+                  </h3>
                   <p className="text-muted-foreground">{item.description}</p>
                 </div>
               </div>
@@ -170,7 +190,9 @@ const Index = () => {
                 <h3 className="font-semibold mb-1 group-hover:text-terracotta transition-colors">
                   {category.name}
                 </h3>
-                <p className="text-sm text-muted-foreground">{category.count} skills</p>
+                <p className="text-sm text-muted-foreground">
+                  {category.count} skills
+                </p>
               </Link>
             ))}
           </div>
@@ -215,7 +237,9 @@ const Index = () => {
                       className="h-12 w-12 rounded-full object-cover"
                     />
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold truncate">{swap.user.name}</h4>
+                      <h4 className="font-semibold truncate">
+                        {swap.user.name}
+                      </h4>
                       <p className="text-sm text-muted-foreground">
                         {swap.user.location}, {swap.user.country}
                       </p>
@@ -227,16 +251,24 @@ const Index = () => {
                     )}
                   </div>
 
-                  <h3 className="font-display text-lg font-semibold mb-2">{swap.title}</h3>
+                  <h3 className="font-display text-lg font-semibold mb-2">
+                    {swap.title}
+                  </h3>
                   <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                     {swap.description}
                   </p>
 
                   <div className="flex flex-wrap gap-2 mb-4">
-                    <Badge variant="secondary" className="bg-terracotta/10 text-terracotta border-0">
+                    <Badge
+                      variant="secondary"
+                      className="bg-terracotta/10 text-terracotta border-0"
+                    >
                       Offers: {swap.skillOffered}
                     </Badge>
-                    <Badge variant="secondary" className="bg-teal/10 text-teal border-0">
+                    <Badge
+                      variant="secondary"
+                      className="bg-teal/10 text-teal border-0"
+                    >
                       Wants: {swap.skillWanted}
                     </Badge>
                   </div>
@@ -328,11 +360,16 @@ const Index = () => {
                 <CardContent className="p-6">
                   <div className="flex items-center gap-1 mb-4">
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-golden text-golden" />
+                      <Star
+                        key={i}
+                        className="h-4 w-4 fill-golden text-golden"
+                      />
                     ))}
                   </div>
                   <p className="text-muted-foreground mb-6">
-                    "CultureSwap changed how I learn. I taught {user.skillsOffered[0]} and learned {user.skillsWanted[0]} from someone across the world!"
+                    "CultureSwap changed how I learn. I taught{" "}
+                    {user.skillsOffered[0]} and learned {user.skillsWanted[0]}{" "}
+                    from someone across the world!"
                   </p>
                   <div className="flex items-center gap-3">
                     <img
@@ -364,7 +401,11 @@ const Index = () => {
             Join thousands of learners exchanging skills and cultures every day.
             It's free to get started!
           </p>
-          <Button size="xl" className="bg-white text-terracotta hover:bg-white/90" asChild>
+          <Button
+            size="xl"
+            className="bg-white text-terracotta hover:bg-white/90"
+            asChild
+          >
             <Link to="/signup">
               Create Free Account
               <ArrowRight className="ml-2 h-5 w-5" />
@@ -372,7 +413,6 @@ const Index = () => {
           </Button>
         </div>
       </section>
-
     </>
   );
 };

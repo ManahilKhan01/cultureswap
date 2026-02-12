@@ -12,11 +12,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, X, Bell, MessageCircle, User, LogOut, Settings, ChevronDown } from "lucide-react";
+import {
+  Menu,
+  X,
+  Bell,
+  MessageCircle,
+  User,
+  LogOut,
+  Settings,
+  ChevronDown,
+  Handshake,
+  CheckCircle,
+} from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { notificationService } from "@/lib/notificationService";
 import { messageService } from "@/lib/messageService";
 import { profileService } from "@/lib/profileService";
+import { presenceService } from "@/lib/presenceService";
+import { StatusDot } from "@/components/StatusDot";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useProfileUpdates } from "@/hooks/useProfileUpdates";
 import { getCacheBustedImageUrl } from "@/lib/cacheUtils";
@@ -26,55 +39,69 @@ interface NavbarProps {
 }
 
 const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
-
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [senderProfiles, setSenderProfiles] = useState<Record<string, any>>({});
   const [conversations, setConversations] = useState<any[]>([]);
-  const [conversationProfiles, setConversationProfiles] = useState<Record<string, any>>({});
+  const [conversationProfiles, setConversationProfiles] = useState<
+    Record<string, any>
+  >({});
   const [loadingConvs, setLoadingConvs] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
   // Use the new unread messages hook for accurate real-time tracking
-  const { total: unreadMessages, markConversationAsRead } = useUnreadMessages(currentUser?.id || null);
+  const { total: unreadMessages, markConversationAsRead } = useUnreadMessages(
+    currentUser?.id || null,
+  );
 
   // Use real-time profile updates hook
   const { profile } = useProfileUpdates(currentUser?.id || null);
 
   // Compute display values from real-time profile or cache
-  const userName = profile?.full_name?.split(' ')[0] || currentUser?.email?.split('@')[0] || "User";
+  const userName =
+    profile?.full_name?.split(" ")[0] ||
+    currentUser?.email?.split("@")[0] ||
+    "User";
   const userImage = profile?.profile_image_url || null;
   const userImageUrl = getCacheBustedImageUrl(userImage);
-
 
   useEffect(() => {
     // Get logged in user
     const loadUser = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (user) {
           setCurrentUser(user);
 
+          // Start presence heartbeat
+          presenceService.startHeartbeat();
+
           // Load notifications
-          const unreadNotifs = await notificationService.getUnreadNotifications(user.id);
+          const unreadNotifs = await notificationService.getUnreadNotifications(
+            user.id,
+          );
           setNotifications(unreadNotifs);
-          setUnreadCount(0); // Initialize as zero as per user request
+          setUnreadCount(unreadNotifs.length); // Show actual unread count
 
           // Load sender profiles
           const profiles: Record<string, any> = {};
           for (const notif of unreadNotifs) {
             if (notif.sender_id && !profiles[notif.sender_id]) {
-              const senderProfile = await profileService.getProfile(notif.sender_id);
+              const senderProfile = await profileService.getProfile(
+                notif.sender_id,
+              );
               profiles[notif.sender_id] = senderProfile;
             }
           }
           setSenderProfiles(profiles);
         }
       } catch (error) {
-        console.error('Error loading user:', error);
+        console.error("Error loading user:", error);
       }
     };
 
@@ -105,7 +132,7 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
         setConversations(convs.slice(0, 7)); // Show max 7 conversations
         setConversationProfiles(profiles);
       } catch (error) {
-        console.error('Error loading conversations:', error);
+        console.error("Error loading conversations:", error);
       } finally {
         setLoadingConvs(false);
       }
@@ -122,33 +149,24 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
     const subscription = notificationService.subscribeToNotifications(
       currentUser.id,
       async (newNotification) => {
-        setNotifications(prev => [newNotification, ...prev]);
-        setUnreadCount(prev => prev + 1);
+        setNotifications((prev) => [newNotification, ...prev]);
+        setUnreadCount((prev) => prev + 1);
 
         // Load sender profile
         if (newNotification.sender_id) {
-          const profile = await profileService.getProfile(newNotification.sender_id);
-          setSenderProfiles(prev => ({ ...prev, [newNotification.sender_id]: profile }));
+          const profile = await profileService.getProfile(
+            newNotification.sender_id,
+          );
+          setSenderProfiles((prev) => ({
+            ...prev,
+            [newNotification.sender_id]: profile,
+          }));
         }
-      }
+      },
     );
-
-    // Subscribe to messages for count
-    const msgSub = supabase
-      .channel(`unread_messages_count_${currentUser.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `receiver_id=eq.${currentUser.id}`
-      }, () => {
-        // Count is now managed by useUnreadMessages hook
-      })
-      .subscribe();
 
     return () => {
       if (subscription) supabase.removeChannel(subscription);
-      if (msgSub) supabase.removeChannel(msgSub);
     };
   }, [isLoggedIn, currentUser?.id]);
 
@@ -165,11 +183,11 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
     try {
       await supabase.auth.signOut();
       // Clear localStorage cache
-      localStorage.removeItem('navbar_profile_cache');
+      localStorage.removeItem("navbar_profile_cache");
       // Redirect to landing page
-      navigate('/');
+      navigate("/");
     } catch (error) {
-      console.error('Error logging out:', error);
+      console.error("Error logging out:", error);
     }
   };
 
@@ -178,7 +196,10 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
       <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 md:px-8">
         <div className="flex items-center justify-between py-3 md:py-4">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 transition-all duration-300 hover:opacity-80 active:scale-95 group">
+          <Link
+            to="/"
+            className="flex items-center gap-2 transition-all duration-300 hover:opacity-80 active:scale-95 group"
+          >
             <img
               src="/logo.svg"
               alt="CultureSwap Logo"
@@ -188,19 +209,20 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-1">
-            {isLoggedIn && navLinks.map((link) => (
-              <Link
-                key={link.name}
-                to={link.href}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive(link.href)
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            {isLoggedIn &&
+              navLinks.map((link) => (
+                <Link
+                  key={link.name}
+                  to={link.href}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive(link.href)
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   }`}
-              >
-                {link.name}
-              </Link>
-            ))}
-
+                >
+                  {link.name}
+                </Link>
+              ))}
           </div>
 
           {/* Right Side Actions */}
@@ -214,7 +236,7 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                       <MessageCircle className="h-5 w-5" />
                       {unreadMessages > 0 && (
                         <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 flex items-center justify-center bg-terracotta text-white text-[10px] shadow-sm ring-1 ring-white">
-                          {unreadMessages > 9 ? '9+' : unreadMessages}
+                          {unreadMessages > 9 ? "9+" : unreadMessages}
                         </Badge>
                       )}
                     </Button>
@@ -235,55 +257,86 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                           </div>
                         ) : (
                           conversations.map((conv) => {
-                            const profile = conversationProfiles[conv.otherUserId];
-                            const isUnread = conv.lastMessage?.receiver_id === currentUser?.id && !conv.lastMessage?.read;
-                            const isAssistant = profile?.full_name?.toLowerCase().includes('assistant') || profile?.email === 'assistant@cultureswap.app';
+                            const profile =
+                              conversationProfiles[conv.otherUserId];
+                            const isUnread =
+                              conv.lastMessage?.receiver_id ===
+                                currentUser?.id && !conv.lastMessage?.read;
+                            const isAssistant =
+                              profile?.full_name
+                                ?.toLowerCase()
+                                .includes("assistant") ||
+                              profile?.email === "assistant@cultureswap.app";
 
                             return (
                               <DropdownMenuItem
                                 key={conv.id}
-                                className={`p-3 cursor-pointer hover:bg-muted ${isAssistant ? 'bg-blue-50/50' : ''}`}
+                                className={`p-3 cursor-pointer hover:bg-muted ${isAssistant ? "bg-blue-50/50" : ""}`}
                                 onClick={async () => {
                                   // Mark conversation as read if it's unread
                                   if (isUnread && conv.id) {
                                     try {
                                       await markConversationAsRead(conv.id);
                                     } catch (error) {
-                                      console.error('Error marking conversation as read:', error);
+                                      console.error(
+                                        "Error marking conversation as read:",
+                                        error,
+                                      );
                                     }
                                   }
+<<<<<<< HEAD
                                   // Force navigation even if on same page to ensure params update
                                   navigate(`/messages?user=${conv.otherUserId}`);
+=======
+                                  navigate(
+                                    `/messages?user=${conv.otherUserId}`,
+                                  );
+>>>>>>> 3f1bb97186cc533d026b2dd8cd15f49590e52789
                                 }}
                               >
                                 <div className="flex items-start gap-3 w-full">
                                   <div className="relative flex-shrink-0">
                                     <img
-                                      src={getCacheBustedImageUrl(profile?.profile_image_url)}
+                                      src={getCacheBustedImageUrl(
+                                        profile?.profile_image_url,
+                                      )}
                                       alt="User"
-                                      className={`h-10 w-10 rounded-full object-cover shadow-sm ${isAssistant ? 'ring-2 ring-blue-400 bg-blue-100' : ''}`}
+                                      className={`h-10 w-10 rounded-full object-cover shadow-sm ${isAssistant ? "ring-2 ring-blue-400 bg-blue-100" : ""}`}
                                     />
                                     {isAssistant && (
                                       <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-white flex items-center justify-center">
-                                        <span className="text-white text-[8px] font-bold">✨</span>
+                                        <span className="text-white text-[8px] font-bold">
+                                          ✨
+                                        </span>
                                       </div>
                                     )}
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between mb-1">
-                                      <p className={`font-medium text-sm truncate ${isUnread ? 'font-bold' : ''} ${isAssistant ? 'text-blue-700' : ''}`}>
-                                        {isAssistant && '🤖 '}{profile?.full_name || 'User'}
+                                      <p
+                                        className={`font-medium text-sm truncate ${isUnread ? "font-bold" : ""} ${isAssistant ? "text-blue-700" : ""}`}
+                                      >
+                                        {isAssistant && "🤖 "}
+                                        {profile?.full_name || "User"}
                                       </p>
                                       <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
-                                        {new Date(conv.lastMessage?.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        {new Date(
+                                          conv.lastMessage?.created_at,
+                                        ).toLocaleTimeString([], {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-1">
                                       {isUnread && (
                                         <div className="h-2 w-2 rounded-full bg-terracotta flex-shrink-0" />
                                       )}
-                                      <p className={`text-xs truncate ${isUnread ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
-                                        {conv.lastMessage?.content || 'No messages yet'}
+                                      <p
+                                        className={`text-xs truncate ${isUnread ? "font-semibold text-foreground" : "text-muted-foreground"}`}
+                                      >
+                                        {conv.lastMessage?.content ||
+                                          "No messages yet"}
                                       </p>
                                     </div>
                                   </div>
@@ -314,7 +367,7 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                       <Bell className="h-5 w-5" />
                       {unreadCount > 0 && (
                         <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-terracotta text-white text-xs">
-                          {unreadCount > 9 ? '9+' : unreadCount}
+                          {unreadCount > 9 ? "9+" : unreadCount}
                         </Badge>
                       )}
                     </Button>
@@ -329,13 +382,15 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                       </div>
                     ) : (
                       notifications.slice(0, 5).map((notification) => {
-                        const senderProfile = senderProfiles[notification.sender_id];
+                        const senderProfile =
+                          senderProfiles[notification.sender_id];
                         return (
                           <DropdownMenuItem
                             key={notification.id}
-                            className="p-3 cursor-pointer hover:bg-muted"
+                            className={`p-3 cursor-pointer hover:bg-muted ${!notification.read ? "bg-terracotta/5" : ""}`}
                             onClick={() => {
                               notificationService.markAsRead(notification.id);
+<<<<<<< HEAD
                               setUnreadCount(prev => Math.max(0, prev - 1));
                               setNotifications(prev => prev.map(n =>
                                 n.id === notification.id ? { ...n, read: true } : n
@@ -357,19 +412,78 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                               }
 
                               navigate(navPath);
+=======
+                              setUnreadCount((prev) => Math.max(0, prev - 1));
+                              setNotifications((prev) =>
+                                prev.map((n) =>
+                                  n.id === notification.id
+                                    ? { ...n, read: true }
+                                    : n,
+                                ),
+                              );
+                              // Navigate to the appropriate location based on notification data
+                              const notifData = notification.data || {};
+                              if (notifData.conversation_id) {
+                                // For offers and messages with conversation context
+                                navigate(
+                                  `/messages?user=${notification.sender_id}`,
+                                );
+                              } else if (notifData.swap_id) {
+                                // For swap-related notifications
+                                navigate(`/swap/${notifData.swap_id}`);
+                              } else if (notification.sender_id) {
+                                // Fallback to sender's chat
+                                navigate(
+                                  `/messages?user=${notification.sender_id}`,
+                                );
+                              } else {
+                                // Fallback to notifications page
+                                navigate("/notifications");
+                              }
+>>>>>>> 3f1bb97186cc533d026b2dd8cd15f49590e52789
                             }}
                           >
                             <div className="flex items-start gap-3 w-full">
-                              <img
-                                src={getCacheBustedImageUrl(senderProfile?.profile_image_url)}
-                                alt="Sender"
-                                className="h-10 w-10 rounded-full object-cover flex-shrink-0"
-                              />
+                              <div className="relative flex-shrink-0">
+                                <img
+                                  src={getCacheBustedImageUrl(
+                                    senderProfile?.profile_image_url,
+                                  )}
+                                  alt="Sender"
+                                  className="h-10 w-10 rounded-full object-cover"
+                                />
+                                {/* Notification type icon */}
+                                {notification.type === "new_offer" && (
+                                  <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-terracotta border-2 border-white flex items-center justify-center">
+                                    <Handshake className="h-2.5 w-2.5 text-white" />
+                                  </div>
+                                )}
+                                {notification.type === "offer_accepted" && (
+                                  <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-white flex items-center justify-center">
+                                    <CheckCircle className="h-2.5 w-2.5 text-white" />
+                                  </div>
+                                )}
+                                {!notification.read &&
+                                  !["new_offer", "offer_accepted"].includes(
+                                    notification.type,
+                                  ) && (
+                                    <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-terracotta border-2 border-white" />
+                                  )}
+                              </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm">{senderProfile?.full_name || 'User'}</p>
-                                <p className="text-xs text-muted-foreground truncate">{notification.body}</p>
+                                <p className="font-medium text-sm">
+                                  {senderProfile?.full_name || "User"}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {notification.body}
+                                </p>
                                 <p className="text-xs text-muted-foreground mt-1">
-                                  {new Date(notification.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  {new Date(
+                                    notification.created_at,
+                                  ).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
                                 </p>
                               </div>
                             </div>
@@ -377,9 +491,18 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                         );
                       })
                     )}
-                    {notifications.length > 5 && (
+                    {notifications.length > 0 && (
                       <>
                         <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Button
+                            variant="ghost"
+                            className="w-full text-center text-sm font-bold text-terracotta hover:text-terracotta-dark hover:bg-terracotta/10 px-0 py-2 cursor-pointer h-auto transition-colors"
+                            onClick={() => navigate("/notifications")}
+                          >
+                            View All Notifications
+                          </Button>
+                        </DropdownMenuItem>
                       </>
                     )}
                   </DropdownMenuContent>
@@ -389,12 +512,15 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="gap-2 pl-2 pr-3">
-                      <img
-                        key={userImageUrl}
-                        src={userImageUrl}
-                        alt={userName}
-                        className="h-8 w-8 rounded-full object-cover"
-                      />
+                      <div className="relative">
+                        <img
+                          key={userImageUrl}
+                          src={userImageUrl}
+                          alt={userName}
+                          className="h-8 w-8 rounded-full object-cover"
+                        />
+                        <StatusDot displayStatus="online" size="sm" />
+                      </div>
                       <span className="text-sm font-medium">{userName}</span>
                       <ChevronDown className="h-4 w-4" />
                     </Button>
@@ -416,7 +542,10 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout} className="gap-2 text-destructive cursor-pointer">
+                    <DropdownMenuItem
+                      onClick={handleLogout}
+                      className="gap-2 text-destructive cursor-pointer"
+                    >
                       <LogOut className="h-4 w-4" />
                       Log Out
                     </DropdownMenuItem>
@@ -465,10 +594,11 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                       <Link
                         to="/messages"
                         onClick={() => setIsOpen(false)}
-                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors flex items-center justify-between ${isActive("/messages")
-                          ? "bg-primary/10 text-primary"
-                          : "text-foreground hover:bg-muted"
-                          }`}
+                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors flex items-center justify-between ${
+                          isActive("/messages")
+                            ? "bg-primary/10 text-primary"
+                            : "text-foreground hover:bg-muted"
+                        }`}
                       >
                         <div className="flex items-center gap-3">
                           <MessageCircle className="h-5 w-5" />
@@ -476,7 +606,7 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                         </div>
                         {unreadMessages > 0 && (
                           <Badge className="bg-terracotta text-white rounded-full px-2 py-0.5 text-[10px]">
-                            {unreadMessages > 9 ? '9+' : unreadMessages}
+                            {unreadMessages > 9 ? "9+" : unreadMessages}
                           </Badge>
                         )}
                       </Link>
@@ -484,10 +614,11 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                       <Link
                         to="/notifications"
                         onClick={() => setIsOpen(false)}
-                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors flex items-center justify-between ${isActive("/notifications")
-                          ? "bg-primary/10 text-primary"
-                          : "text-foreground hover:bg-muted"
-                          }`}
+                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors flex items-center justify-between ${
+                          isActive("/notifications")
+                            ? "bg-primary/10 text-primary"
+                            : "text-foreground hover:bg-muted"
+                        }`}
                       >
                         <div className="flex items-center gap-3">
                           <Bell className="h-5 w-5" />
@@ -495,26 +626,28 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                         </div>
                         {unreadCount > 0 && (
                           <Badge className="bg-terracotta text-white rounded-full px-2 py-0.5 text-[10px]">
-                            {unreadCount > 9 ? '9+' : unreadCount}
+                            {unreadCount > 9 ? "9+" : unreadCount}
                           </Badge>
                         )}
                       </Link>
                     </>
                   )}
 
-                  {isLoggedIn && navLinks.map((link) => (
-                    <Link
-                      key={link.name}
-                      to={link.href}
-                      onClick={() => setIsOpen(false)}
-                      className={`px-4 py-3 rounded-lg text-base font-medium transition-colors ${isActive(link.href)
-                        ? "bg-primary/10 text-primary"
-                        : "text-foreground hover:bg-muted"
+                  {isLoggedIn &&
+                    navLinks.map((link) => (
+                      <Link
+                        key={link.name}
+                        to={link.href}
+                        onClick={() => setIsOpen(false)}
+                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors ${
+                          isActive(link.href)
+                            ? "bg-primary/10 text-primary"
+                            : "text-foreground hover:bg-muted"
                         }`}
-                    >
-                      {link.name}
-                    </Link>
-                  ))}
+                      >
+                        {link.name}
+                      </Link>
+                    ))}
                 </div>
 
                 <div className="mt-auto pt-4 border-t border-border">

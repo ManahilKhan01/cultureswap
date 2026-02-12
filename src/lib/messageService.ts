@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
 interface MessageData {
   sender_id: string;
@@ -13,9 +13,9 @@ export const messageService = {
   // Get or create a conversation between two users
   async getOrCreateConversation(userId1: string, userId2: string) {
     try {
-      const { data, error } = await supabase.rpc('get_or_create_conversation', {
+      const { data, error } = await supabase.rpc("get_or_create_conversation", {
         uid1: userId1,
-        uid2: userId2
+        uid2: userId2,
       });
 
       if (error) {
@@ -23,17 +23,17 @@ export const messageService = {
         const u2 = userId1 < userId2 ? userId2 : userId1;
 
         const { data: conv, error: fetchError } = await supabase
-          .from('conversations')
-          .select('id')
-          .eq('user1_id', u1)
-          .eq('user2_id', u2)
+          .from("conversations")
+          .select("id")
+          .eq("user1_id", u1)
+          .eq("user2_id", u2)
           .maybeSingle();
 
         if (!conv) {
           const { data: newConv, error: insertError } = await supabase
-            .from('conversations')
+            .from("conversations")
             .insert([{ user1_id: u1, user2_id: u2 }])
-            .select('id')
+            .select("id")
             .single();
           if (insertError) throw insertError;
           return newConv.id;
@@ -43,7 +43,7 @@ export const messageService = {
       }
       return data;
     } catch (error) {
-      console.error('messageService.getOrCreateConversation error:', error);
+      console.error("messageService.getOrCreateConversation error:", error);
       throw error;
     }
   },
@@ -52,15 +52,15 @@ export const messageService = {
   async getMessagesByConversation(conversationId: string) {
     try {
       const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
+        .from("messages")
+        .select("*")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: true });
 
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('messageService.getMessagesByConversation error:', error);
+      console.error("messageService.getMessagesByConversation error:", error);
       throw error;
     }
   },
@@ -71,7 +71,10 @@ export const messageService = {
       let conversationId = messageData.conversation_id;
 
       if (!conversationId) {
-        conversationId = await this.getOrCreateConversation(messageData.sender_id, messageData.receiver_id);
+        conversationId = await this.getOrCreateConversation(
+          messageData.sender_id,
+          messageData.receiver_id,
+        );
       }
 
       const payload = {
@@ -84,18 +87,18 @@ export const messageService = {
       };
 
       const { data, error } = await supabase
-        .from('messages')
+        .from("messages")
         .insert([payload])
         .select();
 
       if (error) {
-        console.error('Error sending message:', error.message);
+        console.error("Error sending message:", error.message);
         throw new Error(error.message);
       }
 
       return data?.[0] || null;
     } catch (error) {
-      console.error('messageService.sendMessage error:', error);
+      console.error("messageService.sendMessage error:", error);
       throw error;
     }
   },
@@ -103,6 +106,7 @@ export const messageService = {
   // Get messages for a conversation between two users (with fallback for legacy messages)
   async getConversation(userId1: string, userId2: string) {
     try {
+<<<<<<< HEAD
       const conversationId = await this.getOrCreateConversation(userId1, userId2);
       const messages = await this.getMessagesByConversation(conversationId);
 
@@ -121,7 +125,35 @@ export const messageService = {
     } catch (error) {
       console.error('messageService.getConversation error:', error);
       throw error;
+=======
+      const conversationId = await this.getOrCreateConversation(
+        userId1,
+        userId2,
+      );
+      return this.getMessagesByConversation(conversationId);
+    } catch (error) {
+      console.error(
+        "messageService.getConversation error, falling back:",
+        error,
+      );
+      return this.getMessagesBetweenUsers(userId1, userId2);
+>>>>>>> 3f1bb97186cc533d026b2dd8cd15f49590e52789
     }
+  },
+
+  // Get messages directly between two users (bypassing conversation table)
+  // Useful for assistant chat or temporary fallbacks
+  async getMessagesBetweenUsers(userId1: string, userId2: string) {
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*")
+      .or(
+        `and(sender_id.eq.${userId1},receiver_id.eq.${userId2}),and(sender_id.eq.${userId2},receiver_id.eq.${userId1})`,
+      )
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+    return data || [];
   },
 
   // Get all conversations for a user
@@ -129,33 +161,43 @@ export const messageService = {
     try {
       // 1. Fetch all conversations relation
       const { data: conversations, error } = await supabase
-        .from('conversations')
-        .select(`
+        .from("conversations")
+        .select(
+          `
           id,
           user1_id,
           user2_id,
           created_at
-        `)
+        `,
+        )
         .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
-        .order('created_at', { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (error) {
-        console.error('Error fetching conversations, falling back to messages grouping:', error);
+        console.error(
+          "Error fetching conversations, falling back to messages grouping:",
+          error,
+        );
         // Fallback: Fetch messages directly if conversations table fails
         const { data: legacyMessages, error: legacyError } = await supabase
-          .from('messages')
-          .select('*')
+          .from("messages")
+          .select("*")
           .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-          .order('created_at', { ascending: false });
+          .order("created_at", { ascending: false });
 
         if (legacyError) throw legacyError;
 
         const conversationMap = new Map();
         for (const msg of legacyMessages || []) {
-          const otherUserId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
-          const key = [userId, otherUserId].sort().join('_');
+          const otherUserId =
+            msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
+          const key = [userId, otherUserId].sort().join("_");
           if (!conversationMap.has(key)) {
-            conversationMap.set(key, { otherUserId, lastMessage: msg, allMessages: [] });
+            conversationMap.set(key, {
+              otherUserId,
+              lastMessage: msg,
+              allMessages: [],
+            });
           }
           conversationMap.get(key).allMessages.push(msg);
         }
@@ -165,10 +207,10 @@ export const messageService = {
       // 2. Optimization: Batch fetch recent messages to avoid N+1 queries
       // We fetch the last 1000 messages. This covers significantly more history, reducing the chance of falling back to individual queries.
       const { data: recentMessages } = await supabase
-        .from('messages')
-        .select('*') // Keeping * to ensure we don't miss any new fields used by the UI (like type, attachments, etc)
+        .from("messages")
+        .select("*") // Keeping * to ensure we don't miss any new fields used by the UI (like type, attachments, etc)
         .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-        .order('created_at', { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(1000);
 
       // Group recent messages by conversation_id in memory
@@ -192,12 +234,15 @@ export const messageService = {
       }
 
       // 3. Map conversations to their last message
-      const formattedConversations = await Promise.all(conversations.map(async (conv) => {
-        const otherUserId = conv.user1_id === userId ? conv.user2_id : conv.user1_id;
+      const formattedConversations = await Promise.all(
+        conversations.map(async (conv) => {
+          const otherUserId =
+            conv.user1_id === userId ? conv.user2_id : conv.user1_id;
 
-        // Strategy A: Check if we already have the message from our batch fetch (Fastest & Most Common)
-        let lastMsg = messageMap.get(conv.id);
+          // Strategy A: Check if we already have the message from our batch fetch (Fastest & Most Common)
+          let lastMsg = messageMap.get(conv.id);
 
+<<<<<<< HEAD
         // Strategy A.1: Try pair map if conversation_id mapping failed (Legacy support)
         if (!lastMsg) {
           const pairKey = [userId, otherUserId].sort().join(':');
@@ -213,20 +258,35 @@ export const messageService = {
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();
+=======
+          // Strategy B: If not in recent batch (Dormant chat), fetch specifically (Slower fallback)
+          if (!lastMsg) {
+            const { data: specificMsg } = await supabase
+              .from("messages")
+              .select("*")
+              .eq("conversation_id", conv.id)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+>>>>>>> 3f1bb97186cc533d026b2dd8cd15f49590e52789
 
-          lastMsg = specificMsg;
-        }
+            lastMsg = specificMsg;
+          }
 
-        return {
-          id: conv.id,
-          otherUserId,
-          lastMessage: lastMsg || { content: "No messages yet", created_at: conv.created_at },
-        };
-      }));
+          return {
+            id: conv.id,
+            otherUserId,
+            lastMessage: lastMsg || {
+              content: "No messages yet",
+              created_at: conv.created_at,
+            },
+          };
+        }),
+      );
 
       return formattedConversations;
     } catch (error) {
-      console.error('messageService.getConversations error:', error);
+      console.error("messageService.getConversations error:", error);
       throw error;
     }
   },
@@ -235,19 +295,19 @@ export const messageService = {
   async markAsRead(messageId: string) {
     try {
       const { data, error } = await supabase
-        .from('messages')
+        .from("messages")
         .update({ read: true })
-        .eq('id', messageId)
+        .eq("id", messageId)
         .select();
 
       if (error) {
-        console.error('Error marking message as read:', error);
+        console.error("Error marking message as read:", error);
         throw error;
       }
 
       return data?.[0] || null;
     } catch (error) {
-      console.error('messageService.markAsRead error:', error);
+      console.error("messageService.markAsRead error:", error);
       throw error;
     }
   },
@@ -256,20 +316,20 @@ export const messageService = {
   async markConversationAsRead(conversationId: string, userId: string) {
     try {
       const { error } = await supabase
-        .from('messages')
+        .from("messages")
         .update({ read: true })
-        .eq('conversation_id', conversationId)
-        .eq('receiver_id', userId)
-        .eq('read', false);
+        .eq("conversation_id", conversationId)
+        .eq("receiver_id", userId)
+        .eq("read", false);
 
       if (error) {
-        console.error('Error marking conversation as read:', error);
+        console.error("Error marking conversation as read:", error);
         throw error;
       }
 
       return true;
     } catch (error) {
-      console.error('messageService.markConversationAsRead error:', error);
+      console.error("messageService.markConversationAsRead error:", error);
       throw error;
     }
   },
@@ -278,19 +338,19 @@ export const messageService = {
   async getUnreadCount(userId: string) {
     try {
       const { data, error, count } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact' })
-        .eq('receiver_id', userId)
-        .eq('read', false);
+        .from("messages")
+        .select("*", { count: "exact" })
+        .eq("receiver_id", userId)
+        .eq("read", false);
 
       if (error) {
-        console.error('Error getting unread count:', error);
+        console.error("Error getting unread count:", error);
         throw error;
       }
 
       return count || 0;
     } catch (error) {
-      console.error('messageService.getUnreadCount error:', error);
+      console.error("messageService.getUnreadCount error:", error);
       throw error;
     }
   },
@@ -299,42 +359,51 @@ export const messageService = {
   async getUnreadCountByConversation(conversationId: string, userId: string) {
     try {
       const { data, error, count } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact' })
-        .eq('conversation_id', conversationId)
-        .eq('receiver_id', userId)
-        .eq('read', false);
+        .from("messages")
+        .select("*", { count: "exact" })
+        .eq("conversation_id", conversationId)
+        .eq("receiver_id", userId)
+        .eq("read", false);
 
       if (error) {
-        console.error('Error getting conversation unread count:', error);
+        console.error("Error getting conversation unread count:", error);
         throw error;
       }
 
       return count || 0;
     } catch (error) {
-      console.error('messageService.getUnreadCountByConversation error:', error);
+      console.error(
+        "messageService.getUnreadCountByConversation error:",
+        error,
+      );
       throw error;
     }
   },
 
   // Get conversation by swap ID
-  async getConversationBySwap(swapId: string, userId1: string, userId2: string) {
+  async getConversationBySwap(
+    swapId: string,
+    userId1: string,
+    userId2: string,
+  ) {
     try {
       const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('swap_id', swapId)
-        .or(`and(sender_id.eq.${userId1},receiver_id.eq.${userId2}),and(sender_id.eq.${userId2},receiver_id.eq.${userId1})`)
-        .order('created_at', { ascending: true });
+        .from("messages")
+        .select("*")
+        .eq("swap_id", swapId)
+        .or(
+          `and(sender_id.eq.${userId1},receiver_id.eq.${userId2}),and(sender_id.eq.${userId2},receiver_id.eq.${userId1})`,
+        )
+        .order("created_at", { ascending: true });
 
       if (error) {
-        console.error('Error fetching swap conversation:', error);
+        console.error("Error fetching swap conversation:", error);
         throw error;
       }
 
       return data || [];
     } catch (error) {
-      console.error('messageService.getConversationBySwap error:', error);
+      console.error("messageService.getConversationBySwap error:", error);
       throw error;
     }
   },

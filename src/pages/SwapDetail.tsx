@@ -1,11 +1,36 @@
 import { useState, useEffect } from "react";
-import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Calendar, Clock, MapPin, Star, MessageCircle, Video, ArrowLeftRight, User, Loader2, Plus } from "lucide-react";
+import {
+  useParams,
+  Link,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  MapPin,
+  Star,
+  MessageCircle,
+  Video,
+  ArrowLeftRight,
+  User,
+  Loader2,
+  Plus,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,6 +47,8 @@ import { sessionService } from "@/lib/sessionService";
 import { profileService } from "@/lib/profileService";
 import { reviewService } from "@/lib/reviewService";
 import { messageService } from "@/lib/messageService";
+import { presenceService, type UserStatus } from "@/lib/presenceService";
+import { StatusDot } from "@/components/StatusDot";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const SwapDetailSkeleton = () => (
@@ -71,7 +98,9 @@ const SwapDetailSkeleton = () => (
         <div className="lg:col-span-2 space-y-6">
           {[1, 2].map((i) => (
             <Card key={i}>
-              <CardHeader><Skeleton className="h-6 w-24" /></CardHeader>
+              <CardHeader>
+                <Skeleton className="h-6 w-24" />
+              </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-4">
                   <Skeleton className="h-16 w-16 rounded-full" />
@@ -98,10 +127,10 @@ const SwapDetail = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
-  const source = searchParams.get('source'); // 'discover' if coming from Discover, null otherwise
+  const source = searchParams.get("source"); // 'discover' if coming from Discover, null otherwise
 
   // Try to find in mock first, then database
-  const mockSwap = mockSwaps.find(s => s.id === id);
+  const mockSwap = mockSwaps.find((s) => s.id === id);
   const [swap, setSwap] = useState<any>(mockSwap || null);
   const [partner, setPartner] = useState<any>(null);
   const [swapCreator, setSwapCreator] = useState<any>(null);
@@ -112,6 +141,8 @@ const SwapDetail = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
   const [fetchingSessions, setFetchingSessions] = useState(false);
+  const [partnerStatus, setPartnerStatus] = useState<UserStatus>("offline");
+  const [creatorStatus, setCreatorStatus] = useState<UserStatus>("offline");
 
   const loadRating = async (userId: string) => {
     try {
@@ -138,7 +169,9 @@ const SwapDetail = () => {
         setLoading(true);
 
         // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (user) {
           setCurrentUserId(user.id);
         }
@@ -154,10 +187,14 @@ const SwapDetail = () => {
             setIsCreator(isOwner);
 
             // If viewing from Discover, load the swap creator's info
-            if (source === 'discover') {
-              const creatorProfile = await profileService.getProfile(swapData.user_id);
+            if (source === "discover") {
+              const creatorProfile = await profileService.getProfile(
+                swapData.user_id,
+              );
               if (creatorProfile) {
-                const creatorRating = await reviewService.getAverageRating(swapData.user_id);
+                const creatorRating = await reviewService.getAverageRating(
+                  swapData.user_id,
+                );
                 setSwapCreator({
                   id: swapData.user_id,
                   name: creatorProfile.full_name || "User",
@@ -166,6 +203,11 @@ const SwapDetail = () => {
                   country: creatorProfile.country || "Country",
                   rating: creatorRating,
                 });
+
+                // Fetch creator presence
+                presenceService
+                  .getUserPresence(swapData.user_id)
+                  .then((p) => setCreatorStatus(p.status));
               }
             }
 
@@ -178,7 +220,8 @@ const SwapDetail = () => {
               // Load partner profile
               const profile = await profileService.getProfile(partnerId);
               if (profile) {
-                const avgRating = await reviewService.getAverageRating(partnerId);
+                const avgRating =
+                  await reviewService.getAverageRating(partnerId);
                 setRating(avgRating);
                 setPartner({
                   id: partnerId,
@@ -188,6 +231,11 @@ const SwapDetail = () => {
                   country: profile.country || "Country",
                   rating: avgRating,
                 });
+
+                // Fetch partner presence
+                presenceService
+                  .getUserPresence(partnerId)
+                  .then((p) => setPartnerStatus(p.status));
               }
             }
           }
@@ -215,7 +263,9 @@ const SwapDetail = () => {
       if (swapCreator?.id) {
         const updatedProfile = await profileService.getProfile(swapCreator.id);
         if (updatedProfile) {
-          const updatedRating = await reviewService.getAverageRating(swapCreator.id);
+          const updatedRating = await reviewService.getAverageRating(
+            swapCreator.id,
+          );
           setSwapCreator({
             ...swapCreator,
             name: updatedProfile.full_name || "User",
@@ -230,7 +280,9 @@ const SwapDetail = () => {
       if (partner?.id) {
         const updatedProfile = await profileService.getProfile(partner.id);
         if (updatedProfile) {
-          const updatedRating = await reviewService.getAverageRating(partner.id);
+          const updatedRating = await reviewService.getAverageRating(
+            partner.id,
+          );
           setPartner({
             ...partner,
             name: updatedProfile.full_name || "User",
@@ -243,9 +295,9 @@ const SwapDetail = () => {
       }
     };
 
-    window.addEventListener('profileUpdated', handleProfileUpdate);
+    window.addEventListener("profileUpdated", handleProfileUpdate);
     return () => {
-      window.removeEventListener('profileUpdated', handleProfileUpdate);
+      window.removeEventListener("profileUpdated", handleProfileUpdate);
     };
   }, [swapCreator?.id, partner?.id]);
 
@@ -264,8 +316,15 @@ const SwapDetail = () => {
   const getNearestSession = () => {
     if (!sessions.length) return null;
     const futureSessions = sessions
-      .filter(s => s.status === 'scheduled' && new Date(s.scheduled_at) > new Date())
-      .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+      .filter(
+        (s) =>
+          s.status === "scheduled" && new Date(s.scheduled_at) > new Date(),
+      )
+      .sort(
+        (a, b) =>
+          new Date(a.scheduled_at).getTime() -
+          new Date(b.scheduled_at).getTime(),
+      );
 
     return futureSessions.length > 0 ? futureSessions[0] : null;
   };
@@ -291,21 +350,39 @@ const SwapDetail = () => {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
         <h1 className="font-display text-2xl font-bold mb-4">Swap Not Found</h1>
-        <Button asChild><Link to="/swaps">Back to Swaps</Link></Button>
+        <Button asChild>
+          <Link to="/swaps">Back to Swaps</Link>
+        </Button>
       </div>
     );
   }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "active": return <Badge className="bg-teal/20 text-teal border-teal/30">Active</Badge>;
-      case "pending": return <Badge className="bg-golden/20 text-golden border-golden/30">Pending</Badge>;
-      case "completed": return <Badge className="bg-green-500/20 text-green-600 border-green-500/30">Completed</Badge>;
-      default: return <Badge variant="secondary">{status}</Badge>;
+      case "active":
+        return (
+          <Badge className="bg-teal/20 text-teal border-teal/30">Active</Badge>
+        );
+      case "pending":
+        return (
+          <Badge className="bg-golden/20 text-golden border-golden/30">
+            Pending
+          </Badge>
+        );
+      case "completed":
+        return (
+          <Badge className="bg-green-500/20 text-green-600 border-green-500/30">
+            Completed
+          </Badge>
+        );
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
-  const progressPercent = swap.totalSessions ? (swap.completedSessions! / swap.totalSessions) * 100 : 0;
+  const progressPercent = swap.totalSessions
+    ? (swap.completedSessions! / swap.totalSessions) * 100
+    : 0;
 
   const handleScheduleSession = async () => {
     if (!sessionDate || !sessionTime) {
@@ -314,15 +391,17 @@ const SwapDetail = () => {
     }
 
     try {
-      const scheduledAt = new Date(`${sessionDate}T${sessionTime}`).toISOString();
+      const scheduledAt = new Date(
+        `${sessionDate}T${sessionTime}`,
+      ).toISOString();
       await sessionService.createSession({
         swap_id: swap.id,
-        scheduled_at: scheduledAt
+        scheduled_at: scheduledAt,
       });
 
       toast({
         title: "Session Scheduled",
-        description: `Session scheduled for ${sessionDate} at ${sessionTime}. Meet link generated!`
+        description: `Session scheduled for ${sessionDate} at ${sessionTime}. Meet link generated!`,
       });
 
       setScheduleOpen(false);
@@ -333,7 +412,7 @@ const SwapDetail = () => {
       toast({
         title: "Error",
         description: "Failed to schedule session",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -351,7 +430,9 @@ const SwapDetail = () => {
 
     try {
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       // Insert review into database
@@ -372,13 +453,15 @@ const SwapDetail = () => {
       await loadRating(partner.id);
 
       // Dispatch event so Discover and other pages update
-      window.dispatchEvent(new CustomEvent('ratingUpdated', {
-        detail: { userId: partner.id, rating: rating }
-      }));
+      window.dispatchEvent(
+        new CustomEvent("ratingUpdated", {
+          detail: { userId: partner.id, rating: rating },
+        }),
+      );
 
       toast({
         title: "Review Submitted",
-        description: "Thank you for your feedback!"
+        description: "Thank you for your feedback!",
       });
       setReviewOpen(false);
       setReviewText("");
@@ -388,7 +471,7 @@ const SwapDetail = () => {
       toast({
         title: "Error",
         description: err.message || "Failed to submit review",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -406,7 +489,9 @@ const SwapDetail = () => {
 
     try {
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       // Insert review into database
@@ -427,13 +512,16 @@ const SwapDetail = () => {
       await loadRating(partner.id);
 
       // Dispatch event so Discover and other pages update
-      window.dispatchEvent(new CustomEvent('ratingUpdated', {
-        detail: { userId: partner.id, rating: rating }
-      }));
+      window.dispatchEvent(
+        new CustomEvent("ratingUpdated", {
+          detail: { userId: partner.id, rating: rating },
+        }),
+      );
 
       toast({
         title: "Review Submitted",
-        description: "Thank you for your feedback! Redirecting to your swaps..."
+        description:
+          "Thank you for your feedback! Redirecting to your swaps...",
       });
       setShowCancelReview(false);
       setReviewSubmitted(true);
@@ -447,7 +535,7 @@ const SwapDetail = () => {
       toast({
         title: "Error",
         description: err.message || "Failed to submit review",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -455,7 +543,10 @@ const SwapDetail = () => {
   const handleCancelSwap = async () => {
     try {
       await swapService.cancelSwap(swap.id);
-      toast({ title: "Swap Cancelled", description: "Please leave a review for your swap partner." });
+      toast({
+        title: "Swap Cancelled",
+        description: "Please leave a review for your swap partner.",
+      });
       setCancelOpen(false);
       // Show review dialog after cancelling instead of redirecting
       setShowCancelReview(true);
@@ -464,20 +555,25 @@ const SwapDetail = () => {
       toast({
         title: "Error",
         description: error.message || "Failed to cancel swap",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
   const handleCreateOffer = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       if (!swap.user_id) throw new Error("Swap user not found");
 
       // Get or create conversation with the swap creator
-      const convId = await messageService.getOrCreateConversation(user.id, swap.user_id);
+      const convId = await messageService.getOrCreateConversation(
+        user.id,
+        swap.user_id,
+      );
       setConversationId(convId);
 
       // Open the CreateOfferDialog which will handle the full flow
@@ -487,7 +583,7 @@ const SwapDetail = () => {
       toast({
         title: "Error",
         description: error.message || "Failed to initialize offer",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -503,7 +599,9 @@ const SwapDetail = () => {
         if (updated.partner_id && updated.partner_id !== currentUserId) {
           const profile = await profileService.getProfile(updated.partner_id);
           if (profile) {
-            const avgRating = await reviewService.getAverageRating(updated.partner_id);
+            const avgRating = await reviewService.getAverageRating(
+              updated.partner_id,
+            );
             setPartner({
               id: updated.partner_id,
               name: profile.full_name || "User",
@@ -519,7 +617,8 @@ const SwapDetail = () => {
       setCreateOfferOpen(false);
       toast({
         title: "Offer Created!",
-        description: "Your offer has been sent. The other participant will see it in the chat.",
+        description:
+          "Your offer has been sent. The other participant will see it in the chat.",
       });
     } catch (error: any) {
       console.error("Error after offer created:", error);
@@ -530,9 +629,15 @@ const SwapDetail = () => {
     <div className="flex-1 bg-background pb-12">
       <main className="container mx-auto px-4 py-8">
         <Button variant="ghost" asChild className="mb-6">
+<<<<<<< HEAD
           <Link to={source === 'discover' ? "/discover" : "/swaps"}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             {source === 'discover' ? "Back to Discover" : "Back to Swaps"}
+=======
+          <Link to="/swaps">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Swaps
+>>>>>>> 3f1bb97186cc533d026b2dd8cd15f49590e52789
           </Link>
         </Button>
 
@@ -542,7 +647,9 @@ const SwapDetail = () => {
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>
-                    <CardTitle className="font-display text-2xl mb-2">{swap.title}</CardTitle>
+                    <CardTitle className="font-display text-2xl mb-2">
+                      {swap.title}
+                    </CardTitle>
                     <div className="flex items-center gap-3">
                       {getStatusBadge(swap.status)}
                       <Badge variant="outline">{swap.category}</Badge>
@@ -555,34 +662,48 @@ const SwapDetail = () => {
 
                 <div className="flex items-center gap-4 p-6 rounded-xl bg-gradient-to-r from-terracotta/10 to-teal/10">
                   <div className="flex-1 text-center">
-                    <p className="text-sm text-muted-foreground mb-1">You Teach</p>
-                    <p className="font-semibold text-lg text-terracotta">{swap.skillOffered || swap.skill_offered}</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      You Teach
+                    </p>
+                    <p className="font-semibold text-lg text-terracotta">
+                      {swap.skillOffered || swap.skill_offered}
+                    </p>
                   </div>
                   <div className="flex items-center justify-center w-12 h-12 rounded-full bg-background shadow-md">
                     <ArrowLeftRight className="h-6 w-6 text-primary" />
                   </div>
                   <div className="flex-1 text-center">
-                    <p className="text-sm text-muted-foreground mb-1">You Learn</p>
-                    <p className="font-semibold text-lg text-teal">{swap.skillWanted || swap.skill_wanted}</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      You Learn
+                    </p>
+                    <p className="font-semibold text-lg text-teal">
+                      {swap.skillWanted || swap.skill_wanted}
+                    </p>
                   </div>
                 </div>
 
-                {(swap.status === "active" || swap.status === "open") && swap.totalSessions && (
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="font-medium">Progress</span>
-                      <span className="text-muted-foreground">{swap.completedSessions}/{swap.totalSessions} sessions</span>
+                {(swap.status === "active" || swap.status === "open") &&
+                  swap.totalSessions && (
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="font-medium">Progress</span>
+                        <span className="text-muted-foreground">
+                          {swap.completedSessions}/{swap.totalSessions} sessions
+                        </span>
+                      </div>
+                      <Progress value={progressPercent} className="h-3" />
                     </div>
-                    <Progress value={progressPercent} className="h-3" />
-                  </div>
-                )}
+                  )}
 
                 {swap.status === "completed" && swap.rating && (
                   <div className="flex items-center gap-2">
                     <span className="font-medium">Your Rating:</span>
                     <div className="flex">
                       {[...Array(5)].map((_, i) => (
-                        <Star key={i} className={`h-5 w-5 ${i < swap.rating! ? "text-golden fill-golden" : "text-muted"}`} />
+                        <Star
+                          key={i}
+                          className={`h-5 w-5 ${i < swap.rating! ? "text-golden fill-golden" : "text-muted"}`}
+                        />
                       ))}
                     </div>
                   </div>
@@ -591,7 +712,7 @@ const SwapDetail = () => {
             </Card>
 
             {/* Show Schedule & Details only if partner exists (deal is active) AND not viewing from Discover */}
-            {partner && source !== 'discover' && (
+            {partner && source !== "discover" && (
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0">
                   <CardTitle className="text-lg">Schedule & Details</CardTitle>
@@ -608,10 +729,12 @@ const SwapDetail = () => {
                   <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
                     <Calendar className="h-5 w-5 text-terracotta" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Nearest Session</p>
+                      <p className="text-sm text-muted-foreground">
+                        Nearest Session
+                      </p>
                       <p className="font-medium">
                         {nearestSession
-                          ? `${new Date(nearestSession.scheduled_at).toLocaleDateString()} ${new Date(nearestSession.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                          ? `${new Date(nearestSession.scheduled_at).toLocaleDateString()} ${new Date(nearestSession.scheduled_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
                           : "No upcoming sessions"}
                       </p>
                     </div>
@@ -619,7 +742,9 @@ const SwapDetail = () => {
                   <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
                     <Video className="h-5 w-5 text-teal" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Number of Sessions</p>
+                      <p className="text-sm text-muted-foreground">
+                        Number of Sessions
+                      </p>
                       <p className="font-medium">{sessionCount} sessions</p>
                     </div>
                   </div>
@@ -627,14 +752,20 @@ const SwapDetail = () => {
                     <Video className="h-5 w-5 text-golden" />
                     <div>
                       <p className="text-sm text-muted-foreground">Format</p>
-                      <p className="font-medium capitalize">{swap.format || "online"}</p>
+                      <p className="font-medium capitalize">
+                        {swap.format || "online"}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
                     <Clock className="h-5 w-5 text-navy" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Total Hours</p>
-                      <p className="font-medium">{swap.duration || swap.total_hours || "N/A"} hours</p>
+                      <p className="text-sm text-muted-foreground">
+                        Total Hours
+                      </p>
+                      <p className="font-medium">
+                        {swap.duration || swap.total_hours || "N/A"} hours
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -644,34 +775,49 @@ const SwapDetail = () => {
 
           <div className="lg:col-span-2 space-y-6">
             {/* Show Swap Creator card when viewing from Discover */}
-            {source === 'discover' && swapCreator && (
+            {source === "discover" && swapCreator && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Swap Creator</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-4">
-                    <img src={swapCreator.avatar} alt={swapCreator.name} className="h-16 w-16 rounded-full object-cover ring-2 ring-border" />
+                    <div className="relative">
+                      <img
+                        src={swapCreator.avatar}
+                        alt={swapCreator.name}
+                        className="h-16 w-16 rounded-full object-cover ring-2 ring-border"
+                      />
+                      <StatusDot displayStatus={creatorStatus} size="md" />
+                    </div>
                     <div>
                       <h3 className="font-semibold">{swapCreator.name}</h3>
                       <div className="flex items-center gap-1 mt-1">
                         <Star className="h-4 w-4 fill-golden text-golden" />
-                        <span className="text-sm font-medium">{swapCreator.rating?.toFixed(1) || '0.0'}</span>
+                        <span className="text-sm font-medium">
+                          {swapCreator.rating?.toFixed(1) || "0.0"}
+                        </span>
                       </div>
                     </div>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    <p>{swapCreator.location}, {swapCreator.country}</p>
+                    <p>
+                      {swapCreator.location}, {swapCreator.country}
+                    </p>
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" className="flex-1" asChild>
-                      <Link to={`/messages?user=${swapCreator.id}&swap=${swap.id}`}>
-                        <MessageCircle className="h-4 w-4 mr-2" />Message
+                      <Link
+                        to={`/messages?user=${swapCreator.id}&swap=${swap.id}`}
+                      >
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        Message
                       </Link>
                     </Button>
                     <Button variant="ghost" className="flex-1" asChild>
                       <Link to={`/user/${swapCreator.id}`}>
-                        <User className="h-4 w-4 mr-2" />Profile
+                        <User className="h-4 w-4 mr-2" />
+                        Profile
                       </Link>
                     </Button>
                   </div>
@@ -679,14 +825,21 @@ const SwapDetail = () => {
               </Card>
             )}
 
-            {partner && source !== 'discover' && (
+            {partner && source !== "discover" && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Swap Partner</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-4">
-                    <img src={partner.avatar} alt={partner.name} className="h-16 w-16 rounded-full object-cover ring-2 ring-border" />
+                    <div className="relative">
+                      <img
+                        src={partner.avatar}
+                        alt={partner.name}
+                        className="h-16 w-16 rounded-full object-cover ring-2 ring-border"
+                      />
+                      <StatusDot displayStatus={partnerStatus} size="md" />
+                    </div>
                     <div>
                       <h3 className="font-semibold">{partner.name}</h3>
                     </div>
@@ -694,14 +847,22 @@ const SwapDetail = () => {
                   <div className="flex gap-2">
                     {partner && (
                       <Button variant="outline" className="flex-1" asChild>
-                        <Link to={`/messages?user=${partner.id}&swap=${swap.id}`}>
-                          <MessageCircle className="h-4 w-4 mr-2" />Message
+                        <Link
+                          to={`/messages?user=${partner.id}&swap=${swap.id}`}
+                        >
+                          <MessageCircle className="h-4 w-4 mr-2" />
+                          Message
                         </Link>
                       </Button>
                     )}
-                    <Button variant="ghost" className={!partner ? "w-full" : "flex-1"} asChild>
+                    <Button
+                      variant="ghost"
+                      className={!partner ? "w-full" : "flex-1"}
+                      asChild
+                    >
                       <Link to={`/user/${partner.id}`}>
-                        <User className="h-4 w-4 mr-2" />Profile
+                        <User className="h-4 w-4 mr-2" />
+                        Profile
                       </Link>
                     </Button>
                   </div>
@@ -710,24 +871,32 @@ const SwapDetail = () => {
             )}
 
             {/* Show Create Offer Card if viewing from Discover, no partner yet, and swap is open/pending */}
-            {source === 'discover' && !partner && swap && (swap.status === 'open' || swap.status === 'pending' || !swap.partner_id) && (
-              <Card className="border-green-500/30 bg-gradient-to-br from-green-50 to-green-50/30">
-                <CardHeader>
-                  <CardTitle className="text-lg text-green-700">Create Offer</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Interested in this skill exchange? Click below to create an offer and start the swap!
-                  </p>
-                  <Button
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
-                    onClick={handleCreateOffer}
-                  >
-                    Create Offer
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
+            {source === "discover" &&
+              !partner &&
+              swap &&
+              (swap.status === "open" ||
+                swap.status === "pending" ||
+                !swap.partner_id) && (
+                <Card className="border-green-500/30 bg-gradient-to-br from-green-50 to-green-50/30">
+                  <CardHeader>
+                    <CardTitle className="text-lg text-green-700">
+                      Create Offer
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Interested in this skill exchange? Click below to create
+                      an offer and start the swap!
+                    </p>
+                    <Button
+                      className="w-full bg-green-600 hover:bg-green-700 text-white"
+                      onClick={handleCreateOffer}
+                    >
+                      Create Offer
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
 
             {/* CreateOfferDialog - Using the same component as Messages */}
             {conversationId && (
@@ -742,7 +911,7 @@ const SwapDetail = () => {
             )}
 
             {/* Show Actions Card if partner exists AND not viewing from Discover */}
-            {partner && source !== 'discover' && (
+            {partner && source !== "discover" && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Actions</CardTitle>
@@ -750,7 +919,9 @@ const SwapDetail = () => {
                 <CardContent className="space-y-2">
                   <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
                     <DialogTrigger asChild>
-                      <Button variant="terracotta" className="w-full">Schedule Next Session</Button>
+                      <Button variant="terracotta" className="w-full">
+                        Schedule Next Session
+                      </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
@@ -759,23 +930,49 @@ const SwapDetail = () => {
                       <div className="space-y-4 py-4">
                         <div className="space-y-2">
                           <Label htmlFor="date">Date</Label>
-                          <Input id="date" type="date" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} />
+                          <Input
+                            id="date"
+                            type="date"
+                            value={sessionDate}
+                            onChange={(e) => setSessionDate(e.target.value)}
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="time">Time</Label>
-                          <Input id="time" type="time" value={sessionTime} onChange={(e) => setSessionTime(e.target.value)} />
+                          <Input
+                            id="time"
+                            type="time"
+                            value={sessionTime}
+                            onChange={(e) => setSessionTime(e.target.value)}
+                          />
                         </div>
                       </div>
                       <DialogFooter>
-                        <Button variant="outline" onClick={() => setScheduleOpen(false)}>Cancel</Button>
-                        <Button variant="terracotta" onClick={handleScheduleSession}>Schedule</Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setScheduleOpen(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="terracotta"
+                          onClick={handleScheduleSession}
+                        >
+                          Schedule
+                        </Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
 
                   <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" className="w-full" disabled={isCreator}>Leave Review</Button>
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        disabled={isCreator}
+                      >
+                        Leave Review
+                      </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
@@ -786,31 +983,59 @@ const SwapDetail = () => {
                           <Label>Rating</Label>
                           <div className="flex gap-1">
                             {[1, 2, 3, 4, 5].map((star) => (
-                              <button key={star} onClick={() => setReviewRating(star)}>
-                                <Star className={`h-8 w-8 cursor-pointer transition-colors ${star <= reviewRating ? "fill-golden text-golden" : "text-muted hover:text-golden"}`} />
+                              <button
+                                key={star}
+                                onClick={() => setReviewRating(star)}
+                              >
+                                <Star
+                                  className={`h-8 w-8 cursor-pointer transition-colors ${star <= reviewRating ? "fill-golden text-golden" : "text-muted hover:text-golden"}`}
+                                />
                               </button>
                             ))}
                           </div>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="review">Your Review</Label>
-                          <Textarea id="review" rows={4} placeholder="Share your experience..." value={reviewText} onChange={(e) => setReviewText(e.target.value)} />
+                          <Textarea
+                            id="review"
+                            rows={4}
+                            placeholder="Share your experience..."
+                            value={reviewText}
+                            onChange={(e) => setReviewText(e.target.value)}
+                          />
                         </div>
                       </div>
                       <DialogFooter>
-                        <Button variant="outline" onClick={() => setReviewOpen(false)}>Cancel</Button>
-                        <Button variant="terracotta" onClick={handleLeaveReview}>Submit Review</Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setReviewOpen(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="terracotta"
+                          onClick={handleLeaveReview}
+                        >
+                          Submit Review
+                        </Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
 
                   {/* Cancel Swap - Review Dialog */}
-                  <Dialog open={showCancelReview} onOpenChange={setShowCancelReview}>
+                  <Dialog
+                    open={showCancelReview}
+                    onOpenChange={setShowCancelReview}
+                  >
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>Leave a Review for Your Swap Partner</DialogTitle>
+                        <DialogTitle>
+                          Leave a Review for Your Swap Partner
+                        </DialogTitle>
                         <DialogDescription>
-                          Before leaving, please share your experience with {partner?.name || "your partner"}. Your feedback helps maintain our community quality.
+                          Before leaving, please share your experience with{" "}
+                          {partner?.name || "your partner"}. Your feedback helps
+                          maintain our community quality.
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
@@ -818,23 +1043,44 @@ const SwapDetail = () => {
                           <Label>Rating</Label>
                           <div className="flex gap-1">
                             {[1, 2, 3, 4, 5].map((star) => (
-                              <button key={star} onClick={() => setReviewRating(star)}>
-                                <Star className={`h-8 w-8 cursor-pointer transition-colors ${star <= reviewRating ? "fill-golden text-golden" : "text-muted hover:text-golden"}`} />
+                              <button
+                                key={star}
+                                onClick={() => setReviewRating(star)}
+                              >
+                                <Star
+                                  className={`h-8 w-8 cursor-pointer transition-colors ${star <= reviewRating ? "fill-golden text-golden" : "text-muted hover:text-golden"}`}
+                                />
                               </button>
                             ))}
                           </div>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="cancelReview">Your Review</Label>
-                          <Textarea id="cancelReview" rows={4} placeholder="Share your experience..." value={reviewText} onChange={(e) => setReviewText(e.target.value)} />
+                          <Textarea
+                            id="cancelReview"
+                            rows={4}
+                            placeholder="Share your experience..."
+                            value={reviewText}
+                            onChange={(e) => setReviewText(e.target.value)}
+                          />
                         </div>
                       </div>
                       <DialogFooter>
-                        <Button variant="outline" onClick={() => {
-                          setShowCancelReview(false);
-                          navigate("/swaps");
-                        }}>Skip Review</Button>
-                        <Button variant="terracotta" onClick={handleLeaveCancelReview}>Submit Review</Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setShowCancelReview(false);
+                            navigate("/swaps");
+                          }}
+                        >
+                          Skip Review
+                        </Button>
+                        <Button
+                          variant="terracotta"
+                          onClick={handleLeaveCancelReview}
+                        >
+                          Submit Review
+                        </Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
@@ -842,18 +1088,34 @@ const SwapDetail = () => {
                   {swap.status !== "completed" && (
                     <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
                       <DialogTrigger asChild>
-                        <Button variant="ghost" className="w-full text-destructive">Cancel Swap</Button>
+                        <Button
+                          variant="ghost"
+                          className="w-full text-destructive"
+                        >
+                          Cancel Swap
+                        </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>Cancel Swap</DialogTitle>
                           <DialogDescription>
-                            Are you sure you want to cancel this swap? This action cannot be undone.
+                            Are you sure you want to cancel this swap? This
+                            action cannot be undone.
                           </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
-                          <Button variant="outline" onClick={() => setCancelOpen(false)}>Keep Swap</Button>
-                          <Button variant="destructive" onClick={handleCancelSwap}>Cancel Swap</Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setCancelOpen(false)}
+                          >
+                            Keep Swap
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={handleCancelSwap}
+                          >
+                            Cancel Swap
+                          </Button>
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
@@ -863,9 +1125,14 @@ const SwapDetail = () => {
             )}
 
             {/* Session Manager - Only show if sessions exist */}
-            {(swap.status === 'active' || swap.status === 'open') && sessions.length > 0 && (
-              <SessionManager swapId={swap.id} sessions={sessions} loading={fetchingSessions} />
-            )}
+            {(swap.status === "active" || swap.status === "open") &&
+              sessions.length > 0 && (
+                <SessionManager
+                  swapId={swap.id}
+                  sessions={sessions}
+                  loading={fetchingSessions}
+                />
+              )}
 
             {/* Slide-in Chat Panel */}
             {partner && currentUserId && isChatOpen && (
