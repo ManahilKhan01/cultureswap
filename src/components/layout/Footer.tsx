@@ -1,9 +1,17 @@
 import { Link } from "react-router-dom";
-import { Facebook, Twitter, Instagram, Linkedin, Youtube, Mail } from "lucide-react";
+import {
+  Facebook,
+  Twitter,
+  Instagram,
+  Linkedin,
+  Youtube,
+  Mail,
+} from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 
 const Footer = () => {
   const { toast } = useToast();
@@ -13,21 +21,42 @@ const Footer = () => {
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email) {
+    if (!email || !email.includes("@")) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
       return;
     }
 
     setIsSubscribing(true);
 
-    // Simulate subscription process
-    setTimeout(() => {
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "newsletter-subscribe",
+        { body: { email } },
+      );
+
+      if (error) throw error;
+
       toast({
-        title: "Success!",
-        description: "You have been successfully subscribed.",
+        title: data.message.includes("already")
+          ? "Already Subscribed"
+          : "Success! 🎉",
+        description: data.message,
       });
       setEmail("");
+    } catch (error: any) {
+      console.error("Subscription error:", error);
+      toast({
+        title: "Subscription Failed",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setIsSubscribing(false);
-    }, 500);
+    }
   };
   const footerLinks = {
     platform: [
@@ -99,13 +128,13 @@ const Footer = () => {
         </div>
       </div>
 
-
-
       {/* Bottom Bar */}
       <div className="border-t border-white/10">
         <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-5 md:py-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/60">
-            <p>© {new Date().getFullYear()} CultureSwap. All rights reserved.</p>
+            <p>
+              © {new Date().getFullYear()} CultureSwap. All rights reserved.
+            </p>
             <div className="flex items-center gap-4">
               <span>Made for cultural exchange</span>
             </div>
