@@ -205,10 +205,7 @@ export const OfferCard = ({
     >
       <div className="bg-terracotta text-white px-4 py-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Handshake className="h-4 w-4" />
-          <span className="text-xs font-bold uppercase tracking-wider font-display">
-            Swap Proposal
-          </span>
+          <span className="text-xs font-bold font-display">swap offer</span>
         </div>
         {getStatusBadge()}
       </div>
@@ -255,7 +252,7 @@ export const OfferCard = ({
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Calendar className="h-3.5 w-3.5" />
-              <span className="text-[10px] font-bold uppercase">Schedule</span>
+              <span className="text-[10px] font-bold">schedule</span>
             </div>
             <div className="flex gap-1 flex-wrap">
               {offer.session_days?.map((day) => (
@@ -275,7 +272,7 @@ export const OfferCard = ({
               ) : (
                 <Monitor className="h-3.5 w-3.5" />
               )}
-              <span className="text-[10px] font-bold uppercase">Format</span>
+              <span className="text-[10px] font-bold">format</span>
             </div>
             <p className="text-sm font-semibold capitalize">
               {offer.format || "Online"}
