@@ -2092,109 +2092,115 @@ const Messages = () => {
             </div>
 
             {/* Right Metadata Sidebar */}
-            {selectedConversation && showDetails && (
-              <div className="hidden lg:flex w-72 lg:w-80 border-l border-border flex-col bg-muted/5 animate-in slide-in-from-right-4 duration-300">
-                <div className="p-6 flex flex-col h-full overflow-y-auto">
-                  <div className="mb-8">
-                    <h2 className="text-sm font-bold text-muted-foreground/60 uppercase tracking-wider mb-6">
-                      About{" "}
-                      {otherUserProfile?.full_name?.split(" ")[0] || "User"}
-                    </h2>
-                    <div className="space-y-6">
-                      <div className="flex items-start gap-4">
-                        <div className="h-10 w-10 flex shrink-0 items-center justify-center rounded-xl bg-terracotta/10">
-                          <ImageIcon className="h-5 w-5 text-terracotta" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-muted-foreground/60 uppercase mb-0.5">
-                            From
-                          </p>
-                          <p className="text-sm font-bold text-foreground">
-                            {otherUserProfile?.city
-                              ? `${otherUserProfile.city}, `
-                              : ""}
-                            {otherUserProfile?.country || "Earth"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-4">
-                        <div className="h-10 w-10 flex shrink-0 items-center justify-center rounded-xl bg-blue-100">
-                          <Clock className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-muted-foreground/60 uppercase mb-0.5">
-                            CultureSwap since
-                          </p>
-                          <p className="text-sm font-bold text-foreground">
-                            {otherUserProfile?.created_at
-                              ? new Intl.DateTimeFormat("en-US", {
-                                  month: "short",
-                                  year: "numeric",
-                                }).format(new Date(otherUserProfile.created_at))
-                              : "Recently"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-6 border-t border-border mb-8">
-                    <div className="flex items-center gap-2 mb-6">
-                      <h2 className="text-sm font-bold text-muted-foreground/60 uppercase tracking-wider">
-                        Activity
+            {selectedConversation &&
+              showDetails &&
+              !isAssistantUser(otherUserProfile) && (
+                <div className="hidden lg:flex w-72 lg:w-80 border-l border-border flex-col bg-muted/5 animate-in slide-in-from-right-4 duration-300">
+                  <div className="p-6 flex flex-col h-full overflow-y-auto">
+                    <div className="mb-8">
+                      <h2 className="text-sm font-bold text-muted-foreground/60 uppercase tracking-wider mb-6">
+                        About{" "}
+                        {otherUserProfile?.full_name?.split(" ")[0] || "User"}
                       </h2>
-                      <span className="bg-terracotta text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-tighter">
-                        Plus
-                      </span>
-                    </div>
-                    {isAssistantUser(otherUserProfile) ? (
-                      <p className="text-xs text-muted-foreground leading-relaxed italic">
-                        This is our AI assistant, Swapy. Here to help you with
-                        your culture swap journey!
-                      </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        As a member since{" "}
-                        {otherUserProfile?.created_at
-                          ? new Date(otherUserProfile.created_at).getFullYear()
-                          : "joining"}
-                        , they are active in sharing their culture with the
-                        community.
-                      </p>
-                    )}
-                  </div>
+                      <div className="space-y-6">
+                        <div className="flex items-start gap-4">
+                          <div className="h-10 w-10 flex shrink-0 items-center justify-center rounded-xl bg-terracotta/10">
+                            <ImageIcon className="h-5 w-5 text-terracotta" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-muted-foreground/60 uppercase mb-0.5">
+                              From
+                            </p>
+                            <p className="text-sm font-bold text-foreground">
+                              {otherUserProfile?.city
+                                ? `${otherUserProfile.city}, `
+                                : ""}
+                              {otherUserProfile?.country || "Earth"}
+                            </p>
+                          </div>
+                        </div>
 
-                  <div className="mt-auto pt-8 flex flex-col items-center text-center">
-                    <div className="relative mb-6 group">
-                      <div className="absolute inset-0 bg-gradient-to-br from-terracotta/20 to-teal/20 rounded-full blur-xl group-hover:blur-2xl transition-all opacity-60"></div>
-                      <div className="relative h-20 w-20 rounded-3xl bg-white border border-border shadow-sm flex items-center justify-center p-4">
-                        <div className="h-full w-full rounded-2xl border-2 border-dashed border-muted-foreground/20 flex items-center justify-center">
-                          <Sparkles className="h-8 w-8 text-terracotta/20" />
+                        <div className="flex items-start gap-4">
+                          <div className="h-10 w-10 flex shrink-0 items-center justify-center rounded-xl bg-blue-100">
+                            <Clock className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-muted-foreground/60 uppercase mb-0.5">
+                              CultureSwap since
+                            </p>
+                            <p className="text-sm font-bold text-foreground">
+                              {otherUserProfile?.created_at
+                                ? new Intl.DateTimeFormat("en-US", {
+                                    month: "short",
+                                    year: "numeric",
+                                  }).format(
+                                    new Date(otherUserProfile.created_at),
+                                  )
+                                : "Recently"}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
-                    {otherUserSwapCount > 0 ? (
-                      <div>
-                        <p className="text-sm font-bold text-foreground mb-1">
-                          {otherUserSwapCount} Completed Swaps
-                        </p>
-                        <p className="text-[11px] text-muted-foreground">
-                          Highly active in the community
-                        </p>
+
+                    <div className="pt-6 border-t border-border mb-8">
+                      <div className="flex items-center gap-2 mb-6">
+                        <h2 className="text-sm font-bold text-muted-foreground/60 uppercase tracking-wider">
+                          Activity
+                        </h2>
+                        <span className="bg-terracotta text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-tighter">
+                          Plus
+                        </span>
                       </div>
-                    ) : (
-                      <div>
+                      {isAssistantUser(otherUserProfile) ? (
+                        <p className="text-xs text-muted-foreground leading-relaxed italic">
+                          This is our AI assistant, Swapy. Here to help you with
+                          your culture swap journey!
+                        </p>
+                      ) : (
                         <p className="text-xs text-muted-foreground leading-relaxed">
-                          This user hasn't completed any swaps yet. Be their
-                          first partner!
+                          As a member since{" "}
+                          {otherUserProfile?.created_at
+                            ? new Date(
+                                otherUserProfile.created_at,
+                              ).getFullYear()
+                            : "joining"}
+                          , they are active in sharing their culture with the
+                          community.
                         </p>
+                      )}
+                    </div>
+
+                    <div className="mt-auto pt-8 flex flex-col items-center text-center">
+                      <div className="relative mb-6 group">
+                        <div className="absolute inset-0 bg-gradient-to-br from-terracotta/20 to-teal/20 rounded-full blur-xl group-hover:blur-2xl transition-all opacity-60"></div>
+                        <div className="relative h-20 w-20 rounded-3xl bg-white border border-border shadow-sm flex items-center justify-center p-4">
+                          <div className="h-full w-full rounded-2xl border-2 border-dashed border-muted-foreground/20 flex items-center justify-center">
+                            <Sparkles className="h-8 w-8 text-terracotta/20" />
+                          </div>
+                        </div>
                       </div>
-                    )}
+                      {otherUserSwapCount > 0 ? (
+                        <div>
+                          <p className="text-sm font-bold text-foreground mb-1">
+                            {otherUserSwapCount} Completed Swaps
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            Highly active in the community
+                          </p>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            This user hasn't completed any swaps yet. Be their
+                            first partner!
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
         </div>
       </div>
