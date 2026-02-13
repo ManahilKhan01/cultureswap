@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import nodemailer from "npm:nodemailer@6.9.13";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -61,23 +62,26 @@ serve(async (req) => {
       });
     }
 
-    // Send confirmation email using Supabase Auth (magic link as welcome)
-    // This uses Supabase's built-in email infrastructure
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+    // Send confirmation email using Gmail SMTP (via Nodemailer)
+    const SMTP_USER = Deno.env.get("SMTP_USER");
+    const SMTP_PASS = Deno.env.get("SMTP_PASS");
 
-    if (RESEND_API_KEY) {
-      // Send a beautiful confirmation email via Resend
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${RESEND_API_KEY}`,
+    if (SMTP_USER && SMTP_PASS) {
+      // Create a transporter
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: SMTP_USER,
+          pass: SMTP_PASS,
         },
-        body: JSON.stringify({
-          from: "CultureSwap <onboarding@resend.dev>",
-          to: [email],
-          subject: "Welcome to CultureSwap Newsletter! 🌍",
-          html: `
+      });
+
+      // Send the email
+      await transporter.sendMail({
+        from: `"CultureSwap" <${SMTP_USER}>`,
+        to: email,
+        subject: "Welcome to CultureSwap Newsletter! 🌍",
+        html: `
             <div style="font-family: 'Inter', Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #fdf6ee; padding: 40px 30px; border-radius: 12px;">
               <div style="text-align: center; margin-bottom: 30px;">
                 <h1 style="color: #1a2942; font-size: 28px; margin: 0;">
@@ -107,7 +111,6 @@ serve(async (req) => {
               </div>
             </div>
           `,
-        }),
       });
     }
 
