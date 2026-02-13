@@ -4,11 +4,22 @@ import { Eye, EyeOff, Mail, Lock, User, Upload, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { profileService } from "@/lib/profileService";
+import {
+  validateName,
+  validateEmail,
+  validatePassword,
+} from "@/lib/validation";
 
 import { CameraModal } from "@/components/CameraModal";
 
@@ -16,7 +27,8 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [profileImage, setProfileImage] = useState<File | null>(null);
-  const [profileImagePreview, setProfileImagePreview] = useState<string>("/profile.svg");
+  const [profileImagePreview, setProfileImagePreview] =
+    useState<string>("/profile.svg");
   const [showCamera, setShowCamera] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -66,17 +78,17 @@ const Signup = () => {
 
     try {
       // Validation
-      if (!formData.fullName || !formData.email || !formData.password) {
-        throw new Error("Please fill all fields");
-      }
+      const nameError = validateName(formData.fullName);
+      if (nameError) throw new Error(nameError);
+
+      const emailError = validateEmail(formData.email);
+      if (emailError) throw new Error(emailError);
+
+      const passwordError = validatePassword(formData.password);
+      if (passwordError) throw new Error(passwordError);
 
       if (formData.password !== formData.confirmPassword) {
         throw new Error("Passwords do not match");
-      }
-
-      const passwordRegex = /(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9])(?=.{8,})/;
-      if (!passwordRegex.test(formData.password)) {
-        throw new Error("Password must meet the security requirements below");
       }
 
       // Sign up in Supabase Auth
@@ -91,17 +103,19 @@ const Signup = () => {
 
       // Create in user_profiles table (new)
       if (authData.user) {
-        const { error: profileError } = await supabase.from("user_profiles").insert([
-          {
-            id: authData.user.id,
-            email: formData.email,
-            full_name: formData.fullName,
-            profile_image_url: "/profile.svg", // Default placeholder image
-            languages: [],
-            skills_offered: [],
-            skills_wanted: [],
-          },
-        ]);
+        const { error: profileError } = await supabase
+          .from("user_profiles")
+          .insert([
+            {
+              id: authData.user.id,
+              email: formData.email,
+              full_name: formData.fullName,
+              profile_image_url: "/profile.svg", // Default placeholder image
+              languages: [],
+              skills_offered: [],
+              skills_wanted: [],
+            },
+          ]);
 
         if (profileError) {
           console.error("Profile creation error:", profileError);
@@ -112,7 +126,10 @@ const Signup = () => {
         // Upload profile image if provided
         if (profileImage) {
           try {
-            await profileService.uploadAndUpdateProfileImage(authData.user.id, profileImage);
+            await profileService.uploadAndUpdateProfileImage(
+              authData.user.id,
+              profileImage,
+            );
             console.log("Profile image uploaded successfully");
           } catch (imageError) {
             console.error("Error uploading profile image:", imageError);
@@ -143,8 +160,8 @@ const Signup = () => {
     <div
       className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat"
       style={{
-        backgroundImage: 'url(/bg.jpg)',
-        backgroundColor: "#FBF5EA"
+        backgroundImage: "url(/bg.jpg)",
+        backgroundColor: "#FBF5EA",
       }}
     >
       <div className="absolute inset-0 bg-black/40"></div>
@@ -154,10 +171,12 @@ const Signup = () => {
           <CardDescription>Join CultureSwap today</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             {error && (
               <Alert className="bg-red-50 border-red-200">
-                <AlertDescription className="text-red-600">{error}</AlertDescription>
+                <AlertDescription className="text-red-600">
+                  {error}
+                </AlertDescription>
               </Alert>
             )}
 
@@ -258,25 +277,45 @@ const Signup = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
               <div className="text-xs space-y-1 mt-2 p-2 bg-muted/50 rounded-md">
                 <p className="font-medium mb-1">Password must contain:</p>
-                <div className={`flex items-center gap-2 ${formData.password.length >= 8 ? 'text-green-600' : 'text-muted-foreground'}`}>
-                  <div className={`w-1.5 h-1.5 rounded-full ${formData.password.length >= 8 ? 'bg-green-600' : 'bg-gray-300'}`} />
+                <div
+                  className={`flex items-center gap-2 ${formData.password.length >= 8 ? "text-green-600" : "text-muted-foreground"}`}
+                >
+                  <div
+                    className={`w-1.5 h-1.5 rounded-full ${formData.password.length >= 8 ? "bg-green-600" : "bg-gray-300"}`}
+                  />
                   At least 8 characters
                 </div>
-                <div className={`flex items-center gap-2 ${/[A-Z]/.test(formData.password) ? 'text-green-600' : 'text-muted-foreground'}`}>
-                  <div className={`w-1.5 h-1.5 rounded-full ${/[A-Z]/.test(formData.password) ? 'bg-green-600' : 'bg-gray-300'}`} />
+                <div
+                  className={`flex items-center gap-2 ${/[A-Z]/.test(formData.password) ? "text-green-600" : "text-muted-foreground"}`}
+                >
+                  <div
+                    className={`w-1.5 h-1.5 rounded-full ${/[A-Z]/.test(formData.password) ? "bg-green-600" : "bg-gray-300"}`}
+                  />
                   One uppercase letter
                 </div>
-                <div className={`flex items-center gap-2 ${/[a-z]/.test(formData.password) ? 'text-green-600' : 'text-muted-foreground'}`}>
-                  <div className={`w-1.5 h-1.5 rounded-full ${/[a-z]/.test(formData.password) ? 'bg-green-600' : 'bg-gray-300'}`} />
+                <div
+                  className={`flex items-center gap-2 ${/[a-z]/.test(formData.password) ? "text-green-600" : "text-muted-foreground"}`}
+                >
+                  <div
+                    className={`w-1.5 h-1.5 rounded-full ${/[a-z]/.test(formData.password) ? "bg-green-600" : "bg-gray-300"}`}
+                  />
                   One lowercase letter
                 </div>
-                <div className={`flex items-center gap-2 ${/[^a-zA-Z0-9]/.test(formData.password) ? 'text-green-600' : 'text-muted-foreground'}`}>
-                  <div className={`w-1.5 h-1.5 rounded-full ${/[^a-zA-Z0-9]/.test(formData.password) ? 'bg-green-600' : 'bg-gray-300'}`} />
+                <div
+                  className={`flex items-center gap-2 ${/[^a-zA-Z0-9]/.test(formData.password) ? "text-green-600" : "text-muted-foreground"}`}
+                >
+                  <div
+                    className={`w-1.5 h-1.5 rounded-full ${/[^a-zA-Z0-9]/.test(formData.password) ? "bg-green-600" : "bg-gray-300"}`}
+                  />
                   One special character
                 </div>
               </div>
@@ -301,7 +340,11 @@ const Signup = () => {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>
@@ -317,7 +360,10 @@ const Signup = () => {
 
             <p className="text-center text-sm">
               Already have an account?{" "}
-              <a href="/login" className="text-blue-600 hover:underline font-medium">
+              <a
+                href="/login"
+                className="text-blue-600 hover:underline font-medium"
+              >
                 Sign In
               </a>
             </p>
@@ -332,6 +378,6 @@ const Signup = () => {
       />
     </div>
   );
-}
+};
 
 export default Signup;

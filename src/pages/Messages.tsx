@@ -148,6 +148,8 @@ const Messages = () => {
   const [nextResponseText, setNextResponseText] = useState("");
   const [isAddingResponse, setIsAddingResponse] = useState(false);
   const [editResponseValue, setEditResponseValue] = useState("");
+  const [showDetails, setShowDetails] = useState(true);
+  const [otherUserSwapCount, setOtherUserSwapCount] = useState(0);
 
   // Key to force OfferCard components to re-fetch when offers are updated
   const [offerRefreshKey, setOfferRefreshKey] = useState(0);
@@ -460,30 +462,25 @@ const Messages = () => {
     try {
       const allConversations = await messageService.getConversations(uId);
 
-      // Load profiles and metadata in parallel for better performance
-      const missingProfileIds = allConversations
-        .map((conv) => conv.otherUserId)
-        .filter((id) => !userProfiles[id]);
+      // RPC already returns basic profile info, but we also want to cache it
+      const newProfiles = { ...userProfiles };
+      let profilesUpdated = false;
 
-      const [fetchedProfiles, metadata] = await Promise.all([
-        missingProfileIds.length > 0
-          ? profileService.getManyProfiles(missingProfileIds)
-          : Promise.resolve([]),
-        chatManagementService.getAllChatMetadata(uId),
-      ]);
+      allConversations.forEach((conv) => {
+        if (conv.otherProfile && !newProfiles[conv.otherUserId]) {
+          newProfiles[conv.otherUserId] = conv.otherProfile;
+          profilesUpdated = true;
+        }
+      });
 
-      // Update profiles if any were fetched
-      if (fetchedProfiles.length > 0) {
-        const newProfiles = { ...userProfiles };
-        fetchedProfiles.forEach((profile: any) => {
-          if (profile && profile.id) {
-            newProfiles[profile.id] = profile;
-          }
-        });
+      if (profilesUpdated) {
         setUserProfiles(newProfiles);
       }
 
-      // Sort conversations by last message timestamp (descending)
+      // Metadata for stars/archive can still be fetched in parallel
+      const metadata = await chatManagementService.getAllChatMetadata(uId);
+
+      // Sort is naturally handled by RPC, but we'll sort here for extra safety
       const sortedConversations = [...allConversations].sort((a, b) => {
         const timeA = new Date(a.lastMessage.created_at).getTime();
         const bTime = new Date(b.lastMessage.created_at).getTime();
@@ -494,7 +491,7 @@ const Messages = () => {
       setStarredChats(metadata.starredChats as any);
       setArchivedChats(metadata.archivedChats as any);
 
-      // Fetch presence for all conversation users
+      // Fetch presence in background
       const allUserIds = allConversations
         .map((c: any) => c.otherUserId)
         .filter(Boolean);
@@ -535,41 +532,41 @@ const Messages = () => {
         if (userIdParam) {
           setMessagesLoading(true);
 
-          // 1. Instantly update profile info and selected state if we have it in cache
-          const existingProfile = userProfiles[userIdParam];
-          const profile =
-            existingProfile || (await profileService.getProfile(userIdParam));
+          // 1. Instantly check profile from local state/cache first
+          let profile = userProfiles[userIdParam];
 
-          if (!existingProfile) {
-            setUserProfiles((prev) => ({ ...prev, [userIdParam]: profile }));
+          // 2. Initial parallel batch: Load Conversation ID and Profile (if missing)
+          const [convId, fetchedProfile] = await Promise.all([
+            messageService.getOrCreateConversation(currentUser.id, userIdParam),
+            !profile
+              ? profileService.getProfile(userIdParam)
+              : Promise.resolve(null),
+          ]);
+
+          if (fetchedProfile) {
+            profile = fetchedProfile;
+            setUserProfiles((prev) => ({
+              ...prev,
+              [userIdParam]: fetchedProfile,
+            }));
           }
-
           setOtherUserProfile(profile);
 
-          // 2. Get conversation and messages
-          const convId = await messageService.getOrCreateConversation(
-            currentUser.id,
-            userIdParam,
-          );
-          const convMessages =
-            await messageService.getMessagesByConversation(convId);
+          // 3. Second parallel batch: Load Messages, Swap Details, and Attachments
+          const [convMessages, swapResult] = await Promise.all([
+            messageService.getMessagesByConversation(convId),
+            swapIdParam
+              ? swapService.getSwapById(swapIdParam)
+              : Promise.resolve(null),
+          ]);
 
-          // 3. Update swap context if present
-          if (swapIdParam) {
-            const swap = await swapService.getSwapById(swapIdParam);
-            setCurrentSwap(swap);
-          } else {
-            setCurrentSwap(null);
-          }
-
-          // 4. Load attachments in bulk
-          const attachmentsMap: Record<string, any[]> = {};
+          // Fetch attachments in bulk after we have message IDs
+          let attachmentsMap: Record<string, any[]> = {};
           if (convMessages.length > 0) {
             const messageIds = convMessages.map((m) => m.id);
             const allAttachments =
               await attachmentService.getAttachmentsByConversation(messageIds);
 
-            // Group attachments by message ID
             for (const att of allAttachments) {
               if (!attachmentsMap[att.message_id]) {
                 attachmentsMap[att.message_id] = [];
@@ -578,18 +575,29 @@ const Messages = () => {
             }
           }
 
-          // 5. Commit state updates in one go to prevent flickering
+          // 4. Commit all state updates in one frame
           setMessages(convMessages);
           setAttachments(attachmentsMap);
+          setCurrentSwap(swapResult);
           setSelectedConversation({
             id: convId,
             otherUserId: userIdParam,
             otherProfile: profile,
             swapId: swapIdParam,
           });
+
+          // Fetch swap count for the other user
+          try {
+            const count = await swapService.getCompletedSwapsCount(userIdParam);
+            setOtherUserSwapCount(count);
+          } catch (e) {
+            console.warn("Could not fetch user swap count:", e);
+            setOtherUserSwapCount(0);
+          }
         } else {
           setSelectedConversation(null);
           setMessages([]);
+          setCurrentSwap(null);
         }
       } catch (error) {
         console.error("Error loading chat detail:", error);
@@ -1258,12 +1266,12 @@ const Messages = () => {
 
   return (
     <div className="flex flex-col h-[calc(100dvh-72px)] md:h-[calc(100vh-80px)] bg-background overflow-hidden">
-      <div className="flex-1 overflow-hidden">
-        <div className="container mx-auto h-full py-0 md:py-4 px-0 md:px-4">
-          <div className="bg-card md:rounded-2xl border-none md:border border-border shadow-none md:shadow-xl h-full flex overflow-hidden">
-            {/* Left Panel: Conversations List */}
+      <div className="flex-1 overflow-hidden p-0 md:p-4 lg:p-6 bg-muted/30">
+        <div className="h-full bg-white rounded-none md:rounded-3xl border-none md:border border-border shadow-2xl overflow-hidden flex flex-col relative">
+          <div className="flex flex-1 overflow-hidden">
+            {/* Left Panel: Conversation List */}
             <div
-              className={`w-full md:w-80 lg:w-96 flex flex-col border-r border-border bg-muted/10 ${selectedConversation ? "hidden md:flex" : "flex"}`}
+              className={`w-full md:w-80 lg:w-96 border-r border-border bg-white/40 flex flex-col ${selectedConversation ? "hidden md:flex" : "flex"}`}
             >
               <div className="p-4 border-b border-border space-y-4">
                 <div className="flex items-center justify-between">
@@ -1301,10 +1309,20 @@ const Messages = () => {
                         <div className="absolute left-0 mt-1 w-48 bg-white border border-border rounded-lg shadow-lg z-50 overflow-hidden">
                           <button
                             onClick={() => {
+                              setActiveFilter("all");
+                              setMenuOpenId(null);
+                            }}
+                            className={`w-full text-left px-4 py-2.5 hover:bg-muted text-sm flex items-center gap-2 transition-colors ${activeFilter === "all" ? "bg-terracotta/10 text-terracotta font-semibold" : ""}`}
+                          >
+                            <MessageSquareMore className="h-4 w-4" />
+                            All messages
+                          </button>
+                          <button
+                            onClick={() => {
                               setActiveFilter("unread");
                               setMenuOpenId(null);
                             }}
-                            className={`w-full text-left px-4 py-2.5 hover:bg-muted text-sm flex items-center gap-2 transition-colors ${activeFilter === "unread" ? "bg-terracotta/10 text-terracotta font-semibold" : ""}`}
+                            className={`w-full text-left px-4 py-2.5 hover:bg-muted text-sm flex items-center gap-2 transition-colors border-t border-border/50 ${activeFilter === "unread" ? "bg-terracotta/10 text-terracotta font-semibold" : ""}`}
                           >
                             <Bell className="h-4 w-4" />
                             Unread
@@ -1328,16 +1346,6 @@ const Messages = () => {
                           >
                             <Archive className="h-4 w-4" />
                             Archived
-                          </button>
-                          <button
-                            onClick={() => {
-                              setActiveFilter("all");
-                              setMenuOpenId(null);
-                            }}
-                            className="w-full text-left px-4 py-2.5 hover:bg-muted text-sm flex items-center gap-2 transition-colors border-t border-border text-muted-foreground"
-                          >
-                            <X className="h-4 w-4" />
-                            Clear Filter
                           </button>
                         </div>
                       )}
@@ -1386,17 +1394,20 @@ const Messages = () => {
                     const isAssistant = isAssistantUser(profile);
 
                     return (
-                      <div key={conv.id} className="relative group px-2 mb-1">
+                      <div
+                        key={conv.id}
+                        className="relative group border-b border-border/30 last:border-0"
+                      >
                         <button
                           onClick={() =>
                             setSearchParams({ user: conv.otherUserId })
                           }
-                          className={`w-full p-3 flex items-center gap-3 transition-all rounded-xl text-left ${
+                          className={`w-full p-4 flex items-center gap-3 transition-all rounded-none text-left ${
                             isSelected
-                              ? "bg-terracotta/10 ring-1 ring-terracotta/20 shadow-sm"
+                              ? "bg-muted"
                               : isAssistant
-                                ? "bg-blue-50/50 hover:bg-blue-50"
-                                : "hover:bg-muted/50"
+                                ? "bg-blue-50/30 hover:bg-blue-50/60"
+                                : "hover:bg-muted/40"
                           }`}
                         >
                           <div className="relative flex-shrink-0">
@@ -1541,12 +1552,7 @@ const Messages = () => {
                           {otherUserProfile?.full_name || "User"}
                         </p>
                         <p className="text-[11px] font-medium truncate flex items-center gap-1.5 text-muted-foreground">
-                          {isAssistantUser(otherUserProfile) ? (
-                            <>
-                              <span className="w-1.5 h-1.5 rounded-full bg-terracotta animate-pulse"></span>
-                              AI Assistant
-                            </>
-                          ) : (
+                          {isAssistantUser(otherUserProfile) ? null : (
                             <>
                               {presenceMap[otherUserProfile?.id]?.status ===
                                 "online" && (
@@ -1589,17 +1595,27 @@ const Messages = () => {
                       </div>
                     </div>
 
-                    {canCreateOffer && (
+                    <div className="flex items-center gap-3 md:gap-4">
+                      {canCreateOffer && (
+                        <Button
+                          variant="terracotta"
+                          size="sm"
+                          onClick={() => setCreateOfferOpen(true)}
+                          className="rounded-full px-4 shadow-md transition-transform hover:scale-105 hidden sm:flex"
+                        >
+                          <Handshake className="h-4 w-4 mr-2" />
+                          Send Offer
+                        </Button>
+                      )}
                       <Button
-                        variant="terracotta"
-                        size="sm"
-                        onClick={() => setCreateOfferOpen(true)}
-                        className="rounded-full px-4 shadow-md transition-transform hover:scale-105"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowDetails(!showDetails)}
+                        className={`rounded-full transition-colors ${showDetails ? "text-terracotta bg-terracotta/5" : "text-muted-foreground"}`}
                       >
-                        <Handshake className="h-4 w-4 mr-2" />
-                        Send Offer
+                        <User className="h-5 w-5" />
                       </Button>
-                    )}
+                    </div>
                   </div>
 
                   {/* Messages Stream */}
@@ -2074,6 +2090,111 @@ const Messages = () => {
                 </div>
               )}
             </div>
+
+            {/* Right Metadata Sidebar */}
+            {selectedConversation && showDetails && (
+              <div className="hidden lg:flex w-72 lg:w-80 border-l border-border flex-col bg-muted/5 animate-in slide-in-from-right-4 duration-300">
+                <div className="p-6 flex flex-col h-full overflow-y-auto">
+                  <div className="mb-8">
+                    <h2 className="text-sm font-bold text-muted-foreground/60 uppercase tracking-wider mb-6">
+                      About{" "}
+                      {otherUserProfile?.full_name?.split(" ")[0] || "User"}
+                    </h2>
+                    <div className="space-y-6">
+                      <div className="flex items-start gap-4">
+                        <div className="h-10 w-10 flex shrink-0 items-center justify-center rounded-xl bg-terracotta/10">
+                          <ImageIcon className="h-5 w-5 text-terracotta" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-muted-foreground/60 uppercase mb-0.5">
+                            From
+                          </p>
+                          <p className="text-sm font-bold text-foreground">
+                            {otherUserProfile?.city
+                              ? `${otherUserProfile.city}, `
+                              : ""}
+                            {otherUserProfile?.country || "Earth"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-4">
+                        <div className="h-10 w-10 flex shrink-0 items-center justify-center rounded-xl bg-blue-100">
+                          <Clock className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-muted-foreground/60 uppercase mb-0.5">
+                            CultureSwap since
+                          </p>
+                          <p className="text-sm font-bold text-foreground">
+                            {otherUserProfile?.created_at
+                              ? new Intl.DateTimeFormat("en-US", {
+                                  month: "short",
+                                  year: "numeric",
+                                }).format(new Date(otherUserProfile.created_at))
+                              : "Recently"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-border mb-8">
+                    <div className="flex items-center gap-2 mb-6">
+                      <h2 className="text-sm font-bold text-muted-foreground/60 uppercase tracking-wider">
+                        Activity
+                      </h2>
+                      <span className="bg-terracotta text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-tighter">
+                        Plus
+                      </span>
+                    </div>
+                    {isAssistantUser(otherUserProfile) ? (
+                      <p className="text-xs text-muted-foreground leading-relaxed italic">
+                        This is our AI assistant, Swapy. Here to help you with
+                        your culture swap journey!
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        As a member since{" "}
+                        {otherUserProfile?.created_at
+                          ? new Date(otherUserProfile.created_at).getFullYear()
+                          : "joining"}
+                        , they are active in sharing their culture with the
+                        community.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="mt-auto pt-8 flex flex-col items-center text-center">
+                    <div className="relative mb-6 group">
+                      <div className="absolute inset-0 bg-gradient-to-br from-terracotta/20 to-teal/20 rounded-full blur-xl group-hover:blur-2xl transition-all opacity-60"></div>
+                      <div className="relative h-20 w-20 rounded-3xl bg-white border border-border shadow-sm flex items-center justify-center p-4">
+                        <div className="h-full w-full rounded-2xl border-2 border-dashed border-muted-foreground/20 flex items-center justify-center">
+                          <Sparkles className="h-8 w-8 text-terracotta/20" />
+                        </div>
+                      </div>
+                    </div>
+                    {otherUserSwapCount > 0 ? (
+                      <div>
+                        <p className="text-sm font-bold text-foreground mb-1">
+                          {otherUserSwapCount} Completed Swaps
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Highly active in the community
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          This user hasn't completed any swaps yet. Be their
+                          first partner!
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
