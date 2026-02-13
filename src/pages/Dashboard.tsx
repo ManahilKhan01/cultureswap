@@ -175,7 +175,9 @@ const Dashboard = () => {
       {
         id: "photo",
         label: "Add profile photo",
-        completed: !!userProfile.profile_image_url,
+        completed:
+          !!userProfile.profile_image_url &&
+          userProfile.profile_image_url !== "/profile.svg",
       },
       { id: "bio", label: "Complete bio", completed: !!userProfile.bio },
       {
@@ -187,8 +189,8 @@ const Dashboard = () => {
       },
       {
         id: "location",
-        label: "Add location (City & Country)",
-        completed: !!userProfile.city && !!userProfile.country,
+        label: "Add your city",
+        completed: !!userProfile.city,
       },
       {
         id: "skills_wanted",
@@ -325,7 +327,7 @@ const Dashboard = () => {
 
   return (
     <>
-      <main className="container mx-auto px-4 py-8">
+      <main className="w-full px-4 md:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -358,18 +360,26 @@ const Dashboard = () => {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {stats.map((stat) => (
-            <Link key={stat.label} to={stat.path} className="block">
-              <Card className="hover-lift cursor-pointer hover:border-terracotta/30 transition-all duration-300">
-                <CardContent className="p-6">
+            <Link key={stat.label} to={stat.path} className="flex h-full">
+              <Card className="flex flex-col w-full hover-lift cursor-pointer hover:border-terracotta/30 transition-all duration-300">
+                <CardContent className="p-6 flex-1 flex flex-col justify-between min-h-[120px]">
                   <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-muted-foreground mb-1 mt-0.5">
                         {stat.label}
                       </p>
-                      <p className="text-3xl font-bold">{stat.value}</p>
-                      <p className="text-xs text-teal mt-1">{stat.trend}</p>
+                      <p className="text-3xl font-bold leading-none py-1">
+                        {stat.value}
+                      </p>
+                      {stat.trend ? (
+                        <p className="text-xs text-teal mt-1 font-medium">
+                          {stat.trend}
+                        </p>
+                      ) : (
+                        <div className="h-4" /> // Spacer for consistent layout
+                      )}
                     </div>
-                    <div className="h-10 w-10 rounded-lg bg-terracotta/10 flex items-center justify-center group-hover:bg-terracotta/20 transition-colors">
+                    <div className="h-10 w-10 rounded-lg bg-terracotta/10 flex items-center justify-center group-hover:bg-terracotta/20 transition-colors shrink-0 ml-3">
                       <stat.icon className="h-5 w-5 text-terracotta" />
                     </div>
                   </div>

@@ -23,6 +23,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -103,8 +104,7 @@ const Login = () => {
       <div className="absolute inset-0 bg-black/40"></div>
       <Card className="w-full max-w-md shadow-lg relative z-10">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Welcome Back</CardTitle>
-          <CardDescription>Sign in to your account</CardDescription>
+          <CardTitle className="text-2xl">Sign in</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
@@ -143,6 +143,8 @@ const Login = () => {
                   className="pl-10 pr-10"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onFocus={() => setIsPasswordFocused(true)}
+                  onBlur={() => setIsPasswordFocused(false)}
                   disabled={isLoading}
                 />
                 <button
@@ -158,47 +160,48 @@ const Login = () => {
                 </button>
               </div>
 
-              {/* Password Requirement Indicators */}
-              <div className="text-xs space-y-1 mt-2 p-2 bg-muted/50 rounded-md">
-                <p className="font-medium mb-1">Password must contain:</p>
-                <div
-                  className={`flex items-center gap-2 ${password.length >= 8 ? "text-green-600" : "text-muted-foreground"}`}
-                >
+              {isPasswordFocused && (
+                <div className="text-xs space-y-1 mt-2 p-2 bg-muted/50 rounded-md animate-in fade-in slide-in-from-top-1 duration-200">
+                  <p className="font-medium mb-1">Password must contain:</p>
                   <div
-                    className={`w-1.5 h-1.5 rounded-full ${password.length >= 8 ? "bg-green-600" : "bg-gray-300"}`}
-                  />
-                  At least 8 characters
-                </div>
-                <div
-                  className={`flex items-center gap-2 ${/[A-Z]/.test(password) ? "text-green-600" : "text-muted-foreground"}`}
-                >
+                    className={`flex items-center gap-2 ${password.length >= 8 ? "text-green-600" : "text-muted-foreground"}`}
+                  >
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full ${password.length >= 8 ? "bg-green-600" : "bg-gray-300"}`}
+                    />
+                    At least 8 characters
+                  </div>
                   <div
-                    className={`w-1.5 h-1.5 rounded-full ${/[A-Z]/.test(password) ? "bg-green-600" : "bg-gray-300"}`}
-                  />
-                  One uppercase letter
-                </div>
-                <div
-                  className={`flex items-center gap-2 ${/[a-z]/.test(password) ? "text-green-600" : "text-muted-foreground"}`}
-                >
+                    className={`flex items-center gap-2 ${/[A-Z]/.test(password) ? "text-green-600" : "text-muted-foreground"}`}
+                  >
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full ${/[A-Z]/.test(password) ? "bg-green-600" : "bg-gray-300"}`}
+                    />
+                    One uppercase letter
+                  </div>
                   <div
-                    className={`w-1.5 h-1.5 rounded-full ${/[a-z]/.test(password) ? "bg-green-600" : "bg-gray-300"}`}
-                  />
-                  One lowercase letter
-                </div>
-                <div
-                  className={`flex items-center gap-2 ${/[^a-zA-Z0-9]/.test(password) ? "text-green-600" : "text-muted-foreground"}`}
-                >
+                    className={`flex items-center gap-2 ${/[a-z]/.test(password) ? "text-green-600" : "text-muted-foreground"}`}
+                  >
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full ${/[a-z]/.test(password) ? "bg-green-600" : "bg-gray-300"}`}
+                    />
+                    One lowercase letter
+                  </div>
                   <div
-                    className={`w-1.5 h-1.5 rounded-full ${/[^a-zA-Z0-9]/.test(password) ? "bg-green-600" : "bg-gray-300"}`}
-                  />
-                  One special character
+                    className={`flex items-center gap-2 ${/[^a-zA-Z0-9]/.test(password) ? "text-green-600" : "text-muted-foreground"}`}
+                  >
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full ${/[^a-zA-Z0-9]/.test(password) ? "bg-green-600" : "bg-gray-300"}`}
+                    />
+                    One special character
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="text-right mt-1">
                 <Link
                   to="/forgot-password"
-                  className="text-sm text-blue-600 hover:underline font-medium"
+                  className="text-sm text-muted-foreground hover:text-foreground hover:underline font-medium transition-colors"
                 >
                   Forgot Password?
                 </Link>
@@ -207,7 +210,7 @@ const Login = () => {
 
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700"
+              className="w-full bg-terracotta hover:bg-terracotta/90 text-white shadow-md transition-all active:scale-95"
               size="lg"
               disabled={isLoading}
             >
@@ -218,7 +221,7 @@ const Login = () => {
               Don't have an account?{" "}
               <a
                 href="/signup"
-                className="text-blue-600 hover:underline font-medium"
+                className="text-terracotta hover:underline font-medium"
               >
                 Sign Up
               </a>

@@ -22,6 +22,7 @@ import {
 } from "@/lib/validation";
 
 import { CameraModal } from "@/components/CameraModal";
+import { CountrySelect } from "@/components/CountrySelect";
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -33,11 +34,13 @@ const Signup = () => {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
+    country: "",
     password: "",
     confirmPassword: "",
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -110,6 +113,7 @@ const Signup = () => {
               id: authData.user.id,
               email: formData.email,
               full_name: formData.fullName,
+              country: formData.country,
               profile_image_url: "/profile.svg", // Default placeholder image
               languages: [],
               skills_offered: [],
@@ -167,8 +171,7 @@ const Signup = () => {
       <div className="absolute inset-0 bg-black/40"></div>
       <Card className="w-full max-w-md shadow-lg relative z-10">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Create Account</CardTitle>
-          <CardDescription>Join CultureSwap today</CardDescription>
+          <CardTitle className="text-2xl">Create an account</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
@@ -182,7 +185,7 @@ const Signup = () => {
 
             {/* Profile Image Upload */}
             <div className="space-y-3">
-              <Label>Profile Picture (Optional)</Label>
+              <Label>Profile Picture</Label>
               <div className="flex flex-col items-center gap-4">
                 <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-300 flex items-center justify-center bg-gray-100 aspect-square">
                   <img
@@ -214,7 +217,7 @@ const Signup = () => {
                     />
                     <Label
                       htmlFor="profileImage"
-                      className="flex items-center justify-center gap-2 w-full h-10 px-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md cursor-pointer transition-colors text-xs sm:text-sm font-medium shadow-sm"
+                      className="flex items-center justify-center gap-2 w-full h-10 px-4 bg-terracotta hover:bg-terracotta/90 text-white rounded-md cursor-pointer transition-all text-xs sm:text-sm font-medium shadow-sm active:scale-95"
                     >
                       <Upload className="h-4 w-4" />
                       Upload
@@ -232,7 +235,7 @@ const Signup = () => {
                   id="fullName"
                   name="fullName"
                   type="text"
-                  placeholder="Your full name"
+                  placeholder="e.g. John Michael Smith"
                   className="pl-10"
                   value={formData.fullName}
                   onChange={handleChange}
@@ -259,6 +262,15 @@ const Signup = () => {
             </div>
 
             <div className="space-y-2">
+              <CountrySelect
+                label="Country"
+                value={formData.country}
+                onChange={(country) => setFormData({ ...formData, country })}
+                placeholder="Select your country"
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -270,6 +282,8 @@ const Signup = () => {
                   className="pl-10 pr-10"
                   value={formData.password}
                   onChange={handleChange}
+                  onFocus={() => setIsPasswordFocused(true)}
+                  onBlur={() => setIsPasswordFocused(false)}
                   disabled={isLoading}
                 />
                 <button
@@ -284,41 +298,43 @@ const Signup = () => {
                   )}
                 </button>
               </div>
-              <div className="text-xs space-y-1 mt-2 p-2 bg-muted/50 rounded-md">
-                <p className="font-medium mb-1">Password must contain:</p>
-                <div
-                  className={`flex items-center gap-2 ${formData.password.length >= 8 ? "text-green-600" : "text-muted-foreground"}`}
-                >
+              {isPasswordFocused && (
+                <div className="text-xs space-y-1 mt-2 p-2 bg-muted/50 rounded-md animate-in fade-in slide-in-from-top-1 duration-200">
+                  <p className="font-medium mb-1">Password must contain:</p>
                   <div
-                    className={`w-1.5 h-1.5 rounded-full ${formData.password.length >= 8 ? "bg-green-600" : "bg-gray-300"}`}
-                  />
-                  At least 8 characters
-                </div>
-                <div
-                  className={`flex items-center gap-2 ${/[A-Z]/.test(formData.password) ? "text-green-600" : "text-muted-foreground"}`}
-                >
+                    className={`flex items-center gap-2 ${formData.password.length >= 8 ? "text-green-600" : "text-muted-foreground"}`}
+                  >
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full ${formData.password.length >= 8 ? "bg-green-600" : "bg-gray-300"}`}
+                    />
+                    At least 8 characters
+                  </div>
                   <div
-                    className={`w-1.5 h-1.5 rounded-full ${/[A-Z]/.test(formData.password) ? "bg-green-600" : "bg-gray-300"}`}
-                  />
-                  One uppercase letter
-                </div>
-                <div
-                  className={`flex items-center gap-2 ${/[a-z]/.test(formData.password) ? "text-green-600" : "text-muted-foreground"}`}
-                >
+                    className={`flex items-center gap-2 ${/[A-Z]/.test(formData.password) ? "text-green-600" : "text-muted-foreground"}`}
+                  >
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full ${/[A-Z]/.test(formData.password) ? "bg-green-600" : "bg-gray-300"}`}
+                    />
+                    One uppercase letter
+                  </div>
                   <div
-                    className={`w-1.5 h-1.5 rounded-full ${/[a-z]/.test(formData.password) ? "bg-green-600" : "bg-gray-300"}`}
-                  />
-                  One lowercase letter
-                </div>
-                <div
-                  className={`flex items-center gap-2 ${/[^a-zA-Z0-9]/.test(formData.password) ? "text-green-600" : "text-muted-foreground"}`}
-                >
+                    className={`flex items-center gap-2 ${/[a-z]/.test(formData.password) ? "text-green-600" : "text-muted-foreground"}`}
+                  >
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full ${/[a-z]/.test(formData.password) ? "bg-green-600" : "bg-gray-300"}`}
+                    />
+                    One lowercase letter
+                  </div>
                   <div
-                    className={`w-1.5 h-1.5 rounded-full ${/[^a-zA-Z0-9]/.test(formData.password) ? "bg-green-600" : "bg-gray-300"}`}
-                  />
-                  One special character
+                    className={`flex items-center gap-2 ${/[^a-zA-Z0-9]/.test(formData.password) ? "text-green-600" : "text-muted-foreground"}`}
+                  >
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full ${/[^a-zA-Z0-9]/.test(formData.password) ? "bg-green-600" : "bg-gray-300"}`}
+                    />
+                    One special character
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -351,7 +367,7 @@ const Signup = () => {
 
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700"
+              className="w-full bg-terracotta hover:bg-terracotta/90 text-white shadow-md transition-all active:scale-95"
               size="lg"
               disabled={isLoading}
             >

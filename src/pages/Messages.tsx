@@ -1522,8 +1522,8 @@ const Messages = () => {
               {selectedConversation ? (
                 <>
                   {/* Chat Header */}
-                  <div className="p-3 px-4 md:p-4 border-b border-border flex items-center justify-between sticky top-0 backdrop-blur-sm z-10 bg-white/40 shadow-sm">
-                    <div className="flex items-center gap-3">
+                  <div className="p-3 px-3 md:px-4 border-b border-border flex items-center justify-between sticky top-0 backdrop-blur-sm z-10 bg-white/40 shadow-sm">
+                    <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -1601,10 +1601,10 @@ const Messages = () => {
                           variant="terracotta"
                           size="sm"
                           onClick={() => setCreateOfferOpen(true)}
-                          className="rounded-full px-4 shadow-md transition-transform hover:scale-105 hidden sm:flex"
+                          className="rounded-full px-3 md:px-4 shadow-md transition-transform hover:scale-105 hidden sm:flex shrink-0"
                         >
-                          <Handshake className="h-4 w-4 mr-2" />
-                          Send Offer
+                          <Handshake className="h-4 w-4 mr-1.5 md:mr-2" />
+                          <span className="text-xs md:text-sm">Send Offer</span>
                         </Button>
                       )}
                       <Button
@@ -2095,8 +2095,8 @@ const Messages = () => {
             {selectedConversation &&
               showDetails &&
               !isAssistantUser(otherUserProfile) && (
-                <div className="hidden lg:flex w-72 lg:w-80 border-l border-border flex-col bg-muted/5 animate-in slide-in-from-right-4 duration-300">
-                  <div className="p-6 flex flex-col h-full overflow-y-auto">
+                <div className="hidden lg:flex w-64 lg:w-72 border-l border-border flex-col bg-muted/5 animate-in slide-in-from-right-4 duration-300">
+                  <div className="p-4 lg:p-6 flex flex-col h-full overflow-y-auto">
                     <div className="mb-8">
                       <h2 className="text-sm font-bold text-muted-foreground/60 uppercase tracking-wider mb-6">
                         About{" "}

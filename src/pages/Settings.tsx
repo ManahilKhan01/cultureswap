@@ -574,33 +574,25 @@ const Settings = () => {
                   />
                 </div>
 
-                <div className="flex flex-wrap gap-4 pt-4 border-t border-border mt-6">
+                <div className="flex justify-end pt-4 border-t border-border mt-6">
                   <Button
                     variant="terracotta"
                     onClick={() => handleProfileSave(false)}
                     disabled={isLoading}
+                    className="shadow-md transition-all active:scale-95 px-8"
                   >
-                    <Save className="h-4 w-4 mr-2" />
-                    {isLoading ? "Saving..." : "Save Changes"}
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        Save Changes
+                      </>
+                    )}
                   </Button>
-
-                  <div className="flex gap-2 ml-auto">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={testConnectivity}
-                    >
-                      Test Connectivity
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleProfileSave(true)}
-                      disabled={isLoading}
-                    >
-                      Save (No Image)
-                    </Button>
-                  </div>
                 </div>
               </CardContent>
             </Card>
