@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { swapService } from "@/lib/swapService";
 import { supabase } from "@/lib/supabase";
 import { skillCategories } from "@/data/mockData";
+import { validateSwapContent } from "@/lib/validation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -78,21 +79,32 @@ const CreateSwap = () => {
 
   const validateStep = (step: number) => {
     switch (step) {
-      case 1:
-        if (
-          !formData.title.trim() ||
-          !formData.skill_offered.trim() ||
-          !formData.skill_wanted.trim()
-        ) {
-          toast({
-            title: "Required Fields",
-            description:
-              "Please fill in Title, Skill Offered, and Skill Wanted",
-            variant: "destructive",
-          });
+      case 1: {
+        const titleError = validateSwapContent(formData.title, "Title");
+        if (titleError) {
+          toast({ title: titleError, variant: "destructive" });
+          return false;
+        }
+
+        const skillOfferedError = validateSwapContent(
+          formData.skill_offered,
+          "Skill Offered",
+        );
+        if (skillOfferedError) {
+          toast({ title: skillOfferedError, variant: "destructive" });
+          return false;
+        }
+
+        const skillWantedError = validateSwapContent(
+          formData.skill_wanted,
+          "Skill Wanted",
+        );
+        if (skillWantedError) {
+          toast({ title: skillWantedError, variant: "destructive" });
           return false;
         }
         return true;
+      }
       case 2:
         if (!formData.category) {
           toast({

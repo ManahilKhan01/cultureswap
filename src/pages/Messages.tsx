@@ -1642,7 +1642,7 @@ const Messages = () => {
                           return (
                             <div
                               key={message.id}
-                              className={`flex ${isMe ? "justify-end" : "justify-start"} mb-6 animate-in fade-in slide-in-from-bottom-2`}
+                              className="flex justify-start mb-6 animate-in fade-in slide-in-from-bottom-2"
                             >
                               <div className="max-w-[85%] md:max-w-[70%]">
                                 <OfferCard

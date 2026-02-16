@@ -50,6 +50,7 @@ import { messageService } from "@/lib/messageService";
 import { presenceService, type UserStatus } from "@/lib/presenceService";
 import { StatusDot } from "@/components/StatusDot";
 import { Skeleton } from "@/components/ui/skeleton";
+import { validateReview } from "@/lib/validation";
 
 const SwapDetailSkeleton = () => (
   <div className="flex-1 bg-background pb-12 animate-pulse">
@@ -138,6 +139,7 @@ const SwapDetail = () => {
   const [rating, setRating] = useState(0);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isCreator, setIsCreator] = useState(false);
+
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
   const [fetchingSessions, setFetchingSessions] = useState(false);
@@ -343,6 +345,20 @@ const SwapDetail = () => {
   const [reviewText, setReviewText] = useState("");
   const [showCancelReview, setShowCancelReview] = useState(false);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const reviewValidation = validateReview(reviewText);
+
+  const handleReviewChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newText = e.target.value;
+    const validation = validateReview(newText);
+
+    // If trying to add more content when already at word limit, block it
+    // But allow if the new text is shorter (deletion)
+    if (validation.wordCount > 80 && newText.length > reviewText.length) {
+      return;
+    }
+
+    setReviewText(newText);
+  };
 
   if (loading) return <SwapDetailSkeleton />;
 
@@ -423,6 +439,15 @@ const SwapDetail = () => {
       return;
     }
 
+    const reviewValidation = validateReview(reviewText);
+    if (!reviewValidation.isValid) {
+      toast({
+        title: reviewValidation.error || "Review is invalid",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!partner) {
       toast({ title: "Partner not found", variant: "destructive" });
       return;
@@ -479,6 +504,15 @@ const SwapDetail = () => {
   const handleLeaveCancelReview = async () => {
     if (!reviewText.trim()) {
       toast({ title: "Please write a review", variant: "destructive" });
+      return;
+    }
+
+    const reviewValidation = validateReview(reviewText);
+    if (!reviewValidation.isValid) {
+      toast({
+        title: reviewValidation.error || "Review is invalid",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -995,8 +1029,45 @@ const SwapDetail = () => {
                             rows={4}
                             placeholder="Share your experience..."
                             value={reviewText}
-                            onChange={(e) => setReviewText(e.target.value)}
+                            onChange={handleReviewChange}
+                            maxLength={500}
+                            className={
+                              !reviewValidation.isValid ||
+                              reviewValidation.wordCount === 80 ||
+                              reviewValidation.charCount === 500
+                                ? "border-destructive focus-visible:ring-destructive"
+                                : reviewValidation.wordCount > 0
+                                  ? "border-green-500 focus-visible:ring-green-500"
+                                  : ""
+                            }
                           />
+                          <div className="flex justify-between items-center text-xs mt-1">
+                            {reviewValidation.error ? (
+                              <p className="text-destructive font-medium">
+                                {reviewValidation.error}
+                              </p>
+                            ) : (
+                              <p className="text-muted-foreground">
+                                Share your detailed experience with your
+                                partner.
+                              </p>
+                            )}
+                            <div
+                              className={`font-medium ${
+                                !reviewValidation.isValid ||
+                                reviewValidation.wordCount === 80 ||
+                                reviewValidation.charCount === 500
+                                  ? "text-destructive"
+                                  : reviewValidation.wordCount > 0
+                                    ? "text-green-600"
+                                    : "text-muted-foreground"
+                              }`}
+                            >
+                              <span>
+                                {reviewValidation.charCount} / 500 characters
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                       <DialogFooter>
@@ -1009,6 +1080,7 @@ const SwapDetail = () => {
                         <Button
                           variant="terracotta"
                           onClick={handleLeaveReview}
+                          disabled={!reviewValidation.isValid}
                         >
                           Submit Review
                         </Button>
@@ -1055,8 +1127,45 @@ const SwapDetail = () => {
                             rows={4}
                             placeholder="Share your experience..."
                             value={reviewText}
-                            onChange={(e) => setReviewText(e.target.value)}
+                            onChange={handleReviewChange}
+                            maxLength={500}
+                            className={
+                              !reviewValidation.isValid ||
+                              reviewValidation.wordCount === 80 ||
+                              reviewValidation.charCount === 500
+                                ? "border-destructive focus-visible:ring-destructive"
+                                : reviewValidation.wordCount > 0
+                                  ? "border-green-500 focus-visible:ring-green-500"
+                                  : ""
+                            }
                           />
+                          <div className="flex justify-between items-center text-xs mt-1">
+                            {reviewValidation.error ? (
+                              <p className="text-destructive font-medium">
+                                {reviewValidation.error}
+                              </p>
+                            ) : (
+                              <p className="text-muted-foreground">
+                                Share your detailed experience with your
+                                partner.
+                              </p>
+                            )}
+                            <div
+                              className={`font-medium ${
+                                !reviewValidation.isValid ||
+                                reviewValidation.wordCount === 80 ||
+                                reviewValidation.charCount === 500
+                                  ? "text-destructive"
+                                  : reviewValidation.wordCount > 0
+                                    ? "text-green-600"
+                                    : "text-muted-foreground"
+                              }`}
+                            >
+                              <span>
+                                {reviewValidation.charCount} / 500 characters
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                       <DialogFooter>
@@ -1072,6 +1181,7 @@ const SwapDetail = () => {
                         <Button
                           variant="terracotta"
                           onClick={handleLeaveCancelReview}
+                          disabled={!reviewValidation.isValid}
                         >
                           Submit Review
                         </Button>
