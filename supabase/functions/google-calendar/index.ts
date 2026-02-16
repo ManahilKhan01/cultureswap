@@ -284,14 +284,19 @@ serve(async (req: Request) => {
         }
 
         // Default response for unknown paths
-        return new Response(JSON.stringify({ error: "Function not found" }), {
+        return new Response(JSON.stringify({ error: `Function not found: ${path}` }), {
             status: 404,
             headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
 
     } catch (error: any) {
-        console.error("Edge Function Error:", error.message);
-        return new Response(JSON.stringify({ error: error.message }), {
+        console.error("Edge Function Error:", error);
+
+        // Return a structured JSON error that the frontend can parse
+        return new Response(JSON.stringify({
+            error: error.message || "An internal server error occurred",
+            details: error.toString()
+        }), {
             status: error.message === "Invalid or expired token" || error.message === "Missing Authorization header" ? 401 : 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" }
         });

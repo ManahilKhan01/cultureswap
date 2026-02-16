@@ -408,10 +408,11 @@ const SwapDetail = () => {
       setSessionDate("");
       setSessionTime("");
       loadSessions(); // This will refresh session list, count and next session
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Schedule session error:", error);
       toast({
         title: "Error",
-        description: "Failed to schedule session",
+        description: error.message || "Failed to schedule session",
         variant: "destructive",
       });
     }

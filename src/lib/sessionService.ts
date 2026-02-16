@@ -6,27 +6,36 @@ interface SessionData {
 }
 
 export const sessionService = {
-    // Generate a Google Meet-style link (placeholder)
-    generateMeetLink(): string {
-        const chars = 'abcdefghijklmnopqrstuvwxyz';
-        const randomString = () => {
-            let result = '';
-            for (let i = 0; i < 3; i++) {
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return result;
-        };
-
-        return `https://meet.google.com/${randomString()}-${randomString()}-${randomString()}`;
-    },
-
-    // Create a new session
+    // Create a new session with Google Meet link
     async createSession(sessionData: SessionData) {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
 
-            const meetLink = this.generateMeetLink();
+            console.log('Creating session, invoking google-calendar function...');
+
+            // Call Edge Function to create Google Calendar event and get Meet link
+            const { data: meetData, error: meetError } = await supabase.functions.invoke('google-calendar/create-meeting', {
+                body: {
+                    summary: 'CultureSwap Session',
+                    description: 'Scheduled via CultureSwap',
+                    start_time: sessionData.scheduled_at,
+                    duration_minutes: 60 // Default duration
+                }
+            });
+
+            if (meetError) {
+                console.error('Edge Function Error:', meetError);
+                throw new Error('Failed to generate Google Meet link. Please ensure your Google Calendar is connected in Settings.');
+            }
+
+            if (!meetData || !meetData.meetLink) {
+                console.error('No meet link returned:', meetData);
+                throw new Error('Failed to generate Google Meet link. Please try again.');
+            }
+
+            const meetLink = meetData.meetLink;
+            console.log('Got Meet link:', meetLink);
 
             const { data, error } = await supabase
                 .from('swap_sessions')
@@ -37,6 +46,7 @@ export const sessionService = {
                         scheduled_at: sessionData.scheduled_at || new Date().toISOString(),
                         status: 'scheduled',
                         created_by: user.id,
+                        metadata: { google_event_id: meetData.eventId } // Store event ID for future reference
                     }
                 ])
                 .select()
@@ -50,8 +60,8 @@ export const sessionService = {
                     swap_id: sessionData.swap_id,
                     user_id: user.id,
                     activity_type: 'session',
-                    description: 'Created a new session',
-                    metadata: { session_id: data.id, meet_link: meetLink }
+                    description: 'Created a new session with Google Meet',
+                    metadata: { session_id: data.id, meet_link: meetLink, google_event_id: meetData.eventId }
                 }
             ]);
 
