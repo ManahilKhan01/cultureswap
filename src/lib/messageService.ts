@@ -138,107 +138,68 @@ export const messageService = {
   // Get all conversations for a user
   async getConversations(userId: string) {
     try {
-      // 1. Fetch all conversations relation
+      // Use the optimized RPC to fetch everything in one go
+      const { data, error } = await supabase.rpc("get_user_conversations_v2", {
+        p_user_id: userId,
+      });
+
+      if (error) {
+        console.error("RPC error, falling back to manual fetch:", error);
+        // Fallback logic if RPC fails (e.g., if it hasn't been created yet)
+        return this.getConversationsLegacy(userId);
+      }
+
+      // Map RPC results to the expected format
+      return (data || []).map((row: any) => ({
+        id: row.conversation_id,
+        otherUserId: row.other_user_id,
+        unreadCount: parseInt(row.unread_count),
+        otherProfile: {
+          id: row.other_user_id,
+          full_name: row.other_user_full_name,
+          profile_image_url: row.other_user_avatar_url,
+        },
+        lastMessage: row.last_message_content
+          ? {
+              content: row.last_message_content,
+              created_at: row.last_message_created_at,
+              sender_id: row.last_message_sender_id,
+              read: row.last_message_read,
+            }
+          : {
+              content: "No messages yet",
+              created_at: new Date().toISOString(), // Fallback if no messages
+            },
+      }));
+    } catch (error) {
+      console.error("messageService.getConversations error:", error);
+      throw error;
+    }
+  },
+
+  // Legacy fallback for users who haven't run the migration yet
+  async getConversationsLegacy(userId: string) {
+    try {
       const { data: conversations, error } = await supabase
         .from("conversations")
-        .select(
-          `
-          id,
-          user1_id,
-          user2_id,
-          created_at
-        `,
-        )
+        .select("*")
         .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error(
-          "Error fetching conversations, falling back to messages grouping:",
-          error,
-        );
-        // Fallback: Fetch messages directly if conversations table fails
-        const { data: legacyMessages, error: legacyError } = await supabase
-          .from("messages")
-          .select("*")
-          .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-          .order("created_at", { ascending: false });
+      if (error) throw error;
 
-        if (legacyError) throw legacyError;
-
-        const conversationMap = new Map();
-        for (const msg of legacyMessages || []) {
-          const otherUserId =
-            msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
-          const key = [userId, otherUserId].sort().join("_");
-          if (!conversationMap.has(key)) {
-            conversationMap.set(key, {
-              otherUserId,
-              lastMessage: msg,
-              allMessages: [],
-            });
-          }
-          conversationMap.get(key).allMessages.push(msg);
-        }
-        return Array.from(conversationMap.values());
-      }
-
-      // 2. Optimization: Batch fetch recent messages to avoid N+1 queries
-      // We fetch the last 1000 messages. This covers significantly more history, reducing the chance of falling back to individual queries.
-      const { data: recentMessages } = await supabase
-        .from("messages")
-        .select("*") // Keeping * to ensure we don't miss any new fields used by the UI (like type, attachments, etc)
-        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-        .order("created_at", { ascending: false })
-        .limit(1000);
-
-      // Group recent messages by conversation_id in memory
-      const messageMap = new Map<string, any>();
-      const pairMap = new Map<string, any>();
-
-      if (recentMessages) {
-        for (const msg of recentMessages) {
-          // High priority: Map by conversation_id
-          if (msg.conversation_id && !messageMap.has(msg.conversation_id)) {
-            messageMap.set(msg.conversation_id, msg);
-          }
-
-          // Fallback: Map by user pair (for legacy messages)
-          const otherId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
-          const pairKey = [userId, otherId].sort().join(':');
-          if (!pairMap.has(pairKey)) {
-            pairMap.set(pairKey, msg);
-          }
-        }
-      }
-
-      // 3. Map conversations to their last message
       const formattedConversations = await Promise.all(
-        conversations.map(async (conv) => {
+        (conversations || []).map(async (conv) => {
           const otherUserId =
             conv.user1_id === userId ? conv.user2_id : conv.user1_id;
 
-          // Strategy A: Check if we already have the message from our batch fetch (Fastest & Most Common)
-          let lastMsg = messageMap.get(conv.id);
-
-          // Strategy A.1: Try pair map if conversation_id mapping failed (Legacy support)
-          if (!lastMsg) {
-            const pairKey = [userId, otherUserId].sort().join(':');
-            lastMsg = pairMap.get(pairKey);
-          }
-
-          // Strategy B: If not in recent batch (Dormant chat), fetch specifically (Slower fallback)
-          if (!lastMsg) {
-            const { data: specificMsg } = await supabase
-              .from("messages")
-              .select("*")
-              .eq("conversation_id", conv.id)
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-
-            lastMsg = specificMsg;
-          }
+          const { data: lastMsg } = await supabase
+            .from("messages")
+            .select("*")
+            .eq("conversation_id", conv.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
           return {
             id: conv.id,
@@ -253,8 +214,8 @@ export const messageService = {
 
       return formattedConversations;
     } catch (error) {
-      console.error("messageService.getConversations error:", error);
-      throw error;
+      console.error("Legacy fetch error:", error);
+      return [];
     }
   },
 

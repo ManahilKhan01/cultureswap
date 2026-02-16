@@ -193,7 +193,7 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 md:px-8">
+      <div className="w-full px-3 sm:px-6 md:px-8">
         <div className="flex items-center justify-between py-3 md:py-4">
           {/* Logo */}
           <Link
@@ -495,9 +495,6 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
-                    <div className="p-3 border-b border-border">
-                      <p className="font-semibold">{userName}</p>
-                    </div>
                     <DropdownMenuItem asChild>
                       <Link to="/profile" className="gap-2">
                         <User className="h-4 w-4" />

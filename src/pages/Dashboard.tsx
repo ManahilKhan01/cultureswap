@@ -18,7 +18,7 @@ import {
   ChevronRight,
   Calendar,
   Clock,
-  TrendingUp
+  TrendingUp,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -58,7 +58,10 @@ const DashboardSkeleton = () => (
           </CardHeader>
           <CardContent className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-border/50">
+              <div
+                key={i}
+                className="flex items-center justify-between p-4 rounded-xl border border-border/50"
+              >
                 <div className="flex items-center gap-4">
                   <div className="h-12 w-12 rounded-xl bg-muted" />
                   <div className="space-y-2">
@@ -80,7 +83,10 @@ const DashboardSkeleton = () => (
           </CardHeader>
           <CardContent className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-start gap-4 p-4 rounded-xl border border-border">
+              <div
+                key={i}
+                className="flex items-start gap-4 p-4 rounded-xl border border-border"
+              >
                 <div className="h-12 w-12 rounded-full bg-muted" />
                 <div className="flex-1 space-y-2">
                   <div className="h-4 w-40 bg-muted rounded" />
@@ -130,10 +136,34 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [stats, setStats] = useState([
-    { label: "Swaps Completed", value: "0", icon: Users, trend: "" },
-    { label: "Average Rating", value: "0.0", icon: Star, trend: "" },
-    { label: "Active Conversations", value: "0", icon: MessageCircle, trend: "" },
-    { label: "Badges Earned", value: "0", icon: Award, trend: "" },
+    {
+      label: "Swaps Completed",
+      value: "0",
+      icon: Users,
+      trend: "",
+      path: "/swaps",
+    },
+    {
+      label: "Average Rating",
+      value: "0.0",
+      icon: Star,
+      trend: "",
+      path: "/profile",
+    },
+    {
+      label: "Active Conversations",
+      value: "0",
+      icon: MessageCircle,
+      trend: "",
+      path: "/messages",
+    },
+    {
+      label: "Badges Earned",
+      value: "0",
+      icon: Award,
+      trend: "",
+      path: "/profile",
+    },
   ]);
   const [upcomingSessions, setUpcomingSessions] = useState<any[]>([]);
   const [recommendedSwaps, setRecommendedSwaps] = useState<any[]>([]);
@@ -142,17 +172,39 @@ const Dashboard = () => {
   const completionSteps = useMemo(() => {
     if (!userProfile) return [];
     return [
-      { id: 'photo', label: "Add profile photo", completed: !!userProfile.profile_image_url },
-      { id: 'bio', label: "Complete bio", completed: !!userProfile.bio },
-      { id: 'skills', label: "Add skills offered", completed: Array.isArray(userProfile.skills_offered) ? userProfile.skills_offered.length > 0 : !!userProfile.skills_offered },
-      { id: 'location', label: "Add location (City & Country)", completed: !!userProfile.city && !!userProfile.country },
-      { id: 'skills_wanted', label: "Add skills you want", completed: Array.isArray(userProfile.skills_wanted) ? userProfile.skills_wanted.length > 0 : !!userProfile.skills_wanted },
+      {
+        id: "photo",
+        label: "Add profile photo",
+        completed:
+          !!userProfile.profile_image_url &&
+          userProfile.profile_image_url !== "/profile.svg",
+      },
+      { id: "bio", label: "Complete bio", completed: !!userProfile.bio },
+      {
+        id: "skills",
+        label: "Add skills offered",
+        completed: Array.isArray(userProfile.skills_offered)
+          ? userProfile.skills_offered.length > 0
+          : !!userProfile.skills_offered,
+      },
+      {
+        id: "location",
+        label: "Add your city",
+        completed: !!userProfile.city,
+      },
+      {
+        id: "skills_wanted",
+        label: "Add skills you want",
+        completed: Array.isArray(userProfile.skills_wanted)
+          ? userProfile.skills_wanted.length > 0
+          : !!userProfile.skills_wanted,
+      },
     ];
   }, [userProfile]);
 
   const profileCompletion = useMemo(() => {
     if (completionSteps.length === 0) return 0;
-    const completedCount = completionSteps.filter(s => s.completed).length;
+    const completedCount = completionSteps.filter((s) => s.completed).length;
     return Math.round((completedCount / completionSteps.length) * 100);
   }, [completionSteps]);
 
@@ -165,26 +217,42 @@ const Dashboard = () => {
       fetchDashboardData();
     };
 
-    window.addEventListener('profileUpdated', handleProfileUpdate);
-    return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
+    window.addEventListener("profileUpdated", handleProfileUpdate);
+    return () =>
+      window.removeEventListener("profileUpdated", handleProfileUpdate);
   }, []);
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const user = session?.user;
       if (!user) return;
 
       // Parallel fetching for performance
-      const [profile, userSwaps, conversations, rating, allSwaps, notices, completedCount] = await Promise.all([
+      const [
+        profile,
+        userSwaps,
+        conversations,
+        rating,
+        allSwaps,
+        notices,
+        completedCount,
+      ] = await Promise.all([
         profileService.getProfile(user.id),
         swapService.getUserSwapsWithPartner(user.id),
         messageService.getConversations(user.id),
         reviewService.getAverageRating(user.id),
         swapService.getAllSwaps(),
-        supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(4),
-        swapService.getCompletedSwapsCount(user.id)
+        supabase
+          .from("notifications")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(4),
+        swapService.getCompletedSwapsCount(user.id),
       ]);
 
       setUserProfile(profile);
@@ -198,29 +266,56 @@ const Dashboard = () => {
       const uniqueConvs = conversations.length;
 
       setStats([
-        { label: "Swaps Completed", value: completedCount.toString(), icon: Users, trend: `+${userSwaps.length - completedCount} active` },
-        { label: "Average Rating", value: rating.toFixed(1), icon: Star, trend: rating >= 4.5 ? "Top 10%" : "" },
-        { label: "Active Conversations", value: uniqueConvs.toString(), icon: MessageCircle, trend: "" },
-        { label: "Badges Earned", value: (profile?.badges?.length || 0).toString(), icon: Award, trend: "" },
+        {
+          label: "Swaps Completed",
+          value: completedCount.toString(),
+          icon: Users,
+          trend: `+${userSwaps.length - completedCount} active`,
+          path: "/swaps",
+        },
+        {
+          label: "Average Rating",
+          value: rating.toFixed(1),
+          icon: Star,
+          trend: rating >= 4.5 ? "Top 10%" : "",
+          path: "/profile",
+        },
+        {
+          label: "Active Conversations",
+          value: uniqueConvs.toString(),
+          icon: MessageCircle,
+          trend: "",
+          path: "/messages",
+        },
+        {
+          label: "Badges Earned",
+          value: (profile?.badges?.length || 0).toString(),
+          icon: Award,
+          trend: "",
+          path: "/profile",
+        },
       ]);
 
       // 4. Upcoming Sessions (Active swaps)
       // Since we don't have a schedule table yet, we show active swaps as sessions
-      const activeSwaps = userSwaps.filter((s: any) => s.status === 'active').map((s: any) => ({
-        id: s.id,
-        title: s.title || "Untitled Swap",
-        partner: "Active Partner", // Ideally fetch partner profile
-        time: "Upcoming Session",
-        type: s.user_id === user.id ? 'Teaching' : 'Learning'
-      }));
+      const activeSwaps = userSwaps
+        .filter((s: any) => s.status === "active")
+        .map((s: any) => ({
+          id: s.id,
+          title: s.title || "Untitled Swap",
+          partner: "Active Partner", // Ideally fetch partner profile
+          time: "Upcoming Session",
+          type: s.user_id === user.id ? "Teaching" : "Learning",
+        }));
       setUpcomingSessions(activeSwaps.slice(0, 3));
 
       // 5. Recommended Swaps
-      const othersSwaps = allSwaps.filter((s: any) => s.user_id !== user.id).slice(0, 3);
+      const othersSwaps = allSwaps
+        .filter((s: any) => s.user_id !== user.id)
+        .slice(0, 3);
       setRecommendedSwaps(othersSwaps);
 
       setNotifications(notices.data || []);
-
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
     } finally {
@@ -232,14 +327,14 @@ const Dashboard = () => {
 
   return (
     <>
-
-      <main className="container mx-auto px-4 py-8">
+      <main className="w-full px-4 md:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="font-display text-3xl font-bold mb-2">
-                Welcome back, {userProfile?.full_name?.split(' ')[0] || 'User'}! 👋
+                Welcome back, {userProfile?.full_name?.split(" ")[0] || "User"}!
+                👋
               </h1>
               <p className="text-muted-foreground">
                 Here's what's happening with your skill exchanges
@@ -265,20 +360,32 @@ const Dashboard = () => {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {stats.map((stat) => (
-            <Card key={stat.label} className="hover-lift">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
-                    <p className="text-3xl font-bold">{stat.value}</p>
-                    <p className="text-xs text-teal mt-1">{stat.trend}</p>
+            <Link key={stat.label} to={stat.path} className="flex h-full">
+              <Card className="flex flex-col w-full hover-lift cursor-pointer hover:border-terracotta/30 transition-all duration-300">
+                <CardContent className="p-6 flex-1 flex flex-col justify-between min-h-[120px]">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-muted-foreground mb-1 mt-0.5">
+                        {stat.label}
+                      </p>
+                      <p className="text-3xl font-bold leading-none py-1">
+                        {stat.value}
+                      </p>
+                      {stat.trend ? (
+                        <p className="text-xs text-teal mt-1 font-medium">
+                          {stat.trend}
+                        </p>
+                      ) : (
+                        <div className="h-4" /> // Spacer for consistent layout
+                      )}
+                    </div>
+                    <div className="h-10 w-10 rounded-lg bg-terracotta/10 flex items-center justify-center group-hover:bg-terracotta/20 transition-colors shrink-0 ml-3">
+                      <stat.icon className="h-5 w-5 text-terracotta" />
+                    </div>
                   </div>
-                  <div className="h-10 w-10 rounded-lg bg-terracotta/10 flex items-center justify-center">
-                    <stat.icon className="h-5 w-5 text-terracotta" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
 
@@ -289,7 +396,9 @@ const Dashboard = () => {
             {upcomingSessions.length > 0 && (
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="font-display text-xl">Upcoming Sessions</CardTitle>
+                  <CardTitle className="font-display text-xl">
+                    Upcoming Sessions
+                  </CardTitle>
                   <Button variant="ghost" size="sm" asChild>
                     <Link to="/schedule">View All</Link>
                   </Button>
@@ -297,35 +406,58 @@ const Dashboard = () => {
                 <CardContent>
                   <div className="space-y-4 max-h-[450px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-terracotta/20 scrollbar-track-transparent">
                     {upcomingSessions.map((session) => (
-                      <div
+                      <Link
                         key={session.id}
-                        className="flex items-center justify-between p-4 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-all border border-transparent hover:border-border"
+                        to={`/swap/${session.id}`}
+                        className="flex items-center justify-between p-4 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-all border border-transparent hover:border-border group"
                       >
                         <div className="flex items-center gap-4">
-                          <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${session.type === 'Teaching' ? 'bg-terracotta/10' : 'bg-teal/10'
-                            }`}>
-                            <Calendar className={`h-6 w-6 ${session.type === 'Teaching' ? 'text-terracotta' : 'text-teal'
-                              }`} />
+                          <div
+                            className={`h-12 w-12 rounded-xl flex items-center justify-center transition-colors ${
+                              session.type === "Teaching"
+                                ? "bg-terracotta/10 group-hover:bg-terracotta/20"
+                                : "bg-teal/10 group-hover:bg-teal/20"
+                            }`}
+                          >
+                            <Calendar
+                              className={`h-6 w-6 ${
+                                session.type === "Teaching"
+                                  ? "text-terracotta"
+                                  : "text-teal"
+                              }`}
+                            />
                           </div>
                           <div className="min-w-0">
-                            <p className="font-semibold truncate">{session.title}</p>
-                            <p className="text-sm text-muted-foreground truncate">{session.partner}</p>
+                            <p className="font-semibold truncate group-hover:text-terracotta transition-colors">
+                              {session.title}
+                            </p>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {session.partner}
+                            </p>
                             <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
                               <Clock className="h-3 w-3" />
                               <span>{session.time}</span>
                             </div>
                           </div>
                         </div>
-                        <div className="text-right ml-2 shrink-0">
-                          <Badge variant={session.type === 'Teaching' ? 'default' : 'secondary'} className={
-                            session.type === 'Teaching'
-                              ? 'bg-terracotta/10 text-terracotta border-0'
-                              : 'bg-teal/10 text-teal border-0'
-                          }>
+                        <div className="text-right ml-2 shrink-0 flex items-center gap-3">
+                          <Badge
+                            variant={
+                              session.type === "Teaching"
+                                ? "default"
+                                : "secondary"
+                            }
+                            className={
+                              session.type === "Teaching"
+                                ? "bg-terracotta/10 text-terracotta border-0"
+                                : "bg-teal/10 text-teal border-0"
+                            }
+                          >
                             {session.type}
                           </Badge>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-terracotta transition-colors" />
                         </div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 </CardContent>
@@ -335,7 +467,9 @@ const Dashboard = () => {
             {/* Recommended Swaps */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="font-display text-xl">Recommended for You</CardTitle>
+                <CardTitle className="font-display text-xl">
+                  Recommended for You
+                </CardTitle>
                 <Button variant="ghost" size="sm" asChild>
                   <Link to="/discover">Explore More</Link>
                 </Button>
@@ -351,9 +485,13 @@ const Dashboard = () => {
                       >
                         <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center text-lg uppercase font-bold text-muted-foreground overflow-hidden">
                           {swap.user_profiles?.profile_image_url ? (
-                            <img src={swap.user_profiles.profile_image_url} alt="" className="h-full w-full object-cover" />
+                            <img
+                              src={swap.user_profiles.profile_image_url}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
                           ) : (
-                            swap.skill_offered?.[0] || '?'
+                            swap.skill_offered?.[0] || "?"
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -363,7 +501,9 @@ const Dashboard = () => {
                                 {swap.title}
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                {swap.user_profiles?.full_name || 'Community Member'} • {swap.user_profiles?.city || 'Remote'}
+                                {swap.user_profiles?.full_name ||
+                                  "Community Member"}{" "}
+                                • {swap.user_profiles?.city || "Remote"}
                               </p>
                             </div>
                             <Badge className="bg-teal/10 text-teal border-0 shrink-0">
@@ -385,7 +525,9 @@ const Dashboard = () => {
                     ))
                   ) : (
                     <div className="text-center py-6 text-muted-foreground">
-                      <p className="text-sm italic">No recommendations at the moment</p>
+                      <p className="text-sm italic">
+                        No recommendations at the moment
+                      </p>
                     </div>
                   )}
                 </div>
@@ -399,22 +541,31 @@ const Dashboard = () => {
             {profileCompletion < 100 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="font-display text-lg">Profile Completion</CardTitle>
+                  <CardTitle className="font-display text-lg">
+                    Profile Completion
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div>
                       <div className="flex justify-between text-sm mb-2">
                         <span>Progress</span>
-                        <span className="font-semibold">{profileCompletion}%</span>
+                        <span className="font-semibold">
+                          {profileCompletion}%
+                        </span>
                       </div>
                       <Progress value={profileCompletion} className="h-2" />
                     </div>
                     <div className="space-y-2 text-sm">
                       {completionSteps.map((step) => (
-                        <div key={step.id} className={`flex items-center gap-2 ${step.completed ? 'text-teal' : 'text-muted-foreground'}`}>
-                          <div className={`h-2 w-2 rounded-full ${step.completed ? 'bg-teal' : 'bg-muted'}`} />
-                          {step.label} {step.completed ? '✓' : ''}
+                        <div
+                          key={step.id}
+                          className={`flex items-center gap-2 ${step.completed ? "text-teal" : "text-muted-foreground"}`}
+                        >
+                          <div
+                            className={`h-2 w-2 rounded-full ${step.completed ? "bg-teal" : "bg-muted"}`}
+                          />
+                          {step.label} {step.completed ? "✓" : ""}
                         </div>
                       ))}
                     </div>
@@ -429,22 +580,36 @@ const Dashboard = () => {
             {/* Quick Actions */}
             <Card>
               <CardHeader>
-                <CardTitle className="font-display text-lg">Quick Actions</CardTitle>
+                <CardTitle className="font-display text-lg">
+                  Quick Actions
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button variant="outline" className="w-full justify-start" asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  asChild
+                >
                   <Link to="/messages">
                     <MessageCircle className="h-4 w-4 mr-2" />
                     View Messages
                   </Link>
                 </Button>
-                <Button variant="outline" className="w-full justify-start" asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  asChild
+                >
                   <Link to="/profile">
                     <Users className="h-4 w-4 mr-2" />
                     Edit Profile
                   </Link>
                 </Button>
-                <Button variant="outline" className="w-full justify-start" asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  asChild
+                >
                   <Link to="/discover">
                     <TrendingUp className="h-4 w-4 mr-2" />
                     Browse Community
@@ -455,7 +620,6 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
-
     </>
   );
 };

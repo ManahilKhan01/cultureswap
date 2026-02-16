@@ -6,11 +6,42 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { skillCategories } from "@/data/mockData";
-import { Search, Filter, Clock, CheckCircle, AlertCircle, ArrowLeftRight, MessageCircle, Plus, Loader2, XCircle, Sparkles, BookOpen, Users, Zap } from "lucide-react";
+import {
+  Search,
+  Filter,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  ArrowLeftRight,
+  MessageCircle,
+  Plus,
+  Loader2,
+  XCircle,
+  Sparkles,
+  BookOpen,
+  Users,
+  Zap,
+} from "lucide-react";
 import { swapService } from "@/lib/swapService";
 import { profileService } from "@/lib/profileService";
 import { supabase } from "@/lib/supabase";
@@ -34,7 +65,7 @@ interface Swap {
 }
 
 const SwapsSkeleton = () => (
-  <main className="flex-1 container mx-auto px-4 py-8 animate-pulse">
+  <main className="flex-1 w-full px-4 md:px-8 py-8 animate-pulse">
     {/* Page Header Skeleton */}
     <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div className="space-y-2">
@@ -43,7 +74,6 @@ const SwapsSkeleton = () => (
       </div>
       <Skeleton className="h-10 w-40 rounded-md" />
     </div>
-
 
     {/* Search and Filters Skeleton */}
     <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -112,7 +142,7 @@ const Swaps = () => {
     skill_wanted: "",
     category: "",
     duration: "",
-    format: "online"
+    format: "online",
   });
 
   // Load user's swaps from database
@@ -121,7 +151,9 @@ const Swaps = () => {
       try {
         setLoading(true);
 
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) {
           setLoading(false);
           return;
@@ -135,7 +167,7 @@ const Swaps = () => {
 
         // Load profiles for all users involved in swaps
         const userIds = new Set<string>();
-        userSwaps.forEach(swap => {
+        userSwaps.forEach((swap) => {
           if (swap.user_id) userIds.add(swap.user_id);
           if (swap.partner_id) userIds.add(swap.partner_id);
         });
@@ -150,13 +182,12 @@ const Swaps = () => {
           }
         }
         setProfiles(profilesMap);
-
       } catch (error) {
-        console.error('Error loading swaps:', error);
+        console.error("Error loading swaps:", error);
         toast({
           title: "Error",
           description: "Failed to load swaps",
-          variant: "destructive"
+          variant: "destructive",
         });
       } finally {
         setLoading(false);
@@ -187,7 +218,7 @@ const Swaps = () => {
     const handleProfileUpdate = async () => {
       // Reload all profiles
       const userIds = new Set<string>();
-      swaps.forEach(swap => {
+      swaps.forEach((swap) => {
         if (swap.user_id) userIds.add(swap.user_id);
         if (swap.partner_id) userIds.add(swap.partner_id);
       });
@@ -201,40 +232,58 @@ const Swaps = () => {
           console.error(`Failed to load profile for ${userId}:`, e);
         }
       }
-      setProfiles(prev => ({ ...prev, ...updatedProfiles }));
+      setProfiles((prev) => ({ ...prev, ...updatedProfiles }));
     };
 
-    window.addEventListener('profileUpdated', handleProfileUpdate);
+    window.addEventListener("profileUpdated", handleProfileUpdate);
     return () => {
-      window.removeEventListener('profileUpdated', handleProfileUpdate);
+      window.removeEventListener("profileUpdated", handleProfileUpdate);
     };
   }, [swaps]);
 
   // Filter swaps based on search
   const filteredSwaps = swaps.filter((swap) => {
     const matchesSearch =
-      (swap.skill_offered?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-      (swap.skill_wanted?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+      (swap.skill_offered?.toLowerCase() || "").includes(
+        searchQuery.toLowerCase(),
+      ) ||
+      (swap.skill_wanted?.toLowerCase() || "").includes(
+        searchQuery.toLowerCase(),
+      ) ||
       (swap.title?.toLowerCase() || "").includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
 
   // Group swaps by status
-  const activeSwaps = filteredSwaps.filter(s => s.status === "active");
-  const openSwaps = filteredSwaps.filter(s => s.status === "open"); // NEW: Open only
-  const completedSwaps = filteredSwaps.filter(s => s.status === "completed");
-  const cancelledSwaps = filteredSwaps.filter(s => s.status === "cancelled");
+  const activeSwaps = filteredSwaps.filter((s) => s.status === "active");
+  const openSwaps = filteredSwaps.filter((s) => s.status === "open"); // NEW: Open only
+  const completedSwaps = filteredSwaps.filter((s) => s.status === "completed");
+  const cancelledSwaps = filteredSwaps.filter((s) => s.status === "cancelled");
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-teal/20 text-teal border-teal/30">Active</Badge>;
+        return (
+          <Badge className="bg-teal/20 text-teal border-teal/30">Active</Badge>
+        );
       case "open":
-        return <Badge className="bg-golden/20 text-golden border-golden/30">Open</Badge>;
+        return (
+          <Badge className="bg-golden/20 text-golden border-golden/30">
+            Open
+          </Badge>
+        );
       case "completed":
-        return <Badge className="bg-green-500/20 text-green-600 border-green-500/30">Completed</Badge>;
+        return (
+          <Badge className="bg-green-500/20 text-green-600 border-green-500/30">
+            Completed
+          </Badge>
+        );
       case "cancelled":
-        return <Badge className="bg-red-500/20 text-red-600 border-red-500/30">Cancelled</Badge>;
+        return (
+          <Badge className="bg-red-500/20 text-red-600 border-red-500/30">
+            Cancelled
+          </Badge>
+        );
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -242,29 +291,36 @@ const Swaps = () => {
 
   const getOtherUser = (swap: Swap) => {
     if (!currentUser) return null;
-    const otherUserId = swap.user_id === currentUser.id ? swap.partner_id : swap.user_id;
+    const otherUserId =
+      swap.user_id === currentUser.id ? swap.partner_id : swap.user_id;
     return otherUserId ? profiles[otherUserId] : null;
   };
 
   const handleCreateSwap = async () => {
-    if (!formData.title.trim() || !formData.skill_offered.trim() || !formData.skill_wanted.trim()) {
+    if (
+      !formData.title.trim() ||
+      !formData.skill_offered.trim() ||
+      !formData.skill_wanted.trim()
+    ) {
       toast({
         title: "Error",
         description: "Please fill in Title, Skill Offered, and Skill Wanted",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     try {
       setSubmitting(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       if (!user) {
         toast({
           title: "Error",
           description: "You must be logged in to create a swap",
-          variant: "destructive"
+          variant: "destructive",
         });
         return;
       }
@@ -277,7 +333,7 @@ const Swaps = () => {
 
       toast({
         title: "Success!",
-        description: "Your skill swap has been created!"
+        description: "Your skill swap has been created!",
       });
 
       setDialogOpen(false);
@@ -288,14 +344,14 @@ const Swaps = () => {
         skill_wanted: "",
         category: "",
         duration: "",
-        format: "online"
+        format: "online",
       });
     } catch (error: any) {
       console.error("Error creating swap:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to create swap",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setSubmitting(false);
@@ -308,20 +364,20 @@ const Swaps = () => {
       await swapService.cancelSwap(swapId);
 
       // Update local state
-      setSwaps(swaps.map(s =>
-        s.id === swapId ? { ...s, status: 'cancelled' } : s
-      ));
+      setSwaps(
+        swaps.map((s) => (s.id === swapId ? { ...s, status: "cancelled" } : s)),
+      );
 
       toast({
         title: "Swap Cancelled",
-        description: "The swap has been cancelled successfully."
+        description: "The swap has been cancelled successfully.",
       });
     } catch (error: any) {
       console.error("Error cancelling swap:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to cancel swap",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setCancellingSwapId(null);
@@ -346,15 +402,24 @@ const Swaps = () => {
                     className="h-12 w-12 rounded-full object-cover ring-2 ring-border"
                   />
                   <div>
-                    <h3 className="font-semibold text-foreground">{otherUser.full_name || "Partner"}</h3>
-                    <p className="text-sm text-muted-foreground">{otherUser.city || "Location"}, {otherUser.country || "Country"}</p>
+                    <h3 className="font-semibold text-foreground">
+                      {otherUser.full_name || "Partner"}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {otherUser.city || "Location"},{" "}
+                      {otherUser.country || "Country"}
+                    </p>
                   </div>
                 </>
               ) : (
                 <div>
-                  <h3 className="font-semibold text-foreground">{swap.title}</h3>
+                  <h3 className="font-semibold text-foreground">
+                    {swap.title}
+                  </h3>
                   <p className="text-sm text-muted-foreground">
-                    {isOwner ? "Your swap - waiting for partner" : "No partner yet"}
+                    {isOwner
+                      ? "Your swap - waiting for partner"
+                      : "No partner yet"}
                   </p>
                 </div>
               )}
@@ -366,14 +431,20 @@ const Swaps = () => {
           {/* Skill Exchange */}
           <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/50">
             <div className="flex-1 text-center">
-              <p className="text-xs text-muted-foreground mb-1">{isOwner ? "You Teach" : "You Learn"}</p>
-              <p className="font-medium text-terracotta">{swap.skill_offered}</p>
+              <p className="text-xs text-muted-foreground mb-1">
+                {isOwner ? "You Teach" : "You Learn"}
+              </p>
+              <p className="font-medium text-terracotta">
+                {swap.skill_offered}
+              </p>
             </div>
             <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
               <ArrowLeftRight className="h-5 w-5 text-primary" />
             </div>
             <div className="flex-1 text-center">
-              <p className="text-xs text-muted-foreground mb-1">{isOwner ? "You Learn" : "You Teach"}</p>
+              <p className="text-xs text-muted-foreground mb-1">
+                {isOwner ? "You Learn" : "You Teach"}
+              </p>
               <p className="font-medium text-teal">{swap.skill_wanted}</p>
             </div>
           </div>
@@ -397,16 +468,16 @@ const Swaps = () => {
           <div className="flex gap-2 pt-2">
             {hasPartner && (
               <Button variant="outline" size="sm" className="flex-1" asChild>
-                <Link to={`/messages?user=${otherUser?.id || swap.partner_id}&swap=${swap.id}`}>
+                <Link
+                  to={`/messages?user=${otherUser?.id || swap.partner_id}&swap=${swap.id}`}
+                >
                   <MessageCircle className="h-4 w-4 mr-2" />
                   Message
                 </Link>
               </Button>
             )}
             <Button variant="terracotta" size="sm" className="flex-1" asChild>
-              <Link to={`/swap/${swap.id}`}>
-                View Details
-              </Link>
+              <Link to={`/swap/${swap.id}`}>View Details</Link>
             </Button>
 
             {/* Cancel Swap Button - only for active swaps */}
@@ -430,7 +501,8 @@ const Swaps = () => {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Cancel Swap?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Are you sure you want to cancel this swap? This action cannot be undone.
+                      Are you sure you want to cancel this swap? This action
+                      cannot be undone.
                       {hasPartner && " The other participant will be notified."}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
@@ -456,8 +528,7 @@ const Swaps = () => {
 
   return (
     <>
-
-      <main className="flex-1 container mx-auto px-4 py-8">
+      <main className="flex-1 w-full px-4 md:px-8 py-8">
         {/* Page Header */}
         <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -479,8 +550,6 @@ const Swaps = () => {
           </Button>
         </div>
 
-
-
         {/* Search and Filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">
@@ -492,11 +561,14 @@ const Swaps = () => {
               className="pl-10"
             />
           </div>
-
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
           <TabsList className="bg-muted/50 flex-wrap h-auto">
             <TabsTrigger value="my_swaps" className="gap-2">
               <BookOpen className="h-4 w-4" />
@@ -573,7 +645,9 @@ const Swaps = () => {
             ) : (
               <Card className="p-12 text-center">
                 <CheckCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="font-semibold text-lg mb-2">No Completed Swaps Yet</h3>
+                <h3 className="font-semibold text-lg mb-2">
+                  No Completed Swaps Yet
+                </h3>
                 <p className="text-muted-foreground">
                   Complete your active swaps to see them here.
                 </p>
@@ -591,7 +665,9 @@ const Swaps = () => {
             ) : (
               <Card className="p-12 text-center">
                 <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="font-semibold text-lg mb-2">No Cancelled Swaps</h3>
+                <h3 className="font-semibold text-lg mb-2">
+                  No Cancelled Swaps
+                </h3>
                 <p className="text-muted-foreground">
                   Your cancelled swaps will appear here.
                 </p>
@@ -600,7 +676,6 @@ const Swaps = () => {
           </TabsContent>
         </Tabs>
       </main>
-
     </>
   );
 };
