@@ -20,6 +20,7 @@ import {
 import { Loader2, Send } from "lucide-react";
 import { offerService } from "@/lib/offerService";
 import { useToast } from "@/hooks/use-toast";
+import { validateSwapContent } from "@/lib/validation";
 
 interface CreateOfferDialogProps {
   open: boolean;
@@ -68,12 +69,24 @@ export const CreateOfferDialog = ({
   };
 
   const handleSubmit = async () => {
-    if (!title.trim() || !skillOffered.trim() || !skillWanted.trim()) {
-      toast({
-        title: "Error",
-        description: "Title and skills are required",
-        variant: "destructive",
-      });
+    const titleError = validateSwapContent(title, "Title");
+    if (titleError) {
+      toast({ title: titleError, variant: "destructive" });
+      return;
+    }
+
+    const skillOfferedError = validateSwapContent(
+      skillOffered,
+      "Skill Offered",
+    );
+    if (skillOfferedError) {
+      toast({ title: skillOfferedError, variant: "destructive" });
+      return;
+    }
+
+    const skillWantedError = validateSwapContent(skillWanted, "Skill Wanted");
+    if (skillWantedError) {
+      toast({ title: skillWantedError, variant: "destructive" });
       return;
     }
 

@@ -55,3 +55,85 @@ export const validatePassword = (password: string): string | null => {
 
   return null;
 };
+
+export const validateReview = (
+  text: string,
+): {
+  isValid: boolean;
+  error: string | null;
+  wordCount: number;
+  charCount: number;
+} => {
+  const charCount = text.length;
+  const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+  const MAX_WORDS = 80;
+  const MAX_CHARS = 500;
+
+  if (charCount > MAX_CHARS) {
+    return {
+      isValid: false,
+      error: `Review cannot exceed ${MAX_CHARS} characters. Please shorten your message.`,
+      wordCount,
+      charCount,
+    };
+  }
+
+  if (wordCount > MAX_WORDS) {
+    return {
+      isValid: false,
+      error: `Review cannot exceed ${MAX_WORDS} words. Please shorten your message.`,
+      wordCount,
+      charCount,
+    };
+  }
+
+  return {
+    isValid: true,
+    error: null,
+    wordCount,
+    charCount,
+  };
+};
+
+/**
+ * Validates swap content (title, skill name, etc.) to prevent gibberish and empty strings.
+ */
+export const validateSwapContent = (
+  text: string,
+  label: string,
+): string | null => {
+  const trimmed = text.trim();
+
+  if (!trimmed) {
+    return `${label} is required.`;
+  }
+
+  if (trimmed.length < 3) {
+    return `${label} must be at least 3 characters long.`;
+  }
+
+  // Check for gibberish: no vowels in a word or too many consecutive consonants
+  const words = trimmed.toLowerCase().split(/\s+/);
+  const vowelRegex = /[aeiouy]/;
+  const consonantRepetitionRegex = /[^aeiouy\s\d,.-]{6,}/;
+  const charRepetitionRegex = /(.)\1{4,}/;
+
+  for (const word of words) {
+    // If the word is at least 3 chars long and has no vowels, it's likely gibberish
+    if (word.length >= 3 && !vowelRegex.test(word)) {
+      return `${label} must contain valid words.`;
+    }
+
+    // Check for too many consecutive consonants
+    if (consonantRepetitionRegex.test(word)) {
+      return `${label} contains invalid character sequences.`;
+    }
+  }
+
+  // Check for excessive single character repetition (e.g., "aaaaaaa")
+  if (charRepetitionRegex.test(trimmed)) {
+    return `Please enter a valid ${label.toLowerCase()}.`;
+  }
+
+  return null;
+};
