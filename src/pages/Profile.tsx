@@ -22,16 +22,13 @@ import { profileService } from "@/lib/profileService";
 import { reviewService } from "@/lib/reviewService";
 import { swapService } from "@/lib/swapService";
 import { getCacheBustedImageUrl } from "@/lib/cacheUtils";
-<<<<<<< HEAD
 import { SwapCard } from "@/components/SwapCard";
-=======
 import {
   presenceService,
   getStatusLabel,
   type UserStatus,
 } from "@/lib/presenceService";
 import { StatusDot } from "@/components/StatusDot";
->>>>>>> 3f1bb97186cc533d026b2dd8cd15f49590e52789
 
 const ProfileSkeleton = () => (
   <div className="min-h-screen bg-background animate-pulse">
@@ -76,6 +73,7 @@ const Profile = () => {
   const [viewMode, setViewMode] = useState<"private" | "public">("private");
   const [latestSwaps, setLatestSwaps] = useState<any[]>([]);
   const [userStatus, setUserStatus] = useState<UserStatus>("offline");
+  const [isGoogleConnected, setIsGoogleConnected] = useState(false);
 
   useEffect(() => {
     const loadProfileData = async () => {
@@ -99,6 +97,15 @@ const Profile = () => {
 
           // 2. Load heavier data in background (Async) always to ensure fresh data
           setBgLoading(true);
+
+          // Check Google Connection separately
+          const { data: googleToken } = await supabase
+            .from('google_tokens')
+            .select('id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          setIsGoogleConnected(!!googleToken);
+
           Promise.all([
             // If we didn't get profile from cache/fetch yet, fetch it now
             !userProfile && !cacheHit
@@ -215,6 +222,19 @@ const Profile = () => {
       window.removeEventListener("profileUpdated", handleProfileUpdate);
   }, [userProfile]);
 
+  const handleConnectGoogle = async () => {
+    try {
+      const { data: authData, error: authError } = await supabase.functions.invoke('google-calendar/auth');
+
+      if (authError || !authData?.url) throw authError || new Error("Could not get auth URL");
+
+      window.location.href = authData.url;
+    } catch (error: any) {
+      console.error("Connection Error", error);
+      alert(error.message || "Failed to connect to Google service.");
+    }
+  };
+
   if (loading) return <ProfileSkeleton />;
 
   if (!userProfile) {
@@ -238,8 +258,6 @@ const Profile = () => {
   return (
     <>
       <main className="container mx-auto px-4 py-8">
-<<<<<<< HEAD
-=======
         {/* Profile Header */}
         <div className="bg-gradient-to-r from-terracotta/10 to-teal/10 rounded-2xl p-8 mb-8 border border-white/20">
           <div className="flex flex-col md:flex-row gap-6 items-start">
@@ -314,7 +332,6 @@ const Profile = () => {
           </div>
         </div>
 
->>>>>>> 3f1bb97186cc533d026b2dd8cd15f49590e52789
         {/* View Toggle */}
         <div className="flex justify-center mb-8">
           <div className="bg-muted/50 p-1 rounded-xl border border-border/50 flex gap-1">
@@ -337,7 +354,6 @@ const Profile = () => {
           </div>
         </div>
 
-<<<<<<< HEAD
         {viewMode === 'public' ? (
           /* Public View: 2-Column Sidebar Layout */
           <div className="grid lg:grid-cols-12 gap-6">
@@ -423,11 +439,6 @@ const Profile = () => {
                 </Card>
               )}
 
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Skills cards removed from Public View */}
-              </div>
-
-              {/* Latest Swaps */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-terracotta" />
@@ -450,165 +461,25 @@ const Profile = () => {
             </div>
           </div>
         ) : (
-          /* Private View: Existing Banner + 3-Column Layout */
-          <>
-            {/* Profile Header */}
-            <div className="bg-gradient-to-r from-terracotta/10 to-teal/10 rounded-2xl p-8 mb-8 border border-white/20">
-              <div className="flex flex-col md:flex-row gap-6 items-start">
-                <div className="relative group">
-                  <img
-                    key={getCacheBustedImageUrl(userProfile.profile_image_url)}
-                    src={getCacheBustedImageUrl(userProfile.profile_image_url)}
-                    alt={userProfile.full_name}
-                    className="h-32 w-32 rounded-2xl object-cover border-4 border-white shadow-warm transition-transform duration-500 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 rounded-2xl bg-black/10 opacity-0 group-hover:opacity-10 transition-opacity" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h1 className="font-display text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-terracotta to-terracotta/70">{userProfile.full_name || "User"}</h1>
-                      <div className="flex items-center gap-4 text-muted-foreground mb-4">
-                        <span className="flex items-center gap-1 hover:text-terracotta transition-colors">
-                          <MapPin className="h-4 w-4" />
-                          {userProfile.city || "City"}, {userProfile.country || "Country"}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Star className="h-4 w-4 fill-golden text-golden" />
-                          {rating > 0 ? rating.toFixed(1) : (bgLoading ? "..." : "0.0")} ({reviews.length} reviews)
-                        </span>
-                      </div>
-                    </div>
-                    <Button variant="outline" asChild className="hover-lift">
-                      <Link to="/settings"><Edit className="h-4 w-4 mr-2" />Edit Profile</Link>
-                    </Button>
-                  </div>
-                  <p className="text-muted-foreground mb-4 max-w-2xl leading-relaxed">{userProfile.bio || "No bio added yet"}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {userProfile.languages && userProfile.languages.length > 0 && userProfile.languages.map((lang: string) => (
-                      <Badge key={lang} variant="secondary" className="gap-1 bg-white/50 border-white/40"><Globe className="h-3 w-3" />{lang}</Badge>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2">
-                <Tabs defaultValue="reviews" className="w-full">
-                  <TabsList className="mb-6 bg-muted/50 p-1 border border-border/50 rounded-xl">
-                    <TabsTrigger value="reviews" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Reviews</TabsTrigger>
-                    <TabsTrigger value="skills" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Skills</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="skills" className="space-y-6 focus-visible:outline-none">
-                    <Card className="border-border/50 shadow-sm overflow-hidden group">
-                      <div className="h-1 w-full bg-terracotta/10 translate-y-[-1px] group-hover:bg-terracotta/30 transition-colors" />
-                      <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2 text-terracotta">
-                          <Award className="h-5 w-5" /> Skills I Offer
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex flex-wrap gap-2">
-                          {userProfile.skills_offered && userProfile.skills_offered.length > 0 ? (
-                            userProfile.skills_offered.map((skill: string) => (
-                              <Badge key={skill} className="bg-terracotta/10 text-terracotta border-0 hover:bg-terracotta hover:text-white transition-all cursor-default scale-100 hover:scale-110 active:scale-95">{skill}</Badge>
-                            ))
-                          ) : (
-                            <p className="text-muted-foreground text-sm italic">No skills added yet</p>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border-border/50 shadow-sm overflow-hidden group">
-                      <div className="h-1 w-full bg-teal/10 translate-y-[-1px] group-hover:bg-teal/30 transition-colors" />
-                      <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2 text-teal">
-                          <Sparkles className="h-5 w-5" /> Skills I Want to Learn
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex flex-wrap gap-2">
-                          {userProfile.skills_wanted && userProfile.skills_wanted.length > 0 ? (
-                            userProfile.skills_wanted.map((skill: string) => (
-                              <Badge key={skill} className="bg-teal/10 text-teal border-0 hover:bg-teal hover:text-white transition-all cursor-default scale-100 hover:scale-110 active:scale-95">{skill}</Badge>
-                            ))
-                          ) : (
-                            <p className="text-muted-foreground text-sm italic">No skills added yet</p>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  <TabsContent value="reviews" className="space-y-4 focus-visible:outline-none">
-                    {bgLoading ? (
-                      <div className="space-y-4">
-                        {[1, 2].map((i) => (
-                          <div key={i} className="h-32 w-full bg-muted rounded-xl animate-pulse" />
-                        ))}
-                      </div>
-                    ) : reviews.length > 0 ? (
-                      reviews.map((review: any) => (
-                        <Card key={review.id} className="border-border/50 hover:shadow-md transition-shadow">
-                          <CardContent className="pt-6">
-                            <div className="flex items-center gap-3 mb-3">
-                              <div className="h-10 w-10 rounded-full bg-terracotta/10 flex items-center justify-center font-display text-terracotta font-bold">
-                                {review.reviewer_name?.[0] || 'U'}
-                              </div>
-                              <div>
-                                <p className="font-semibold text-sm">{review.reviewer_name || "User"}</p>
-                                <div className="flex gap-0.5">
-                                  {[...Array(5)].map((_, i) => (
-                                    <Star key={i} className={`h-3 w-3 ${i < review.rating ? 'fill-golden text-golden' : 'text-muted'}`} />
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                            <p className="text-muted-foreground text-sm italic leading-relaxed">"{review.comment}"</p>
-                          </CardContent>
-                        </Card>
-                      ))
-                    ) : (
-                      <Card className="border-dashed border-2 bg-transparent">
-                        <CardContent className="py-12 text-center">
-                          <MessageCircle className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-                          <p className="text-muted-foreground">No reviews yet. Start swapping to earn reviews!</p>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </TabsContent>
-                </Tabs>
-              </div>
-
-              <div className="space-y-6">
-=======
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <Tabs
-              defaultValue={viewMode === "private" ? "reviews" : "skills"}
-              className="w-full"
-            >
-              <TabsList className="mb-6 bg-muted/50 p-1 border border-border/50 rounded-xl">
-                {viewMode === "public" && (
+          /* Private View: Existing Tabs Layout */
+          <div className="grid lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <Tabs defaultValue="reviews" className="w-full">
+                <TabsList className="mb-6 bg-muted/50 p-1 border border-border/50 rounded-xl">
+                  <TabsTrigger
+                    value="reviews"
+                    className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                  >
+                    Reviews
+                  </TabsTrigger>
                   <TabsTrigger
                     value="skills"
                     className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
                   >
                     Skills
                   </TabsTrigger>
-                )}
-                <TabsTrigger
-                  value="reviews"
-                  className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                >
-                  Reviews
-                </TabsTrigger>
-              </TabsList>
+                </TabsList>
 
-              {viewMode === "public" && (
                 <TabsContent
                   value="skills"
                   className="space-y-6 focus-visible:outline-none"
@@ -623,7 +494,7 @@ const Profile = () => {
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
                         {userProfile.skills_offered &&
-                        userProfile.skills_offered.length > 0 ? (
+                          userProfile.skills_offered.length > 0 ? (
                           userProfile.skills_offered.map((skill: string) => (
                             <Badge
                               key={skill}
@@ -651,7 +522,7 @@ const Profile = () => {
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
                         {userProfile.skills_wanted &&
-                        userProfile.skills_wanted.length > 0 ? (
+                          userProfile.skills_wanted.length > 0 ? (
                           userProfile.skills_wanted.map((skill: string) => (
                             <Badge
                               key={skill}
@@ -669,226 +540,203 @@ const Profile = () => {
                     </CardContent>
                   </Card>
                 </TabsContent>
-              )}
 
-              <TabsContent
-                value="reviews"
-                className="space-y-4 focus-visible:outline-none"
-              >
-                {bgLoading ? (
-                  <div className="space-y-4">
-                    {[1, 2].map((i) => (
-                      <div
-                        key={i}
-                        className="h-32 w-full bg-muted rounded-xl animate-pulse"
-                      />
-                    ))}
-                  </div>
-                ) : reviews.length > 0 ? (
-                  reviews.map((review: any) => (
-                    <Card
-                      key={review.id}
-                      className="border-border/50 hover:shadow-md transition-shadow"
-                    >
-                      <CardContent className="pt-6">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="h-10 w-10 rounded-full bg-terracotta/10 flex items-center justify-center font-display text-terracotta font-bold">
-                            {review.reviewer_name?.[0] || "U"}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-sm">
-                              {review.reviewer_name || "User"}
-                            </p>
-                            <div className="flex gap-0.5">
-                              {[...Array(5)].map((_, i) => (
-                                <Star
-                                  key={i}
-                                  className={`h-3 w-3 ${i < review.rating ? "fill-golden text-golden" : "text-muted"}`}
-                                />
-                              ))}
+                <TabsContent
+                  value="reviews"
+                  className="space-y-4 focus-visible:outline-none"
+                >
+                  {bgLoading ? (
+                    <div className="space-y-4">
+                      {[1, 2].map((i) => (
+                        <div
+                          key={i}
+                          className="h-32 w-full bg-muted rounded-xl animate-pulse"
+                        />
+                      ))}
+                    </div>
+                  ) : reviews.length > 0 ? (
+                    reviews.map((review: any) => (
+                      <Card
+                        key={review.id}
+                        className="border-border/50 hover:shadow-md transition-shadow"
+                      >
+                        <CardContent className="pt-6">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="h-10 w-10 rounded-full bg-terracotta/10 flex items-center justify-center font-display text-terracotta font-bold">
+                              {review.reviewer_name?.[0] || "U"}
                             </div>
-                          </div>
-                        </div>
-                        <p className="text-muted-foreground text-sm italic leading-relaxed">
-                          "{review.comment}"
-                        </p>
-                      </CardContent>
-                    </Card>
-                  ))
-                ) : (
-                  <Card className="border-dashed border-2 bg-transparent">
-                    <CardContent className="py-12 text-center">
-                      <MessageCircle className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-                      <p className="text-muted-foreground">
-                        No reviews yet. Start swapping to earn reviews!
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          <div className="space-y-6">
-            {viewMode === "public" && (
-              <>
->>>>>>> 3f1bb97186cc533d026b2dd8cd15f49590e52789
-                <Card className="border-border/50 shadow-sm overflow-hidden">
-                  <CardHeader className="bg-muted/30 pb-4">
-                    <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                      Profile Details
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-6 space-y-4">
-                    <div className="flex items-center justify-between text-sm group">
-                      <span className="flex items-center gap-2 text-muted-foreground">
-                        <Globe className="h-4 w-4" /> Languages
-                      </span>
-                      <span className="font-medium">
-                        {userProfile.languages?.join(", ") || "None"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-2 text-muted-foreground">
-                        <Clock className="h-4 w-4" /> Timezone
-                      </span>
-                      <span className="font-medium">
-                        {userProfile.timezone || "Not set"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-2 text-muted-foreground">
-                        <Calendar className="h-4 w-4" /> Member Since
-                      </span>
-                      <span className="font-medium">
-                        {new Date(userProfile.created_at).toLocaleDateString(
-                          "en-US",
-                          { month: "short", year: "numeric" },
-                        )}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-terracotta to-terracotta/80 text-white border-0 shadow-lg shadow-terracotta/20 relative overflow-hidden group">
-                  <div className="absolute top-[-20%] right-[-10%] h-32 w-32 bg-white/10 rounded-full blur-2xl group-hover:scale-110 transition-transform duration-700" />
-                  <CardContent className="py-8 text-center relative z-10">
-                    <p className="text-4xl font-display font-bold mb-1 drop-shadow-sm">
-                      {bgLoading ? (
-                        <Skeleton className="h-8 w-12 mx-auto bg-white/20" />
-                      ) : (
-                        swapsCount
-                      )}
-                    </p>
-                    <p className="text-terracotta-foreground/90 text-sm font-medium uppercase tracking-widest">
-                      Swaps Completed
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <div className="bg-teal/5 border border-teal/10 rounded-xl p-6 text-center">
-                  <Award className="h-10 w-10 text-teal mx-auto mb-3 opacity-50" />
-                  <h4 className="font-semibold text-teal-900 mb-1">
-                    Culture Explorer
-                  </h4>
-                  <p className="text-xs text-teal-700/70">
-                    Next badge at 5 completed swaps
-                  </p>
-                </div>
-<<<<<<< HEAD
-              </div>
-            </div>
-          </>
-        )}
-=======
-
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                  <Card className="border-border/50 shadow-sm overflow-hidden">
-                    <CardHeader className="bg-muted/30 pb-4">
-                      <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                        Latest Swaps
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-6 space-y-4">
-                      {latestSwaps.length > 0 ? (
-                        latestSwaps.map((swap) => (
-                          <div key={swap.id} className="group cursor-default">
-                            <h4 className="text-sm font-semibold group-hover:text-terracotta transition-colors line-clamp-1">
-                              {swap.title}
-                            </h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] py-0 h-4 border-terracotta/20 text-terracotta"
-                              >
-                                {swap.skill_offered}
-                              </Badge>
-                              <span className="text-[10px] text-muted-foreground">
-                                for
-                              </span>
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] py-0 h-4 border-teal/20 text-teal"
-                              >
-                                {swap.skill_wanted}
-                              </Badge>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground italic">
-                          No swaps created yet
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-border/50 shadow-sm overflow-hidden">
-                    <CardHeader className="bg-muted/30 pb-4">
-                      <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                        User Reviews Summary
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-6 space-y-4">
-                      {reviews.length > 0 ? (
-                        reviews.slice(0, 3).map((review) => (
-                          <div key={review.id} className="space-y-1">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold">
+                            <div>
+                              <p className="font-semibold text-sm">
                                 {review.reviewer_name || "User"}
-                              </span>
+                              </p>
                               <div className="flex gap-0.5">
                                 {[...Array(5)].map((_, i) => (
                                   <Star
                                     key={i}
-                                    className={`h-2.5 w-2.5 ${i < review.rating ? "fill-golden text-golden" : "text-muted"}`}
+                                    className={`h-3 w-3 ${i < review.rating ? "fill-golden text-golden" : "text-muted"}`}
                                   />
                                 ))}
                               </div>
                             </div>
-                            <p className="text-xs text-muted-foreground line-clamp-2 italic">
-                              "{review.comment}"
-                            </p>
                           </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground italic">
-                          No reviews yet
+                          <p className="text-muted-foreground text-sm italic leading-relaxed">
+                            "{review.comment}"
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <Card className="border-dashed border-2 bg-transparent">
+                      <CardContent className="py-12 text-center">
+                        <MessageCircle className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                        <p className="text-muted-foreground">
+                          No reviews yet. Start swapping to earn reviews!
                         </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
+
+            <div className="space-y-6">
+              <Card className="border-border/50 shadow-sm overflow-hidden">
+                <CardHeader className="bg-muted/30 pb-4">
+                  <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    Profile Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-4">
+                  <div className="flex items-center justify-between text-sm group">
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <Globe className="h-4 w-4" /> Languages
+                    </span>
+                    <span className="font-medium">
+                      {userProfile.languages?.join(", ") || "None"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="h-4 w-4" /> Timezone
+                    </span>
+                    <span className="font-medium">
+                      {userProfile.timezone || "Not set"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="h-4 w-4" /> Member Since
+                    </span>
+                    <span className="font-medium">
+                      {new Date(userProfile.created_at).toLocaleDateString(
+                        "en-US",
+                        { month: "short", year: "numeric" },
                       )}
-                      {reviews.length > 3 && (
-                        <p className="text-[10px] text-center text-muted-foreground pt-2 border-t border-border/50">
-                          + {reviews.length - 3} more reviews in the reviews tab
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-              </>
-            )}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-terracotta to-terracotta/80 text-white border-0 shadow-lg shadow-terracotta/20 relative overflow-hidden group">
+                <div className="absolute top-[-20%] right-[-10%] h-32 w-32 bg-white/10 rounded-full blur-2xl group-hover:scale-110 transition-transform duration-700" />
+                <CardContent className="py-8 text-center relative z-10">
+                  <p className="text-4xl font-display font-bold mb-1 drop-shadow-sm">
+                    {bgLoading ? (
+                      <Skeleton className="h-8 w-12 mx-auto bg-white/20" />
+                    ) : (
+                      swapsCount
+                    )}
+                  </p>
+                  <p className="text-terracotta-foreground/90 text-sm font-medium uppercase tracking-widest">
+                    Swaps Completed
+                  </p>
+                </CardContent>
+              </Card>
+
+              <div className="bg-teal/5 border border-teal/10 rounded-xl p-6 text-center">
+                <Award className="h-10 w-10 text-teal mx-auto mb-3 opacity-50" />
+                <h4 className="font-semibold text-teal-900 mb-1">
+                  Culture Explorer
+                </h4>
+                <p className="text-xs text-teal-700/70">
+                  Next badge at 5 completed swaps
+                </p>
+              </div>
+
+              <Card className="border-border/50 shadow-sm overflow-hidden">
+                <CardHeader className="bg-muted/30 pb-4">
+                  <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    Connected Services
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">Google Calendar</span>
+                        <span className={`text-[10px] ${isGoogleConnected ? 'text-green-600' : 'text-muted-foreground'}`}>
+                          {isGoogleConnected ? 'Connected' : 'Not setup'}
+                        </span>
+                      </div>
+                    </div>
+                    {isGoogleConnected ? (
+                      <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">Active</Badge>
+                    ) : (
+                      <Button variant="outline" size="sm" className="h-7 text-xs" onClick={handleConnectGoogle}>
+                        Connect
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                <Card className="border-border/50 shadow-sm overflow-hidden">
+                  <CardHeader className="bg-muted/30 pb-4">
+                    <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                      Latest Swaps
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6 space-y-4">
+                    {latestSwaps.length > 0 ? (
+                      latestSwaps.map((swap) => (
+                        <div key={swap.id} className="group cursor-default">
+                          <h4 className="text-sm font-semibold group-hover:text-terracotta transition-colors line-clamp-1">
+                            {swap.title}
+                          </h4>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] py-0 h-4 border-terracotta/20 text-terracotta"
+                            >
+                              {swap.skill_offered}
+                            </Badge>
+                            <span className="text-[10px] text-muted-foreground">
+                              for
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] py-0 h-4 border-teal/20 text-teal"
+                            >
+                              {swap.skill_wanted}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">
+                        No swaps created yet
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </div>
-        </div>
->>>>>>> 3f1bb97186cc533d026b2dd8cd15f49590e52789
+        )}
       </main>
     </>
   );

@@ -214,11 +214,10 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                 <Link
                   key={link.name}
                   to={link.href}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive(link.href)
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive(link.href)
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
+                    }`}
                 >
                   {link.name}
                 </Link>
@@ -261,7 +260,7 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                               conversationProfiles[conv.otherUserId];
                             const isUnread =
                               conv.lastMessage?.receiver_id ===
-                                currentUser?.id && !conv.lastMessage?.read;
+                              currentUser?.id && !conv.lastMessage?.read;
                             const isAssistant =
                               profile?.full_name
                                 ?.toLowerCase()
@@ -284,14 +283,8 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                                       );
                                     }
                                   }
-<<<<<<< HEAD
                                   // Force navigation even if on same page to ensure params update
                                   navigate(`/messages?user=${conv.otherUserId}`);
-=======
-                                  navigate(
-                                    `/messages?user=${conv.otherUserId}`,
-                                  );
->>>>>>> 3f1bb97186cc533d026b2dd8cd15f49590e52789
                                 }}
                               >
                                 <div className="flex items-start gap-3 w-full">
@@ -390,29 +383,6 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                             className={`p-3 cursor-pointer hover:bg-muted ${!notification.read ? "bg-terracotta/5" : ""}`}
                             onClick={() => {
                               notificationService.markAsRead(notification.id);
-<<<<<<< HEAD
-                              setUnreadCount(prev => Math.max(0, prev - 1));
-                              setNotifications(prev => prev.map(n =>
-                                n.id === notification.id ? { ...n, read: true } : n
-                              ));
-
-                              // Determine navigation path based on notification type/data
-                              let navPath = `/messages?user=${notification.sender_id}`;
-
-                              // Check if there is a swap_id or related metadata
-                              // Assuming metadata or additional fields might store this info. 
-                              // If notification body or title implies a specific swap/offer context.
-                              // In a real scenario, we'd check notification.metadata or notification.resource_id
-                              if (notification.metadata?.swap_id) {
-                                navPath += `&swap=${notification.metadata.swap_id}`;
-                              } else if (notification.type === 'offer_created' || notification.type === 'swap_request') {
-                                // If we don't have explicit metadata mapped yet, we might fallback or try to infer.
-                                // But ideally, the notification creation should include this. 
-                                // For now, we'll keep it robust.
-                              }
-
-                              navigate(navPath);
-=======
                               setUnreadCount((prev) => Math.max(0, prev - 1));
                               setNotifications((prev) =>
                                 prev.map((n) =>
@@ -422,11 +392,11 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                                 ),
                               );
                               // Navigate to the appropriate location based on notification data
-                              const notifData = notification.data || {};
-                              if (notifData.conversation_id) {
+                              const notifData = notification.data || notification.metadata || {};
+                              if (notifData.conversation_id || notifData.user_id) {
                                 // For offers and messages with conversation context
                                 navigate(
-                                  `/messages?user=${notification.sender_id}`,
+                                  `/messages?user=${notification.sender_id || notifData.user_id}`,
                                 );
                               } else if (notifData.swap_id) {
                                 // For swap-related notifications
@@ -440,7 +410,6 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                                 // Fallback to notifications page
                                 navigate("/notifications");
                               }
->>>>>>> 3f1bb97186cc533d026b2dd8cd15f49590e52789
                             }}
                           >
                             <div className="flex items-start gap-3 w-full">
@@ -594,11 +563,10 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                       <Link
                         to="/messages"
                         onClick={() => setIsOpen(false)}
-                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors flex items-center justify-between ${
-                          isActive("/messages")
+                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors flex items-center justify-between ${isActive("/messages")
                             ? "bg-primary/10 text-primary"
                             : "text-foreground hover:bg-muted"
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-3">
                           <MessageCircle className="h-5 w-5" />
@@ -614,11 +582,10 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                       <Link
                         to="/notifications"
                         onClick={() => setIsOpen(false)}
-                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors flex items-center justify-between ${
-                          isActive("/notifications")
+                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors flex items-center justify-between ${isActive("/notifications")
                             ? "bg-primary/10 text-primary"
                             : "text-foreground hover:bg-muted"
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-3">
                           <Bell className="h-5 w-5" />
@@ -639,11 +606,10 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                         key={link.name}
                         to={link.href}
                         onClick={() => setIsOpen(false)}
-                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors ${
-                          isActive(link.href)
+                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors ${isActive(link.href)
                             ? "bg-primary/10 text-primary"
                             : "text-foreground hover:bg-muted"
-                        }`}
+                          }`}
                       >
                         {link.name}
                       </Link>

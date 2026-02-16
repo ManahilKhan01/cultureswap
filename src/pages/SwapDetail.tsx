@@ -629,15 +629,9 @@ const SwapDetail = () => {
     <div className="flex-1 bg-background pb-12">
       <main className="container mx-auto px-4 py-8">
         <Button variant="ghost" asChild className="mb-6">
-<<<<<<< HEAD
           <Link to={source === 'discover' ? "/discover" : "/swaps"}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             {source === 'discover' ? "Back to Discover" : "Back to Swaps"}
-=======
-          <Link to="/swaps">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Swaps
->>>>>>> 3f1bb97186cc533d026b2dd8cd15f49590e52789
           </Link>
         </Button>
 

@@ -52,25 +52,6 @@ export const OfferCard = ({
     if (offerId) {
       const fetchOffer = async () => {
         try {
-<<<<<<< HEAD
-            setAccepting(true);
-            await offerService.acceptOffer(offer.id);
-            toast({
-                title: "Offer Accepted!",
-                description: "The swap is now active. Check your Swaps page!",
-            });
-            // Update local state immediately
-            if (offer) {
-                setOffer({ ...offer, status: 'accepted' });
-            }
-            onOfferUpdated?.();
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || "Failed to accept offer",
-                variant: "destructive",
-            });
-=======
           // Only show loading on first fetch if no data
           if (!offer) setLoading(true);
 
@@ -89,193 +70,11 @@ export const OfferCard = ({
           });
         } catch (error) {
           console.error("Error fetching offer:", error);
->>>>>>> 3f1bb97186cc533d026b2dd8cd15f49590e52789
         } finally {
           setLoading(false);
         }
       };
 
-<<<<<<< HEAD
-    const handleReject = async () => {
-        try {
-            setRejecting(true);
-            await offerService.rejectOffer(offer.id);
-            toast({
-                title: "Offer Declined",
-                description: "You've declined this offer.",
-            });
-            // Update local state immediately
-            if (offer) {
-                setOffer({ ...offer, status: 'rejected' });
-            }
-            onOfferUpdated?.();
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || "Failed to reject offer",
-                variant: "destructive",
-            });
-        } finally {
-            setRejecting(false);
-        }
-    };
-
-    const getStatusBadge = () => {
-        switch (offer.status) {
-            case "pending":
-                return (
-                    <Badge variant="outline" className="bg-white/20 text-white border-white/40 animate-pulse">
-                        Pending
-                    </Badge>
-                );
-            case "accepted":
-                return (
-                    <Badge variant="outline" className="bg-white/20 text-white border-white/40">
-                        Accepted
-                    </Badge>
-                );
-            case "rejected":
-                return (
-                    <Badge variant="outline" className="bg-white/10 text-white/70 border-white/20">
-                        Declined
-                    </Badge>
-                );
-            default:
-                return null;
-        }
-    };
-
-    return (
-        <Card className={`overflow-hidden border-2 transition-all duration-300 max-w-sm shadow-lg ${isPending ? 'border-terracotta/40 bg-white/80 backdrop-blur-md' : 'border-neutral-200 bg-neutral-50/50'
-            }`}>
-            <div className="bg-terracotta text-white px-4 py-2 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Handshake className="h-4 w-4" />
-                    <span className="text-xs font-bold uppercase tracking-wider font-display">
-                        Swap Proposal
-                    </span>
-                </div>
-                {getStatusBadge()}
-            </div>
-
-            <CardContent className="p-4 space-y-4">
-                <div className="space-y-1">
-                    <h3 className="font-bold text-lg leading-tight text-foreground">
-                        {offer.title || "Swap Proposal"}
-                    </h3>
-                    {(offer.skill_offered || offer.skill_wanted) && (
-                        <div className="flex flex-col gap-1.5 mt-2">
-                            {offer.skill_offered && (
-                                <div className="flex items-center gap-2">
-                                    <Badge variant="secondary" className="bg-teal/10 text-teal-dark border-teal/20 text-[10px] h-5">Teacher</Badge>
-                                    <span className="text-sm font-medium">{offer.skill_offered}</span>
-                                </div>
-                            )}
-                            {offer.skill_wanted && (
-                                <div className="flex items-center gap-2">
-                                    <Badge variant="secondary" className="bg-terracotta/10 text-terracotta-dark border-terracotta/20 text-[10px] h-5">Learner</Badge>
-                                    <span className="text-sm font-medium">{offer.skill_wanted}</span>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                <div className="h-px bg-border/50" />
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <Calendar className="h-3.5 w-3.5" />
-                            <span className="text-[10px] font-bold uppercase">Schedule</span>
-                        </div>
-                        <div className="flex gap-1 flex-wrap">
-                            {offer.session_days?.map((day) => (
-                                <span key={day} className="text-[11px] font-medium bg-secondary px-1.5 py-0.5 rounded text-secondary-foreground">
-                                    {DAY_LABELS[day] || day}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <Clock className="h-3.5 w-3.5" />
-                            <span className="text-[10px] font-bold uppercase">Duration</span>
-                        </div>
-                        <p className="text-sm font-semibold">
-                            {DURATION_LABELS[offer.duration] || offer.duration}
-                        </p>
-                    </div>
-                </div>
-
-                {(offer.schedule || offer.notes) && (
-                    <div className="bg-muted/30 rounded-xl p-3 border border-border/50">
-                        {offer.schedule && (
-                            <div className="flex gap-2 mb-2">
-                                <Info className="h-4 w-4 text-terracotta/60 mt-0.5" />
-                                <div className="text-xs">
-                                    <span className="font-semibold text-foreground/80">Preferred Time: </span>
-                                    <span className="text-muted-foreground">{offer.schedule}</span>
-                                </div>
-                            </div>
-                        )}
-                        {offer.notes && (
-                            <p className="text-xs text-muted-foreground leading-relaxed italic">
-                                "{offer.notes}"
-                            </p>
-                        )}
-                    </div>
-                )}
-
-                {canRespond && (
-                    <div className="flex gap-2 pt-2">
-                        <Button
-                            size="sm"
-                            variant="secondary"
-                            className="flex-1 rounded-xl h-10 font-semibold"
-                            onClick={handleReject}
-                            disabled={accepting || rejecting}
-                        >
-                            {rejecting ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                                "Decline"
-                            )}
-                        </Button>
-                        <Button
-                            size="sm"
-                            className="flex-1 bg-terracotta hover:bg-terracotta-dark text-white rounded-xl h-10 font-semibold shadow-md active:scale-95 transition-transform"
-                            onClick={handleAccept}
-                            disabled={accepting || rejecting}
-                        >
-                            {accepting ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                                "Accept Offer"
-                            )}
-                        </Button>
-                    </div>
-                )}
-
-                {!isReceiver && isPending && (
-                    <div className="flex items-center justify-center gap-2 py-1">
-                        <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                        <span className="text-[11px] text-muted-foreground font-medium italic">
-                            Awaiting response...
-                        </span>
-                    </div>
-                )}
-
-                {offer.status === 'accepted' && (
-                    <div className="flex items-center justify-center gap-2 py-1 animate-in fade-in duration-300">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span className="text-sm font-bold text-green-600">
-                            Accepted
-                        </span>
-                    </div>
-                )}
-            </CardContent>
-        </Card>
-=======
       fetchOffer();
     }
   }, [offerId, refreshTrigger]); // Respond to refreshTrigger
@@ -294,7 +93,6 @@ export const OfferCard = ({
           onOfferUpdated?.();
         }
       },
->>>>>>> 3f1bb97186cc533d026b2dd8cd15f49590e52789
     );
 
     return () => {

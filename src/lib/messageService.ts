@@ -106,26 +106,6 @@ export const messageService = {
   // Get messages for a conversation between two users (with fallback for legacy messages)
   async getConversation(userId1: string, userId2: string) {
     try {
-<<<<<<< HEAD
-      const conversationId = await this.getOrCreateConversation(userId1, userId2);
-      const messages = await this.getMessagesByConversation(conversationId);
-
-      // If we found messages by ID, return them
-      if (messages && messages.length > 0) return messages;
-
-      // If no messages found by ID, try the legacy pair-wise lookup (messages without conversation_id)
-      const { data, error: legacyError } = await supabase
-        .from('messages')
-        .select('*')
-        .or(`and(sender_id.eq.${userId1},receiver_id.eq.${userId2}),and(sender_id.eq.${userId2},receiver_id.eq.${userId1})`)
-        .order('created_at', { ascending: true });
-
-      if (legacyError) throw legacyError;
-      return data || [];
-    } catch (error) {
-      console.error('messageService.getConversation error:', error);
-      throw error;
-=======
       const conversationId = await this.getOrCreateConversation(
         userId1,
         userId2,
@@ -137,7 +117,6 @@ export const messageService = {
         error,
       );
       return this.getMessagesBetweenUsers(userId1, userId2);
->>>>>>> 3f1bb97186cc533d026b2dd8cd15f49590e52789
     }
   },
 
@@ -242,23 +221,12 @@ export const messageService = {
           // Strategy A: Check if we already have the message from our batch fetch (Fastest & Most Common)
           let lastMsg = messageMap.get(conv.id);
 
-<<<<<<< HEAD
-        // Strategy A.1: Try pair map if conversation_id mapping failed (Legacy support)
-        if (!lastMsg) {
-          const pairKey = [userId, otherUserId].sort().join(':');
-          lastMsg = pairMap.get(pairKey);
-        }
+          // Strategy A.1: Try pair map if conversation_id mapping failed (Legacy support)
+          if (!lastMsg) {
+            const pairKey = [userId, otherUserId].sort().join(':');
+            lastMsg = pairMap.get(pairKey);
+          }
 
-        // Strategy B: If not in recent batch (Dormant chat), fetch specifically (Slower fallback)
-        if (!lastMsg) {
-          const { data: specificMsg } = await supabase
-            .from('messages')
-            .select('*')
-            .eq('conversation_id', conv.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-=======
           // Strategy B: If not in recent batch (Dormant chat), fetch specifically (Slower fallback)
           if (!lastMsg) {
             const { data: specificMsg } = await supabase
@@ -268,7 +236,6 @@ export const messageService = {
               .order("created_at", { ascending: false })
               .limit(1)
               .maybeSingle();
->>>>>>> 3f1bb97186cc533d026b2dd8cd15f49590e52789
 
             lastMsg = specificMsg;
           }

@@ -128,9 +128,6 @@ const Footer = () => {
         </div>
       </div>
 
-<<<<<<< HEAD
-
-
       {/* Links Section */}
       <div className="container mx-auto px-3 sm:px-4 md:px-6 py-10 sm:py-12 md:py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -164,9 +161,6 @@ const Footer = () => {
           ))}
         </div>
       </div>
-
-=======
->>>>>>> 3f1bb97186cc533d026b2dd8cd15f49590e52789
       {/* Bottom Bar */}
       <div className="border-t border-white/10">
         <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-5 md:py-6">
