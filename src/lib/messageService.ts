@@ -103,7 +103,7 @@ export const messageService = {
     }
   },
 
-  // Get conversation between two users
+  // Get messages for a conversation between two users (with fallback for legacy messages)
   async getConversation(userId1: string, userId2: string) {
     try {
       const conversationId = await this.getOrCreateConversation(

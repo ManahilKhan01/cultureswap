@@ -128,6 +128,39 @@ const Footer = () => {
         </div>
       </div>
 
+      {/* Links Section */}
+      <div className="container mx-auto px-3 sm:px-4 md:px-6 py-10 sm:py-12 md:py-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          {Object.entries(footerLinks).map(([category, links]) => (
+            <div key={category}>
+              <h4 className="font-semibold mb-4 text-white capitalize">{category}</h4>
+              <ul className="space-y-2">
+                {links.map((link) => (
+                  <li key={link.name}>
+                    <Link
+                      to={link.href}
+                      className="text-white/60 hover:text-terracotta transition-colors text-sm"
+                      onClick={(e) => {
+                        const commonPlaceholders = ['/how-it-works', '/stories', '/support', '/safety', '/faq', '/cookies', '/guidelines', '/careers', '/press', '/blog', '/contact', '/privacy', '/terms'];
+
+                        if (commonPlaceholders.includes(link.href)) {
+                          e.preventDefault();
+                          toast({
+                            title: "Coming Soon",
+                            description: `${link.name} page is under construction.`,
+                          });
+                        }
+                      }}
+                    >
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
       {/* Bottom Bar */}
       <div className="border-t border-white/10">
         <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-5 md:py-6">

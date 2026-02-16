@@ -37,6 +37,7 @@ import { swapService } from "@/lib/swapService";
 import { profileService } from "@/lib/profileService";
 import { reviewService } from "@/lib/reviewService";
 import { supabase } from "@/lib/supabase";
+import { SwapCard } from "@/components/SwapCard";
 
 interface SwapWithProfile {
   id: string;
