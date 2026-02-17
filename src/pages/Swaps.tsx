@@ -168,7 +168,12 @@ const Swaps = () => {
 
         // Fetch all swaps where user is owner or partner
         const userSwaps = await swapService.getUserSwapsWithPartner(user.id);
-        setSwaps(userSwaps);
+
+        // Explicitly filter to ensure data isolation (frontend safeguard)
+        const verifiedSwaps = userSwaps.filter(
+          (s) => s.user_id === user.id || s.partner_id === user.id,
+        );
+        setSwaps(verifiedSwaps);
 
         // Load profiles for all users involved in swaps
         const userIds = new Set<string>();

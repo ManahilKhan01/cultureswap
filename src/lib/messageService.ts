@@ -193,17 +193,26 @@ export const messageService = {
           const otherUserId =
             conv.user1_id === userId ? conv.user2_id : conv.user1_id;
 
-          const { data: lastMsg } = await supabase
-            .from("messages")
-            .select("*")
-            .eq("conversation_id", conv.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
+          // Parallel fetch for last message and profile
+          const [{ data: lastMsg }, { data: profile }] = await Promise.all([
+            supabase
+              .from("messages")
+              .select("*")
+              .eq("conversation_id", conv.id)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle(),
+            supabase
+              .from("user_profiles")
+              .select("*")
+              .eq("id", otherUserId)
+              .maybeSingle(),
+          ]);
 
           return {
             id: conv.id,
             otherUserId,
+            otherProfile: profile,
             lastMessage: lastMsg || {
               content: "No messages yet",
               created_at: conv.created_at,
