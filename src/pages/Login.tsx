@@ -23,7 +23,6 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -143,8 +142,6 @@ const Login = () => {
                   className="pl-10 pr-10"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  onFocus={() => setIsPasswordFocused(true)}
-                  onBlur={() => setIsPasswordFocused(false)}
                   disabled={isLoading}
                 />
                 <button
@@ -159,44 +156,6 @@ const Login = () => {
                   )}
                 </button>
               </div>
-
-              {isPasswordFocused && (
-                <div className="text-xs space-y-1 mt-2 p-2 bg-muted/50 rounded-md animate-in fade-in slide-in-from-top-1 duration-200">
-                  <p className="font-medium mb-1">Password must contain:</p>
-                  <div
-                    className={`flex items-center gap-2 ${password.length >= 8 ? "text-green-600" : "text-muted-foreground"}`}
-                  >
-                    <div
-                      className={`w-1.5 h-1.5 rounded-full ${password.length >= 8 ? "bg-green-600" : "bg-gray-300"}`}
-                    />
-                    At least 8 characters
-                  </div>
-                  <div
-                    className={`flex items-center gap-2 ${/[A-Z]/.test(password) ? "text-green-600" : "text-muted-foreground"}`}
-                  >
-                    <div
-                      className={`w-1.5 h-1.5 rounded-full ${/[A-Z]/.test(password) ? "bg-green-600" : "bg-gray-300"}`}
-                    />
-                    One uppercase letter
-                  </div>
-                  <div
-                    className={`flex items-center gap-2 ${/[a-z]/.test(password) ? "text-green-600" : "text-muted-foreground"}`}
-                  >
-                    <div
-                      className={`w-1.5 h-1.5 rounded-full ${/[a-z]/.test(password) ? "bg-green-600" : "bg-gray-300"}`}
-                    />
-                    One lowercase letter
-                  </div>
-                  <div
-                    className={`flex items-center gap-2 ${/[^a-zA-Z0-9]/.test(password) ? "text-green-600" : "text-muted-foreground"}`}
-                  >
-                    <div
-                      className={`w-1.5 h-1.5 rounded-full ${/[^a-zA-Z0-9]/.test(password) ? "bg-green-600" : "bg-gray-300"}`}
-                    />
-                    One special character
-                  </div>
-                </div>
-              )}
 
               <div className="text-right mt-1">
                 <Link

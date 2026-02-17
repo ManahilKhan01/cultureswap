@@ -141,7 +141,7 @@ const Dashboard = () => {
       value: "0",
       icon: Users,
       trend: "",
-      path: "/swaps",
+      path: "/swaps?tab=completed",
     },
     {
       label: "Average Rating",
@@ -271,7 +271,7 @@ const Dashboard = () => {
           value: completedCount.toString(),
           icon: Users,
           trend: `+${userSwaps.length - completedCount} active`,
-          path: "/swaps",
+          path: "/swaps?tab=completed",
         },
         {
           label: "Average Rating",

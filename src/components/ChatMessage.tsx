@@ -37,16 +37,10 @@ export const ChatMessage = ({
   const displayName = isMe ? "Me" : senderProfile?.full_name || "User";
 
   return (
-    <div
-      className={`flex flex-col mb-6 group animate-in fade-in slide-in-from-bottom-2 duration-300 w-full ${isMe ? "items-end" : "items-start"}`}
-    >
+    <div className="flex flex-col mb-6 group animate-in fade-in slide-in-from-bottom-2 duration-300 w-full items-start">
       {/* Sender Info Table (Avatar + Name + Timestamp) */}
-      <div
-        className={`flex items-center justify-between mb-1.5 w-full ${isMe ? "flex-row-reverse" : "flex-row"}`}
-      >
-        <div
-          className={`flex items-center gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}
-        >
+      <div className="flex items-center justify-between mb-1.5 w-full flex-row">
+        <div className="flex items-center gap-2 flex-row">
           <div className="relative">
             <img
               src={getCacheBustedImageUrl(senderProfile?.profile_image_url)}
@@ -71,15 +65,13 @@ export const ChatMessage = ({
       </div>
 
       {/* Message Content Container */}
-      <div
-        className={`max-w-[85%] md:max-w-[70%] relative flex flex-col ${isMe ? "items-end" : "items-start"}`}
-      >
+      <div className="max-w-[85%] md:max-w-[70%] relative flex flex-col items-start">
         {/* Text Content */}
         {message.content && message.content.trim() && (
           <div
             className={`relative rounded-2xl px-4 py-3 shadow-sm ${
               isMe
-                ? "bg-terracotta text-white rounded-tr-none"
+                ? "bg-terracotta text-white rounded-tl-none"
                 : `border rounded-tl-none ${isAssistant ? "bg-blue-50 border-blue-100 text-foreground" : "bg-white border-border/40 text-foreground"}`
             }`}
           >
@@ -91,9 +83,7 @@ export const ChatMessage = ({
 
         {/* Attachments Section */}
         {attachments.length > 0 && (
-          <div
-            className={`mt-3 space-y-3 flex flex-col ${isMe ? "items-end" : "items-start"}`}
-          >
+          <div className="mt-3 space-y-3 flex flex-col items-start">
             {attachments.length > 1 && onDownloadAll && (
               <Button
                 variant="outline"

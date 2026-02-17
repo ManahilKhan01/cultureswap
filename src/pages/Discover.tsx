@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   Search,
@@ -112,9 +112,7 @@ const DiscoverSkeleton = () => (
 const Discover = () => {
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState(
-    searchParams.get("category") || "all",
-  );
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedFormat, setSelectedFormat] = useState("all");
   const [sortBy, setSortBy] = useState("match");
   const [swaps, setSwaps] = useState<SwapWithProfile[]>([]);
@@ -123,6 +121,15 @@ const Discover = () => {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Initialize from URL param if present
+  useEffect(() => {
+    const categoryParam = searchParams.get("category");
+    if (categoryParam) {
+      setSelectedCategory(categoryParam);
+    }
+  }, [searchParams]);
 
   // Load swaps from database on component mount
   useEffect(() => {
@@ -139,7 +146,13 @@ const Discover = () => {
 
         // 1. Fetch basic swaps FIRST (Very Fast)
         const allSwaps = await swapService.getAllSwaps();
-        setSwaps(allSwaps.map((s) => ({ ...s, rating: 0 })));
+
+        // Filter out current user's swaps (Show only OTHER users' swaps)
+        const otherUsersSwaps = user
+          ? allSwaps.filter((s) => s.user_id !== user.id)
+          : allSwaps;
+
+        setSwaps(otherUsersSwaps.map((s) => ({ ...s, rating: 0 })));
         setLoading(false); // Show cards immediately!
 
         // 2. Fetch profiles and ratings in background (Slower)
@@ -218,6 +231,22 @@ const Discover = () => {
     };
   }, []);
 
+  const selectCategory = (category: string) => {
+    setSelectedCategory((prev) => (prev === category ? "all" : category));
+  };
+
+  const scroll = (direction: "left" | "right") => {
+    if (scrollRef.current) {
+      const { current } = scrollRef;
+      const scrollAmount = 300;
+      if (direction === "left") {
+        current.scrollBy({ left: -scrollAmount, behavior: "smooth" });
+      } else {
+        current.scrollBy({ left: scrollAmount, behavior: "smooth" });
+      }
+    }
+  };
+
   const filteredSwaps = swaps.filter((swap) => {
     const profile = profilesMap[swap.user_id];
 
@@ -228,7 +257,10 @@ const Discover = () => {
       !searchQuery ||
       (profile?.city?.toLowerCase() || "").includes(searchTerms) ||
       (profile?.country?.toLowerCase() || "").includes(searchTerms) ||
-      (swap.format?.toLowerCase() || "").includes(searchTerms);
+      (swap.format?.toLowerCase() || "").includes(searchTerms) ||
+      (swap.title?.toLowerCase() || "").includes(searchTerms) ||
+      (swap.skill_offered?.toLowerCase() || "").includes(searchTerms) ||
+      (swap.skill_wanted?.toLowerCase() || "").includes(searchTerms);
 
     const matchesCategory =
       selectedCategory === "all" ||
@@ -242,6 +274,7 @@ const Discover = () => {
 
   const sortedSwaps = [...filteredSwaps].sort((a, b) => {
     if (sortBy === "match") {
+      // Prioritize matches from selected category if any
       if (selectedCategory !== "all") {
         const aMatches =
           a.category?.toLowerCase() === selectedCategory.toLowerCase() ? 1 : 0;
@@ -294,6 +327,57 @@ const Discover = () => {
   return (
     <>
       <main className="w-full px-4 md:px-8 py-8">
+        {/* Category Scroller (Minimalist) */}
+        <div className="mb-6">
+          <div className="relative group flex items-center border-b border-border/50 pb-4">
+            <button
+              onClick={() => scroll("left")}
+              className="absolute left-0 z-10 p-1 bg-background/80 hover:bg-muted/50 rounded-full hidden md:flex items-center justify-center transition-all bg-background"
+              aria-label="Scroll left"
+            >
+              <ChevronLeft className="h-5 w-5 text-muted-foreground" />
+            </button>
+
+            <div
+              ref={scrollRef}
+              className="flex items-center gap-8 overflow-x-auto scrollbar-hide px-10 w-full scroll-smooth"
+            >
+              <button
+                onClick={() => setSelectedCategory("all")}
+                className={`whitespace-nowrap text-sm font-medium transition-colors ${
+                  selectedCategory === "all"
+                    ? "text-terracotta"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                All Categories
+              </button>
+
+              {skillCategories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => selectCategory(cat.name)}
+                  className={`whitespace-nowrap text-sm font-medium transition-colors ${
+                    selectedCategory === cat.name
+                      ? "text-terracotta"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => scroll("right")}
+              className="absolute right-0 z-10 p-1 bg-background/80 hover:bg-muted/50 rounded-full hidden md:flex items-center justify-center transition-all bg-background"
+              aria-label="Scroll right"
+            >
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </div>
+        </div>
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="font-display text-3xl font-bold mb-2">
@@ -305,85 +389,81 @@ const Discover = () => {
         </div>
 
         {/* Search and Filters */}
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by location (Onsite, In-person, Hybrid)"
-              className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+        <div className="flex flex-col gap-6 mb-8">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by title, skill, or location"
+                className="pl-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
 
-          <div className="flex gap-2">
-            <Select
-              value={selectedCategory}
-              onValueChange={setSelectedCategory}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {skillCategories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.name}>
-                    {cat.icon} {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Select value={selectedFormat} onValueChange={setSelectedFormat}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Location Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Locations</SelectItem>
+                  <SelectItem value="online">Online</SelectItem>
+                  <SelectItem value="in-person">In-Person</SelectItem>
+                  <SelectItem value="hybrid">Hybrid</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="match">Best Match</SelectItem>
-                <SelectItem value="rating">Highest Rated</SelectItem>
-                <SelectItem value="recent">Most Recent</SelectItem>
-              </SelectContent>
-            </Select>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="match">Best Match</SelectItem>
+                  <SelectItem value="rating">Highest Rated</SelectItem>
+                  <SelectItem value="recent">Most Recent</SelectItem>
+                </SelectContent>
+              </Select>
 
-            {/* Mobile Filters */}
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="icon" className="md:hidden">
-                  <SlidersHorizontal className="h-4 w-4" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent>
-                <SheetHeader>
-                  <SheetTitle>Filters</SheetTitle>
-                </SheetHeader>
-                <div className="space-y-6 mt-6">
-                  <div className="space-y-3">
-                    <Label>Format</Label>
-                    <div className="space-y-2">
-                      {["all", "online", "in-person", "both"].map((format) => (
-                        <div
-                          key={format}
-                          className="flex items-center space-x-2"
-                        >
-                          <Checkbox
-                            id={format}
-                            checked={selectedFormat === format}
-                            onCheckedChange={() => setSelectedFormat(format)}
-                          />
-                          <Label htmlFor={format} className="capitalize">
-                            {format === "all" ? "All Formats" : format}
-                          </Label>
-                        </div>
-                      ))}
+              {/* Mobile Filters */}
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon" className="md:hidden">
+                    <SlidersHorizontal className="h-4 w-4" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent>
+                  <SheetHeader>
+                    <SheetTitle>Filters</SheetTitle>
+                  </SheetHeader>
+                  <div className="space-y-6 mt-6">
+                    <div className="space-y-3">
+                      <Label>Categories</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {skillCategories.map((cat) => (
+                          <Badge
+                            key={cat.id}
+                            variant={
+                              selectedCategory === cat.name
+                                ? "default"
+                                : "outline"
+                            }
+                            className="cursor-pointer"
+                            onClick={() => selectCategory(cat.name)}
+                          >
+                            {cat.name}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </SheetContent>
-            </Sheet>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
         </div>
 
-        {/* Active Filters */}
+        {/* Active Filters Summary */}
         {hasActiveFilters && (
           <div className="flex items-center gap-2 mb-6 flex-wrap">
             <span className="text-sm text-muted-foreground">
@@ -398,7 +478,7 @@ const Discover = () => {
               </Badge>
             )}
             {selectedCategory !== "all" && (
-              <Badge variant="secondary" className="gap-1 capitalize">
+              <Badge variant="secondary" className="gap-1">
                 {selectedCategory}
                 <button onClick={() => setSelectedCategory("all")}>
                   <X className="h-3 w-3" />

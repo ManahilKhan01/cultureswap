@@ -467,9 +467,18 @@ const Messages = () => {
       let profilesUpdated = false;
 
       allConversations.forEach((conv) => {
-        if (conv.otherProfile && !newProfiles[conv.otherUserId]) {
-          newProfiles[conv.otherUserId] = conv.otherProfile;
-          profilesUpdated = true;
+        const existingProfile = newProfiles[conv.otherUserId];
+        const newProfile = conv.otherProfile;
+
+        if (newProfile) {
+          // Update if missing or if the new one has a name and the old one doesn't
+          if (
+            !existingProfile ||
+            (newProfile.full_name && !existingProfile.full_name)
+          ) {
+            newProfiles[conv.otherUserId] = newProfile;
+            profilesUpdated = true;
+          }
         }
       });
 
@@ -535,10 +544,10 @@ const Messages = () => {
           // 1. Instantly check profile from local state/cache first
           let profile = userProfiles[userIdParam];
 
-          // 2. Initial parallel batch: Load Conversation ID and Profile (if missing)
+          // 2. Initial parallel batch: Load Conversation ID and Profile (if missing or incomplete)
           const [convId, fetchedProfile] = await Promise.all([
             messageService.getOrCreateConversation(currentUser.id, userIdParam),
-            !profile
+            !profile || !profile.full_name
               ? profileService.getProfile(userIdParam)
               : Promise.resolve(null),
           ]);
@@ -1642,7 +1651,7 @@ const Messages = () => {
                           return (
                             <div
                               key={message.id}
-                              className={`flex ${isMe ? "justify-end" : "justify-start"} mb-6 animate-in fade-in slide-in-from-bottom-2`}
+                              className="flex justify-start mb-6 animate-in fade-in slide-in-from-bottom-2"
                             >
                               <div className="max-w-[85%] md:max-w-[70%]">
                                 <OfferCard

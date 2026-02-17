@@ -47,13 +47,13 @@ const ForgotPassword = () => {
         {/* Logo */}
         <Link to="/" className="flex items-center justify-center gap-2 mb-8">
           <img 
-            src="/Logo_1_svg.svg" 
+            src="../public/logo.svg" 
             alt="CultureSwap Logo" 
-            className="h-10 w-10 object-contain"
+            className="h-40 w-40 object-contain"
           />
-          <span className="font-display text-2xl font-semibold text-foreground">
+          {/* <span className="font-display text-2xl font-semibold text-foreground">
             CultureSwap
-          </span>
+          </span> */}
         </Link>
 
         <Card className="animate-fade-in">

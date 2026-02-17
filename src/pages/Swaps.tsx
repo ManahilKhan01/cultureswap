@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -131,7 +131,12 @@ const Swaps = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [activeTab, setActiveTab] = useState("active");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "active";
+
+  const handleTabChange = (value: string) => {
+    setSearchParams({ tab: value });
+  };
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [cancellingSwapId, setCancellingSwapId] = useState<string | null>(null);
@@ -163,7 +168,12 @@ const Swaps = () => {
 
         // Fetch all swaps where user is owner or partner
         const userSwaps = await swapService.getUserSwapsWithPartner(user.id);
-        setSwaps(userSwaps);
+
+        // Explicitly filter to ensure data isolation (frontend safeguard)
+        const verifiedSwaps = userSwaps.filter(
+          (s) => s.user_id === user.id || s.partner_id === user.id,
+        );
+        setSwaps(verifiedSwaps);
 
         // Load profiles for all users involved in swaps
         const userIds = new Set<string>();
@@ -566,7 +576,7 @@ const Swaps = () => {
         {/* Tabs */}
         <Tabs
           value={activeTab}
-          onValueChange={setActiveTab}
+          onValueChange={handleTabChange}
           className="space-y-6"
         >
           <TabsList className="bg-muted/50 flex-wrap h-auto">
