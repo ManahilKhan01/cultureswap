@@ -58,26 +58,42 @@ interface SwapWithProfile {
 
 const DiscoverSkeleton = () => (
   <div className="min-h-screen bg-background">
-    <main className="container mx-auto px-4 py-8">
-      {/* Skeleton Header */}
-      <div className="mb-8 space-y-4">
-        <div className="h-10 w-64 bg-muted rounded animate-pulse" />
-        <div className="h-4 w-96 bg-muted rounded animate-pulse" />
-      </div>
-
-      {/* Skeleton Filters */}
-      <div className="flex flex-col md:flex-row gap-4 mb-8">
-        <div className="h-10 flex-1 bg-muted rounded animate-pulse" />
-        <div className="flex gap-2">
-          <div className="h-10 w-44 bg-muted rounded animate-pulse" />
-          <div className="h-10 w-36 bg-muted rounded animate-pulse" />
+    <main className="w-full px-4 md:px-8 pb-8 pt-2">
+      {/* Category Scroller Skeleton */}
+      <div className="mb-6">
+        <div className="flex items-center gap-8 px-10 border-b border-border/50 pb-4 overflow-hidden">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
+            <div
+              key={i}
+              className="h-5 w-24 bg-muted rounded animate-pulse shrink-0"
+            />
+          ))}
         </div>
       </div>
 
-      {/* Skeleton Results Count */}
+      {/* Header Skeleton */}
+      <div className="mb-8">
+        <div className="h-9 w-64 bg-muted rounded animate-pulse mb-2" />
+        <div className="h-5 w-96 bg-muted rounded animate-pulse" />
+      </div>
+
+      {/* Search and Filters Skeleton */}
+      <div className="flex flex-col gap-6 mb-8">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1">
+            <div className="h-10 w-full bg-muted rounded animate-pulse" />
+          </div>
+          <div className="flex gap-2">
+            <div className="h-10 w-[180px] bg-muted rounded animate-pulse" />
+            <div className="h-10 w-[150px] bg-muted rounded animate-pulse" />
+          </div>
+        </div>
+      </div>
+
+      {/* Results Count Skeleton */}
       <div className="h-4 w-32 bg-muted rounded mb-6 animate-pulse" />
 
-      {/* Skeleton Grid */}
+      {/* Grid Skeleton */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <Card key={i} className="overflow-hidden border-border/50">
@@ -122,6 +138,22 @@ const Discover = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(true);
+
+  const checkScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setShowLeftArrow(scrollLeft > 0);
+      setShowRightArrow(Math.ceil(scrollLeft + clientWidth) < scrollWidth);
+    }
+  };
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener("resize", checkScroll);
+    return () => window.removeEventListener("resize", checkScroll);
+  }, []);
 
   // Initialize from URL param if present
   useEffect(() => {
@@ -244,6 +276,8 @@ const Discover = () => {
       } else {
         current.scrollBy({ left: scrollAmount, behavior: "smooth" });
       }
+      // Check scroll after animation
+      setTimeout(checkScroll, 300);
     }
   };
 
@@ -326,21 +360,24 @@ const Discover = () => {
 
   return (
     <>
-      <main className="w-full px-4 md:px-8 py-8">
+      <main className="w-full px-4 md:px-8 pb-8 pt-2">
         {/* Category Scroller (Minimalist) */}
         <div className="mb-6">
           <div className="relative group flex items-center border-b border-border/50 pb-4">
-            <button
-              onClick={() => scroll("left")}
-              className="absolute left-0 z-10 p-1 bg-background/80 hover:bg-muted/50 rounded-full hidden md:flex items-center justify-center transition-all bg-background"
-              aria-label="Scroll left"
-            >
-              <ChevronLeft className="h-5 w-5 text-muted-foreground" />
-            </button>
+            {showLeftArrow && (
+              <button
+                onClick={() => scroll("left")}
+                className="absolute left-0 z-10 p-1 bg-background/80 hover:bg-muted/50 rounded-full hidden md:flex items-center justify-center transition-all bg-background border border-border/50 shadow-sm"
+                aria-label="Scroll left"
+              >
+                <ChevronLeft className="h-5 w-5 text-muted-foreground" />
+              </button>
+            )}
 
             <div
               ref={scrollRef}
-              className="flex items-center gap-8 overflow-x-auto scrollbar-hide px-10 w-full scroll-smooth"
+              onScroll={checkScroll}
+              className="flex items-center gap-8 overflow-x-auto px-10 w-full scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
             >
               <button
                 onClick={() => setSelectedCategory("all")}
@@ -368,13 +405,15 @@ const Discover = () => {
               ))}
             </div>
 
-            <button
-              onClick={() => scroll("right")}
-              className="absolute right-0 z-10 p-1 bg-background/80 hover:bg-muted/50 rounded-full hidden md:flex items-center justify-center transition-all bg-background"
-              aria-label="Scroll right"
-            >
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </button>
+            {showRightArrow && (
+              <button
+                onClick={() => scroll("right")}
+                className="absolute right-0 z-10 p-1 bg-background/80 hover:bg-muted/50 rounded-full hidden md:flex items-center justify-center transition-all bg-background border border-border/50 shadow-sm"
+                aria-label="Scroll right"
+              >
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </button>
+            )}
           </div>
         </div>
 

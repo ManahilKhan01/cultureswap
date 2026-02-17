@@ -214,10 +214,11 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                 <Link
                   key={link.name}
                   to={link.href}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive(link.href)
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive(link.href)
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                    }`}
+                  }`}
                 >
                   {link.name}
                 </Link>
@@ -260,7 +261,7 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                               conversationProfiles[conv.otherUserId];
                             const isUnread =
                               conv.lastMessage?.receiver_id ===
-                              currentUser?.id && !conv.lastMessage?.read;
+                                currentUser?.id && !conv.lastMessage?.read;
                             const isAssistant =
                               profile?.full_name
                                 ?.toLowerCase()
@@ -284,7 +285,9 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                                     }
                                   }
                                   // Force navigation even if on same page to ensure params update
-                                  navigate(`/messages?user=${conv.otherUserId}`);
+                                  navigate(
+                                    `/messages?user=${conv.otherUserId}`,
+                                  );
                                 }}
                               >
                                 <div className="flex items-start gap-3 w-full">
@@ -392,8 +395,14 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                                 ),
                               );
                               // Navigate to the appropriate location based on notification data
-                              const notifData = notification.data || notification.metadata || {};
-                              if (notifData.conversation_id || notifData.user_id) {
+                              const notifData =
+                                notification.data ||
+                                notification.metadata ||
+                                {};
+                              if (
+                                notifData.conversation_id ||
+                                notifData.user_id
+                              ) {
                                 // For offers and messages with conversation context
                                 navigate(
                                   `/messages?user=${notification.sender_id || notifData.user_id}`,
@@ -480,7 +489,10 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                 {/* User Menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="gap-2 pl-2 pr-3">
+                    <Button
+                      variant="ghost"
+                      className="rounded-full h-8 w-8 p-0"
+                    >
                       <div className="relative">
                         <img
                           key={userImageUrl}
@@ -490,11 +502,17 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                         />
                         <StatusDot displayStatus="online" size="sm" />
                       </div>
-                      <span className="text-sm font-medium">{userName}</span>
-                      <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
+                    <div className="flex flex-col space-y-1 p-2 border-b border-border/50 mb-1">
+                      <p className="font-medium text-sm leading-none">
+                        {profile?.full_name || userName}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {currentUser?.email}
+                      </p>
+                    </div>
                     <DropdownMenuItem asChild>
                       <Link to="/profile" className="gap-2">
                         <User className="h-4 w-4" />
@@ -560,10 +578,11 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                       <Link
                         to="/messages"
                         onClick={() => setIsOpen(false)}
-                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors flex items-center justify-between ${isActive("/messages")
+                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors flex items-center justify-between ${
+                          isActive("/messages")
                             ? "bg-primary/10 text-primary"
                             : "text-foreground hover:bg-muted"
-                          }`}
+                        }`}
                       >
                         <div className="flex items-center gap-3">
                           <MessageCircle className="h-5 w-5" />
@@ -579,10 +598,11 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                       <Link
                         to="/notifications"
                         onClick={() => setIsOpen(false)}
-                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors flex items-center justify-between ${isActive("/notifications")
+                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors flex items-center justify-between ${
+                          isActive("/notifications")
                             ? "bg-primary/10 text-primary"
                             : "text-foreground hover:bg-muted"
-                          }`}
+                        }`}
                       >
                         <div className="flex items-center gap-3">
                           <Bell className="h-5 w-5" />
@@ -603,10 +623,11 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                         key={link.name}
                         to={link.href}
                         onClick={() => setIsOpen(false)}
-                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors ${isActive(link.href)
+                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors ${
+                          isActive(link.href)
                             ? "bg-primary/10 text-primary"
                             : "text-foreground hover:bg-muted"
-                          }`}
+                        }`}
                       >
                         {link.name}
                       </Link>
