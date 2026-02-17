@@ -26,7 +26,20 @@ export const sessionService = {
 
             if (meetError) {
                 console.error('Edge Function Error:', meetError);
-                throw new Error('Failed to generate Google Meet link. Please ensure your Google Calendar is connected in Settings.');
+                // Extract the specific error message if available, otherwise use a generic one
+                // The edge function returns: { error: "Main error message", details: "..." }
+                // Supabase might wrap this in its own error structure depending on how invoke is called and fails
+                // But usually for 4xx/5xx responses that return JSON, we might need to parse it if Supabase doesn't automatically
+
+                // If meetError is an object with a message, use it.
+                const errorMessage = meetError.message || meetError.toString();
+
+                // If the error message suggests a connection issue, guide the user
+                if (errorMessage.includes("Google account not connected") || errorMessage.includes("reconnect")) {
+                    throw new Error(errorMessage);
+                }
+
+                throw new Error(`Failed to generate Google Meet link: ${errorMessage}`);
             }
 
             if (!meetData || !meetData.meetLink) {

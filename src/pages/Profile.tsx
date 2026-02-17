@@ -682,8 +682,21 @@ const Profile = () => {
                         </span>
                       </div>
                     </div>
+                  </div>
+                  <div className="flex gap-2">
                     {isGoogleConnected ? (
-                      <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">Active</Badge>
+                      <>
+                        <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">Active</Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                          onClick={handleConnectGoogle}
+                          title="Reconnect Google Calendar if you are having issues"
+                        >
+                          Reconnect
+                        </Button>
+                      </>
                     ) : (
                       <Button variant="outline" size="sm" className="h-7 text-xs" onClick={handleConnectGoogle}>
                         Connect
@@ -737,7 +750,7 @@ const Profile = () => {
             </div>
           </div>
         )}
-      </main>
+      </main >
     </>
   );
 };
