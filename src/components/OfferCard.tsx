@@ -12,6 +12,7 @@ import {
   Handshake,
   MapPin,
   Monitor,
+  Undo2,
 } from "lucide-react";
 import { offerService, Offer } from "@/lib/offerService";
 import { useToast } from "@/hooks/use-toast";
@@ -46,6 +47,7 @@ export const OfferCard = ({
   const [loading, setLoading] = useState(!initialOffer && !!offerId);
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
 
   // Fetch offer on mount or when refreshTrigger changes
   useEffect(() => {
@@ -88,7 +90,6 @@ export const OfferCard = ({
       offerIdToWatch,
       (payload) => {
         if (payload.new && payload.new.id === offerIdToWatch) {
-          console.log("Offer status updated in real-time:", payload.new.status);
           setOffer(payload.new as Offer);
           onOfferUpdated?.();
         }
@@ -118,8 +119,10 @@ export const OfferCard = ({
   }
 
   const isReceiver = offer.receiver_id === currentUserId;
+  const isSender = offer.sender_id === currentUserId;
   const isPending = offer.status === "pending";
   const canRespond = isReceiver && isPending;
+  const canWithdraw = isSender && isPending;
 
   const handleAccept = async () => {
     try {
@@ -158,6 +161,26 @@ export const OfferCard = ({
       });
     } finally {
       setRejecting(false);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    try {
+      setWithdrawing(true);
+      await offerService.withdrawOffer(offer.id);
+      toast({
+        title: "Offer Withdrawn",
+        description: "Your offer has been withdrawn.",
+      });
+      onOfferUpdated?.();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to withdraw offer",
+        variant: "destructive",
+      });
+    } finally {
+      setWithdrawing(false);
     }
   };
 
@@ -203,11 +226,8 @@ export const OfferCard = ({
           : "border-neutral-200 bg-neutral-50/50"
       }`}
     >
-      <div className="bg-terracotta text-white px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold font-display">swap offer</span>
-        </div>
-        {getStatusBadge()}
+      <div className="bg-terracotta text-white px-4 py-2 flex items-center">
+        <span className="text-xs font-bold font-display">swap offer</span>
       </div>
 
       <CardContent className="p-4 space-y-4">
@@ -345,14 +365,51 @@ export const OfferCard = ({
           </div>
         )}
 
-        {!isReceiver && isPending && (
-          <div className="flex items-center justify-center gap-2 py-1">
-            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-            <span className="text-[11px] text-muted-foreground font-medium italic">
-              Awaiting response...
-            </span>
+        {/* Status footer */}
+        <div className="flex items-center justify-between pt-1 border-t border-border/40">
+          <div className="flex items-center gap-2">
+            {offer.status === "pending" && (
+              <>
+                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                <span className="text-[11px] text-amber-600 font-semibold uppercase tracking-wide">
+                  Pending
+                </span>
+              </>
+            )}
+            {offer.status === "accepted" && (
+              <>
+                <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                <span className="text-[11px] text-green-600 font-semibold uppercase tracking-wide">
+                  Accepted
+                </span>
+              </>
+            )}
+            {offer.status === "rejected" && (
+              <>
+                <XCircle className="h-3.5 w-3.5 text-red-400" />
+                <span className="text-[11px] text-red-500 font-semibold uppercase tracking-wide">
+                  Declined
+                </span>
+              </>
+            )}
           </div>
-        )}
+          {canWithdraw && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2.5 text-xs text-muted-foreground hover:text-red-500 hover:bg-red-50 gap-1.5"
+              onClick={handleWithdraw}
+              disabled={withdrawing}
+            >
+              {withdrawing ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Undo2 className="h-3 w-3" />
+              )}
+              Withdraw
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

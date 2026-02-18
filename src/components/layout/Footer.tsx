@@ -94,16 +94,16 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="bg-navy text-white w-full">
+    <footer className="bg-white text-foreground w-full border-t-[2px] border-terracotta/20 relative">
       {/* Newsletter Section */}
-      <div className="border-b border-white/10">
+      <div className="border-b border-muted/20">
         <div className="container mx-auto px-3 sm:px-4 md:px-6 py-8 sm:py-10 md:py-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="text-center md:text-left">
               <h3 className="font-display text-2xl font-semibold mb-2">
                 Stay Connected
               </h3>
-              <p className="text-white/70">
+              <p className="text-muted-foreground">
                 Get weekly tips on skill exchange and cultural learning
               </p>
             </div>
@@ -113,7 +113,7 @@ const Footer = () => {
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 w-full sm:min-w-[240px] md:w-72"
+                className="bg-muted/10 border-muted text-foreground placeholder:text-muted-foreground w-full sm:min-w-[240px] md:w-72"
               />
               <Button
                 variant="terracotta"
@@ -133,15 +133,31 @@ const Footer = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {Object.entries(footerLinks).map(([category, links]) => (
             <div key={category}>
-              <h4 className="font-semibold mb-4 text-white capitalize">{category}</h4>
+              <h4 className="font-semibold mb-4 text-foreground capitalize">
+                {category}
+              </h4>
               <ul className="space-y-2">
                 {links.map((link) => (
                   <li key={link.name}>
                     <Link
                       to={link.href}
-                      className="text-white/60 hover:text-terracotta transition-colors text-sm"
+                      className="text-muted-foreground hover:text-terracotta transition-colors text-sm"
                       onClick={(e) => {
-                        const commonPlaceholders = ['/how-it-works', '/stories', '/support', '/safety', '/faq', '/cookies', '/guidelines', '/careers', '/press', '/blog', '/contact', '/privacy', '/terms'];
+                        const commonPlaceholders = [
+                          "/how-it-works",
+                          "/stories",
+                          "/support",
+                          "/safety",
+                          "/faq",
+                          "/cookies",
+                          "/guidelines",
+                          "/careers",
+                          "/press",
+                          "/blog",
+                          "/contact",
+                          "/privacy",
+                          "/terms",
+                        ];
 
                         if (commonPlaceholders.includes(link.href)) {
                           e.preventDefault();
@@ -162,9 +178,9 @@ const Footer = () => {
         </div>
       </div>
       {/* Bottom Bar */}
-      <div className="border-t border-white/10">
+      <div className="border-t border-muted/20">
         <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-5 md:py-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/60">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
             <p>
               © {new Date().getFullYear()} CultureSwap. All rights reserved.
             </p>

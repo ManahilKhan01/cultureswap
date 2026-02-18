@@ -237,25 +237,7 @@ const Settings = () => {
     }
   };
 
-  const testConnectivity = async () => {
-    try {
-      console.log("DEBUG - Testing Supabase connectivity...");
-      const { data, error } = await supabase
-        .from("timezones")
-        .select("count", { count: "exact", head: true });
-      if (error) throw error;
-      alert("Connectivity Test: SUCCESS! Connected to Supabase.");
-    } catch (err: any) {
-      console.error("DEBUG - Connectivity Test FAILED:", err);
-      alert("Connectivity Test: FAILED! " + err.message);
-    }
-  };
-
   const handleProfileSave = async (skipImage: boolean = false) => {
-    console.log(
-      `DEBUG - handleProfileSave triggered (skipImage: ${skipImage})`,
-    );
-
     // Validate Name
     const nameError = validateName(profile.name);
     if (nameError) {
@@ -276,7 +258,6 @@ const Settings = () => {
       } = await supabase.auth.getUser();
 
       if (userError || !user) {
-        console.error("DEBUG - Auth Error:", userError);
         toast({
           title: "Authentication Error",
           description: "Your session has expired. Please log in again.",
@@ -286,24 +267,15 @@ const Settings = () => {
         return;
       }
 
-      console.log("DEBUG - User authenticated:", user.id);
-
       // Handle image upload FIRST if not skipped
       if (!skipImage && imageFile) {
-        console.log("DEBUG - Uploading image file...");
         try {
-          const uploadedProfile =
-            await profileService.uploadAndUpdateProfileImage(
-              user.id,
-              imageFile,
-            );
-          console.log("DEBUG - Image uploaded successfully:", uploadedProfile);
-
+          await profileService.uploadAndUpdateProfileImage(user.id, imageFile);
           // Image is already updated in the database via uploadAndUpdateProfileImage
           // Clear the imageFile so we don't try to upload it again
           setImageFile(null);
         } catch (imgError: any) {
-          console.error("DEBUG - Image upload error:", imgError);
+          console.error("Error uploading image:", imgError);
           toast({
             title: "Error",
             description:
@@ -334,7 +306,6 @@ const Settings = () => {
           : [],
       };
 
-      console.log("DEBUG - Starting database update (upsert)...");
       const { error: upsertErr } = await supabase.from("user_profiles").upsert({
         id: user.id,
         email: user.email,
@@ -343,11 +314,8 @@ const Settings = () => {
       });
 
       if (upsertErr) {
-        console.error("DEBUG - Upsert error:", upsertErr);
         throw upsertErr;
       }
-
-      console.log("DEBUG - Update successful");
 
       // Clear all profile-related caches
       clearProfileCaches();

@@ -38,7 +38,27 @@ import {
   MapPin,
   Monitor,
   Eye,
+  Info,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+const RequiredLabel = () => (
+  <TooltipProvider>
+    <Tooltip delayDuration={300}>
+      <TooltipTrigger asChild>
+        <span className="text-destructive ml-1 cursor-help">*</span>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>This field is required</p>
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
+);
 
 const CreateSwap = () => {
   const navigate = useNavigate();
@@ -58,6 +78,7 @@ const CreateSwap = () => {
     address: "",
     availability: "",
     preferences: "",
+    expiration: "4", // Default to 4 days
   });
 
   const handleChange = (
@@ -171,6 +192,9 @@ const CreateSwap = () => {
         category: formData.category,
         duration: formData.duration,
         format: formData.format,
+        expires_at: new Date(
+          Date.now() + parseInt(formData.expiration) * 24 * 60 * 60 * 1000,
+        ).toISOString(),
       };
 
       const swap = await swapService.createSwap(user.id, submitData);
@@ -229,10 +253,10 @@ const CreateSwap = () => {
               <ArrowLeft className="h-4 w-4" />
               <span className="text-sm font-medium">Exit Builder</span>
             </button>
-            <div className="text-sm font-bold text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
+            {/* <div className="text-sm font-bold text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
               Step <span className="text-primary">{currentStep}</span> of{" "}
               {totalSteps}
-            </div>
+            </div> */}
           </div>
 
           <div className="space-y-2">
@@ -240,7 +264,7 @@ const CreateSwap = () => {
               value={(currentStep / totalSteps) * 100}
               className="h-2"
             />
-            <div className="flex justify-between text-xs font-semibold text-muted-foreground uppercase tracking-widest px-1 font-display">
+            <div className="flex justify-between text-xs font-semibold text-muted-foreground  tracking-widest px-1 font-display">
               <span className={currentStep >= 1 ? "text-primary" : ""}>
                 Define
               </span>
@@ -262,27 +286,20 @@ const CreateSwap = () => {
           {currentStep === 1 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="mb-6">
-                <h1 className="text-3xl font-bold font-display flex items-center gap-3">
-                  <div className="p-2 bg-terracotta/10 rounded-lg">
-                    <Zap className="h-6 w-6 text-terracotta" />
-                  </div>
+                <h1 className="text-3xl font-bold font-display">
                   Define Your Swap
                 </h1>
                 <p className="text-muted-foreground mt-2">
-                  Start with the core of your exchange—what you bring and what
-                  you seek.
+                  Start with the core of your exchange. Share what you offer and
+                  what you’re looking to learn.
                 </p>
               </div>
 
               <Card className="border-2 border-warm-cream">
                 <CardContent className="pt-6 space-y-8">
                   <div className="space-y-3">
-                    <Label
-                      htmlFor="title"
-                      className="text-base font-semibold flex items-center gap-2"
-                    >
-                      <Sparkles className="h-4 w-4 text-golden" />
-                      Swap Title *
+                    <Label htmlFor="title" className="text-base font-semibold">
+                      Swap Title <RequiredLabel />
                     </Label>
                     <Input
                       id="title"
@@ -304,12 +321,9 @@ const CreateSwap = () => {
                     <div className="space-y-3">
                       <Label
                         htmlFor="skill_offered"
-                        className="text-base font-semibold flex items-center gap-2"
+                        className="text-base font-semibold"
                       >
-                        <div className="w-5 h-5 rounded-full bg-teal/10 flex items-center justify-center">
-                          <Check className="h-3 w-3 text-teal" />
-                        </div>
-                        I Can Teach *
+                        I Can Teach <RequiredLabel />
                       </Label>
                       <Input
                         id="skill_offered"
@@ -327,12 +341,9 @@ const CreateSwap = () => {
                     <div className="space-y-3">
                       <Label
                         htmlFor="skill_wanted"
-                        className="text-base font-semibold flex items-center gap-2"
+                        className="text-base font-semibold"
                       >
-                        <div className="w-5 h-5 rounded-full bg-golden/10 flex items-center justify-center text-golden text-[10px] font-bold">
-                          ?
-                        </div>
-                        I Want to Learn *
+                        I Want to Learn <RequiredLabel />
                       </Label>
                       <Input
                         id="skill_wanted"
@@ -356,10 +367,7 @@ const CreateSwap = () => {
           {currentStep === 2 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
               <div className="mb-6">
-                <h1 className="text-3xl font-bold font-display flex items-center gap-3">
-                  <div className="p-2 bg-teal/10 rounded-lg">
-                    <BookOpen className="h-6 w-6 text-teal" />
-                  </div>
+                <h1 className="text-3xl font-bold font-display">
                   Add More Context
                 </h1>
                 <p className="text-muted-foreground mt-2">
@@ -380,7 +388,8 @@ const CreateSwap = () => {
                     <Textarea
                       id="description"
                       name="description"
-                      placeholder="Briefly describe your experience level, what you can teach, and what you're looking for in a partner..."
+                      placeholder="Briefly state your experience level, the skill or cultural knowledge you can share, and the specific skill you want to learn through this exchange.
+"
                       value={formData.description}
                       onChange={handleChange}
                       rows={6}
@@ -409,7 +418,7 @@ const CreateSwap = () => {
                         htmlFor="category"
                         className="text-base font-semibold"
                       >
-                        Category *
+                        Category <RequiredLabel />
                       </Label>
                       <Select
                         value={formData.category}
@@ -430,7 +439,7 @@ const CreateSwap = () => {
 
                     <div className="space-y-3">
                       <Label className="text-base font-semibold">
-                        Preferred Format *
+                        Preferred Format <RequiredLabel />
                       </Label>
                       <div className="grid grid-cols-2 gap-2">
                         {formatOptions.map((opt) => (
@@ -465,10 +474,9 @@ const CreateSwap = () => {
                     <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                       <Label
                         htmlFor="address"
-                        className="text-base font-semibold flex items-center gap-2"
+                        className="text-base font-semibold"
                       >
-                        <MapPin className="h-4 w-4 text-terracotta" />
-                        Meeting Address *
+                        Meeting Address <RequiredLabel />
                       </Label>
                       <Input
                         id="address"
@@ -492,10 +500,7 @@ const CreateSwap = () => {
           {currentStep === 3 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
               <div className="mb-6">
-                <h1 className="text-3xl font-bold font-display flex items-center gap-3">
-                  <div className="p-2 bg-golden/10 rounded-lg">
-                    <Clock className="h-6 w-6 text-golden" />
-                  </div>
+                <h1 className="text-3xl font-bold font-display">
                   Scheduling & Logistics
                 </h1>
                 <p className="text-muted-foreground mt-2">
@@ -510,13 +515,13 @@ const CreateSwap = () => {
                       htmlFor="duration"
                       className="text-base font-semibold"
                     >
-                      Typical Session Duration *
+                      Typical Session Duration <RequiredLabel />
                     </Label>
                     <Select
                       value={formData.duration}
                       onValueChange={(v) => handleSelectChange("duration", v)}
                     >
-                      <SelectTrigger className="h-12">
+                      <SelectTrigger className="h-12 border-muted hover:border-terracotta/30 focus:border-terracotta">
                         <SelectValue placeholder="Select duration" />
                       </SelectTrigger>
                       <SelectContent>
@@ -531,10 +536,37 @@ const CreateSwap = () => {
 
                   <div className="space-y-3">
                     <Label
-                      htmlFor="availability"
-                      className="text-base font-semibold flex items-center gap-2"
+                      htmlFor="expiration"
+                      className="text-base font-semibold"
                     >
-                      <Calendar className="h-4 w-4 text-terracotta" />
+                      Swap Expiration <RequiredLabel />
+                    </Label>
+                    <Select
+                      value={formData.expiration}
+                      onValueChange={(v) => handleSelectChange("expiration", v)}
+                    >
+                      <SelectTrigger className="h-12 border-muted hover:border-terracotta/30 focus:border-terracotta">
+                        <SelectValue placeholder="Select expiration limit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 Day</SelectItem>
+                        <SelectItem value="2">2 Days</SelectItem>
+                        <SelectItem value="3">3 Days</SelectItem>
+                        <SelectItem value="4">4 Days (Max)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+                      <Clock className="h-3 w-3" />
+                      Swap will automatically expire and be removed after this
+                      limit.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label
+                      htmlFor="availability"
+                      className="text-base font-semibold"
+                    >
                       Availability
                     </Label>
                     <Textarea
@@ -573,10 +605,7 @@ const CreateSwap = () => {
           {currentStep === 4 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
               <div className="mb-6">
-                <h1 className="text-3xl font-bold font-display flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <Eye className="h-6 w-6 text-primary" />
-                  </div>
+                <h1 className="text-3xl font-bold font-display">
                   Preview & Publish
                 </h1>
                 <p className="text-muted-foreground mt-2">

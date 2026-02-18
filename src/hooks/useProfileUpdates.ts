@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import { profileService } from '@/lib/profileService';
-import { refreshImageCache } from '@/lib/cacheUtils';
+import { useEffect, useState, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import { profileService } from "@/lib/profileService";
+import { refreshImageCache } from "@/lib/cacheUtils";
 
 interface ProfileData {
   id: string;
@@ -46,7 +46,7 @@ export const useProfileUpdates = (userId: string | null) => {
         return parsed;
       }
     } catch (e) {
-      console.warn('Error reading profile from localStorage:', e);
+      // Silent
     }
 
     return null;
@@ -77,18 +77,19 @@ export const useProfileUpdates = (userId: string | null) => {
         try {
           localStorage.setItem(`profile_cache_${userId}`, JSON.stringify(data));
           // Backward compatibility for Navbar
-          localStorage.setItem('navbar_profile_cache', JSON.stringify(data));
+          localStorage.setItem("navbar_profile_cache", JSON.stringify(data));
         } catch (e) {
-          console.warn('Error saving profile to localStorage:', e);
+          // Silent
         }
       }
 
       setError(null);
     } catch (err) {
-      console.error('Error fetching profile:', err);
       // Don't override existing profile on error if we have one
       if (!profile) {
-        setError(err instanceof Error ? err : new Error('Failed to fetch profile'));
+        setError(
+          err instanceof Error ? err : new Error("Failed to fetch profile"),
+        );
       }
     } finally {
       setIsLoading(false);
@@ -107,17 +108,18 @@ export const useProfileUpdates = (userId: string | null) => {
     const channel = supabase
       .channel(`profile:${userId}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'user_profiles',
+          event: "*",
+          schema: "public",
+          table: "user_profiles",
           filter: `id=eq.${userId}`,
         },
         (payload) => {
-          console.log('Profile update received:', payload);
-
-          if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+          if (
+            payload.eventType === "UPDATE" ||
+            payload.eventType === "INSERT"
+          ) {
             const newProfile = payload.new as ProfileData;
 
             // Refresh global image cache busting timestamp
@@ -126,23 +128,31 @@ export const useProfileUpdates = (userId: string | null) => {
             // Update caches
             profileMemoryCache[userId] = newProfile;
             try {
-              localStorage.setItem(`profile_cache_${userId}`, JSON.stringify(newProfile));
-              localStorage.setItem('navbar_profile_cache', JSON.stringify(newProfile));
-            } catch (e) { }
+              localStorage.setItem(
+                `profile_cache_${userId}`,
+                JSON.stringify(newProfile),
+              );
+              localStorage.setItem(
+                "navbar_profile_cache",
+                JSON.stringify(newProfile),
+              );
+            } catch (e) {}
 
             // Update local state
             setProfile(newProfile);
 
             // Dispatch event for other components
-            window.dispatchEvent(new CustomEvent('profileUpdated', {
-              detail: payload.new
-            }));
-          } else if (payload.eventType === 'DELETE') {
+            window.dispatchEvent(
+              new CustomEvent("profileUpdated", {
+                detail: payload.new,
+              }),
+            );
+          } else if (payload.eventType === "DELETE") {
             delete profileMemoryCache[userId];
             localStorage.removeItem(`profile_cache_${userId}`);
             setProfile(null);
           }
-        }
+        },
       )
       .subscribe();
 
@@ -156,25 +166,30 @@ export const useProfileUpdates = (userId: string | null) => {
     const handleManualUpdate = (event: any) => {
       const updatedData = event.detail as ProfileData;
       if (userId && updatedData && updatedData.id === userId) {
-        console.log('Manual profile update received in hook:', updatedData);
-
         // Refresh global image cache busting timestamp
         refreshImageCache();
 
         // Update caches
         profileMemoryCache[userId] = updatedData;
         try {
-          localStorage.setItem(`profile_cache_${userId}`, JSON.stringify(updatedData));
-          localStorage.setItem('navbar_profile_cache', JSON.stringify(updatedData));
-        } catch (e) { }
+          localStorage.setItem(
+            `profile_cache_${userId}`,
+            JSON.stringify(updatedData),
+          );
+          localStorage.setItem(
+            "navbar_profile_cache",
+            JSON.stringify(updatedData),
+          );
+        } catch (e) {}
 
         // Update state
         setProfile(updatedData);
       }
     };
 
-    window.addEventListener('profileUpdated', handleManualUpdate);
-    return () => window.removeEventListener('profileUpdated', handleManualUpdate);
+    window.addEventListener("profileUpdated", handleManualUpdate);
+    return () =>
+      window.removeEventListener("profileUpdated", handleManualUpdate);
   }, [userId]);
 
   // Manual refresh function

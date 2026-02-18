@@ -168,7 +168,10 @@ const UserProfile = () => {
               <CardContent className="pt-6 text-center">
                 <div className="relative inline-block">
                   <img
-                    src={getCacheBustedImageUrl(user.profile_image_url) || "/profile.svg"}
+                    src={
+                      getCacheBustedImageUrl(user.profile_image_url) ||
+                      "/profile.svg"
+                    }
                     alt={user.full_name || "User"}
                     className="h-32 w-32 rounded-full object-cover mx-auto ring-4 ring-terracotta/20"
                   />
@@ -288,7 +291,9 @@ const UserProfile = () => {
                   <CardTitle className="text-lg">About</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground leading-relaxed">{user.bio}</p>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {user.bio}
+                  </p>
                 </CardContent>
               </Card>
             )}
@@ -350,7 +355,9 @@ const UserProfile = () => {
                   ))
                 ) : (
                   <div className="col-span-full py-12 text-center bg-muted/30 rounded-xl border border-dashed">
-                    <p className="text-muted-foreground italic">No active swaps listed by this user yet.</p>
+                    <p className="text-muted-foreground italic">
+                      No active swaps listed by this user yet.
+                    </p>
                   </div>
                 )}
               </div>
