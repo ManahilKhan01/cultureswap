@@ -100,9 +100,9 @@ const Profile = () => {
 
           // Check Google Connection separately
           const { data: googleToken } = await supabase
-            .from('google_tokens')
-            .select('id')
-            .eq('user_id', user.id)
+            .from("google_tokens")
+            .select("id")
+            .eq("user_id", user.id)
             .maybeSingle();
           setIsGoogleConnected(!!googleToken);
 
@@ -195,7 +195,6 @@ const Profile = () => {
   // Listen for profile updates
   useEffect(() => {
     const handleProfileUpdate = () => {
-      console.log("Profile updated event received, refreshing profile...");
       setLoading(true);
       const reloadProfileData = async () => {
         try {
@@ -224,9 +223,11 @@ const Profile = () => {
 
   const handleConnectGoogle = async () => {
     try {
-      const { data: authData, error: authError } = await supabase.functions.invoke('google-calendar/auth');
+      const { data: authData, error: authError } =
+        await supabase.functions.invoke("google-calendar/auth");
 
-      if (authError || !authData?.url) throw authError || new Error("Could not get auth URL");
+      if (authError || !authData?.url)
+        throw authError || new Error("Could not get auth URL");
 
       window.location.href = authData.url;
     } catch (error: any) {
@@ -354,7 +355,7 @@ const Profile = () => {
           </div>
         </div>
 
-        {viewMode === 'public' ? (
+        {viewMode === "public" ? (
           /* Public View: 2-Column Sidebar Layout */
           <div className="grid lg:grid-cols-12 gap-6">
             {/* Left Column: Profile Card & Details */}
@@ -362,62 +363,95 @@ const Profile = () => {
               <Card>
                 <CardContent className="pt-6 text-center">
                   <img
-                    src={getCacheBustedImageUrl(userProfile.profile_image_url) || "/profile.svg"}
+                    src={
+                      getCacheBustedImageUrl(userProfile.profile_image_url) ||
+                      "/profile.svg"
+                    }
                     alt={userProfile.full_name || "User"}
                     className="h-32 w-32 rounded-full object-cover mx-auto ring-4 ring-terracotta/20"
                   />
-                  <h1 className="font-display text-2xl font-bold mt-4">{userProfile.full_name || "User"}</h1>
+                  <h1 className="font-display text-2xl font-bold mt-4">
+                    {userProfile.full_name || "User"}
+                  </h1>
                   <p className="text-muted-foreground flex items-center justify-center gap-1 mt-1">
-                    <MapPin className="h-4 w-4" />{userProfile.city || "Location"}, {userProfile.country || "Country"}
+                    <MapPin className="h-4 w-4" />
+                    {userProfile.city || "Location"},{" "}
+                    {userProfile.country || "Country"}
                   </p>
                   <div className="flex items-center justify-center gap-2 mt-2">
                     <Star className="h-5 w-5 fill-golden text-golden" />
                     <span className="font-semibold">{rating.toFixed(1)}</span>
-                    <span className="text-muted-foreground">({reviews.length} reviews)</span>
+                    <span className="text-muted-foreground">
+                      ({reviews.length} reviews)
+                    </span>
                   </div>
                   <Button variant="terracotta" className="w-full mt-4" asChild>
                     <Link to={`/messages?user=${userProfile.id}`}>
-                      <MessageCircle className="h-4 w-4 mr-2" />Send Message
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Send Message
                     </Link>
                   </Button>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader><CardTitle className="text-lg">Details</CardTitle></CardHeader>
+                <CardHeader>
+                  <CardTitle className="text-lg">Details</CardTitle>
+                </CardHeader>
                 <CardContent className="space-y-3 text-sm">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>Joined {new Date(userProfile.created_at || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+                    <span>
+                      Joined{" "}
+                      {new Date(
+                        userProfile.created_at || Date.now(),
+                      ).toLocaleDateString("en-US", {
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Globe className="h-4 w-4 text-muted-foreground" />
-                    <span>{userProfile.languages?.join(', ') || 'Not specified'}</span>
+                    <span>
+                      {userProfile.languages?.join(", ") || "Not specified"}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="border-border/50 shadow-sm overflow-hidden">
                 <CardHeader className="bg-muted/30 pb-4">
-                  <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">User Reviews Summary</CardTitle>
+                  <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    User Reviews Summary
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6 space-y-4">
                   {reviews.length > 0 ? (
                     reviews.slice(0, 3).map((review) => (
                       <div key={review.id} className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold">{review.reviewer_name || "User"}</span>
+                          <span className="text-xs font-bold">
+                            {review.reviewer_name || "User"}
+                          </span>
                           <div className="flex gap-0.5">
                             {[...Array(5)].map((_, i) => (
-                              <Star key={i} className={`h-2.5 w-2.5 ${i < review.rating ? 'fill-golden text-golden' : 'text-muted'}`} />
+                              <Star
+                                key={i}
+                                className={`h-2.5 w-2.5 ${i < review.rating ? "fill-golden text-golden" : "text-muted"}`}
+                              />
                             ))}
                           </div>
                         </div>
-                        <p className="text-xs text-muted-foreground line-clamp-2 italic">"{review.comment}"</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2 italic">
+                          "{review.comment}"
+                        </p>
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-muted-foreground italic">No reviews yet</p>
+                    <p className="text-sm text-muted-foreground italic">
+                      No reviews yet
+                    </p>
                   )}
                   {reviews.length > 3 && (
                     <p className="text-[10px] text-center text-muted-foreground pt-2 border-t border-border/50">
@@ -432,7 +466,9 @@ const Profile = () => {
             <div className="lg:col-span-8 space-y-6">
               {userProfile.bio && (
                 <Card>
-                  <CardHeader><CardTitle className="text-lg">About</CardTitle></CardHeader>
+                  <CardHeader>
+                    <CardTitle className="text-lg">About</CardTitle>
+                  </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground">{userProfile.bio}</p>
                   </CardContent>
@@ -453,7 +489,9 @@ const Profile = () => {
                     ))
                   ) : (
                     <div className="col-span-full py-8 text-center bg-muted/30 rounded-lg border border-dashed">
-                      <p className="text-muted-foreground italic">No swaps created yet</p>
+                      <p className="text-muted-foreground italic">
+                        No swaps created yet
+                      </p>
                     </div>
                   )}
                 </div>
@@ -494,7 +532,7 @@ const Profile = () => {
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
                         {userProfile.skills_offered &&
-                          userProfile.skills_offered.length > 0 ? (
+                        userProfile.skills_offered.length > 0 ? (
                           userProfile.skills_offered.map((skill: string) => (
                             <Badge
                               key={skill}
@@ -522,7 +560,7 @@ const Profile = () => {
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
                         {userProfile.skills_wanted &&
-                          userProfile.skills_wanted.length > 0 ? (
+                        userProfile.skills_wanted.length > 0 ? (
                           userProfile.skills_wanted.map((skill: string) => (
                             <Badge
                               key={skill}
@@ -676,9 +714,13 @@ const Profile = () => {
                         <Calendar className="h-4 w-4 text-muted-foreground" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium">Google Calendar</span>
-                        <span className={`text-[10px] ${isGoogleConnected ? 'text-green-600' : 'text-muted-foreground'}`}>
-                          {isGoogleConnected ? 'Connected' : 'Not setup'}
+                        <span className="text-sm font-medium">
+                          Google Calendar
+                        </span>
+                        <span
+                          className={`text-[10px] ${isGoogleConnected ? "text-green-600" : "text-muted-foreground"}`}
+                        >
+                          {isGoogleConnected ? "Connected" : "Not setup"}
                         </span>
                       </div>
                     </div>
@@ -686,7 +728,12 @@ const Profile = () => {
                   <div className="flex gap-2">
                     {isGoogleConnected ? (
                       <>
-                        <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">Active</Badge>
+                        <Badge
+                          variant="outline"
+                          className="text-green-600 border-green-200 bg-green-50"
+                        >
+                          Active
+                        </Badge>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -698,7 +745,12 @@ const Profile = () => {
                         </Button>
                       </>
                     ) : (
-                      <Button variant="outline" size="sm" className="h-7 text-xs" onClick={handleConnectGoogle}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={handleConnectGoogle}
+                      >
                         Connect
                       </Button>
                     )}
@@ -750,7 +802,7 @@ const Profile = () => {
             </div>
           </div>
         )}
-      </main >
+      </main>
     </>
   );
 };

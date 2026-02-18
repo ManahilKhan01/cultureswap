@@ -282,13 +282,13 @@ export const SwapChatPanel = ({
                 {otherUserName?.toLowerCase().includes("assistant") && "🤖 "}
                 {otherUserName}
               </CardTitle>
-              <p
+              {/* <p
                 className={`text-xs ${otherUserName?.toLowerCase().includes("assistant") ? "text-blue-600 font-medium" : "text-muted-foreground"}`}
               >
                 {otherUserName?.toLowerCase().includes("assistant")
                   ? "AI Assistant"
                   : "Swap Chat"}
-              </p>
+              </p> */}
             </div>
           </div>
           {onClose && (

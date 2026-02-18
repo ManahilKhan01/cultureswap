@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Send } from "lucide-react";
 import { offerService } from "@/lib/offerService";
+import { swapService } from "@/lib/swapService";
 import { useToast } from "@/hooks/use-toast";
 import { validateSwapContent } from "@/lib/validation";
 
@@ -51,16 +52,43 @@ export const CreateOfferDialog = ({
 }: CreateOfferDialogProps) => {
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
-  const [title, setTitle] = useState("");
-  const [skillOffered, setSkillOffered] = useState("");
-  const [skillWanted, setSkillWanted] = useState("");
-  const [category, setCategory] = useState("Technology");
-  const [format, setFormat] = useState("online");
-  const [address, setAddress] = useState("");
+  const [availableSwaps, setAvailableSwaps] = useState<any[]>([]);
+  const [loadingSwaps, setLoadingSwaps] = useState(false);
+  const [selectedSwapId, setSelectedSwapId] = useState<string>("");
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  const [duration, setDuration] = useState("");
   const [schedule, setSchedule] = useState("");
   const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    if (open && receiverId) {
+      fetchReceiverSwaps();
+    }
+  }, [open, receiverId]);
+
+  const fetchReceiverSwaps = async () => {
+    try {
+      setLoadingSwaps(true);
+      const swaps = await swapService.getSwapsByUser(receiverId);
+      // Filter for open swaps (pending a partner)
+      // We exclude 'active' swaps which already have a partner
+      const activeSwaps = swaps.filter((s) => s.status === "open");
+      setAvailableSwaps(activeSwaps);
+
+      // If a specific swapId was passed (e.g. from a context where we already know the swap), select it
+      if (swapId) {
+        setSelectedSwapId(swapId);
+      }
+    } catch (error) {
+      console.error("Error fetching receiver swaps:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load available swaps.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingSwaps(false);
+    }
+  };
 
   const toggleDay = (dayId: string) => {
     setSelectedDays((prev) =>
@@ -69,24 +97,12 @@ export const CreateOfferDialog = ({
   };
 
   const handleSubmit = async () => {
-    const titleError = validateSwapContent(title, "Title");
-    if (titleError) {
-      toast({ title: titleError, variant: "destructive" });
-      return;
-    }
-
-    const skillOfferedError = validateSwapContent(
-      skillOffered,
-      "Skill Offered",
-    );
-    if (skillOfferedError) {
-      toast({ title: skillOfferedError, variant: "destructive" });
-      return;
-    }
-
-    const skillWantedError = validateSwapContent(skillWanted, "Skill Wanted");
-    if (skillWantedError) {
-      toast({ title: skillWantedError, variant: "destructive" });
+    if (!selectedSwapId) {
+      toast({
+        title: "Error",
+        description: "Please select a swap to offer on",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -99,21 +115,34 @@ export const CreateOfferDialog = ({
       return;
     }
 
+    const selectedSwap = availableSwaps.find((s) => s.id === selectedSwapId);
+    if (!selectedSwap) {
+      toast({
+        title: "Error",
+        description: "Selected swap not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setSubmitting(true);
 
       await offerService.createOffer({
         conversation_id: conversationId,
-        swap_id: swapId || undefined,
+        swap_id: selectedSwapId,
         receiver_id: receiverId,
-        title,
-        skill_offered: skillOffered,
-        skill_wanted: skillWanted,
-        category,
-        format,
-        address: format === "in-person" ? address : undefined,
+        title: selectedSwap.title, // Use the swap's title
+        skill_offered: selectedSwap.skill_wanted, // I offer what they want
+        skill_wanted: selectedSwap.skill_offered, // I want what they offer
+        category: selectedSwap.category,
+        format: selectedSwap.format,
+        address:
+          selectedSwap.format === "in-person"
+            ? selectedSwap.address
+            : undefined, // Assuming address exists on swap
         session_days: selectedDays,
-        duration,
+        duration: selectedSwap.duration || "60 mins", // Default or from swap
         schedule: schedule || undefined,
         notes: notes || undefined,
       });
@@ -124,11 +153,8 @@ export const CreateOfferDialog = ({
       });
 
       // Reset form
-      setTitle("");
-      setSkillOffered("");
-      setSkillWanted("");
+      setSelectedSwapId("");
       setSelectedDays([]);
-      setDuration("");
       setSchedule("");
       setNotes("");
 
@@ -148,106 +174,111 @@ export const CreateOfferDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Create Swap Offer</DialogTitle>
+          <DialogTitle>Swap Offer</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6 overflow-y-auto flex-1 px-6 -mx-6 pr-4">
-          {/* Basic Info */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Swap Proposal Title *</Label>
-              <Input
-                id="title"
-                placeholder="e.g., English for Coding Help"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                disabled={submitting}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="offered">I Can Teach *</Label>
-                <Input
-                  id="offered"
-                  placeholder="Skill you offer"
-                  value={skillOffered}
-                  onChange={(e) => setSkillOffered(e.target.value)}
-                  disabled={submitting}
-                />
+          {/* Swap Selection */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Select a Swap Request</Label>
+            {loadingSwaps ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="wanted">I Want to Learn *</Label>
-                <Input
-                  id="wanted"
-                  placeholder="Skill you want"
-                  value={skillWanted}
-                  onChange={(e) => setSkillWanted(e.target.value)}
-                  disabled={submitting}
-                />
+            ) : availableSwaps.length > 0 ? (
+              <div className="space-y-3">
+                {availableSwaps.map((swap) => (
+                  <div
+                    key={swap.id}
+                    onClick={() => setSelectedSwapId(swap.id)}
+                    className={`p-2.5 rounded-lg border cursor-pointer transition-all ${
+                      selectedSwapId === swap.id
+                        ? "border-terracotta bg-terracotta/5 ring-1 ring-terracotta"
+                        : "border-border hover:border-terracotta/50 hover:bg-muted/20"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm text-foreground truncate">
+                          {swap.title}
+                        </h4>
+                        <div className="mt-1.5 flex flex-col gap-0.5">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                              They want to learn
+                            </p>
+                            <p className="text-sm font-medium text-foreground">
+                              {swap.skill_wanted}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                              You will learn
+                            </p>
+                            <p className="text-sm font-medium text-foreground">
+                              {swap.skill_offered}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      {selectedSwapId === swap.id && (
+                        <div className="h-4 w-4 rounded-full bg-terracotta flex items-center justify-center shrink-0 mt-0.5">
+                          <Send className="h-2 w-2 text-white" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select
-                  value={category}
-                  onValueChange={setCategory}
-                  disabled={submitting}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Technology">Technology</SelectItem>
-                    <SelectItem value="Language">Language</SelectItem>
-                    <SelectItem value="Arts & Crafts">Arts & Crafts</SelectItem>
-                    <SelectItem value="Business">Business</SelectItem>
-                    <SelectItem value="Music">Music</SelectItem>
-                    <SelectItem value="Fitness">Fitness</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="format">Format</Label>
-                <Select
-                  value={format}
-                  onValueChange={setFormat}
-                  disabled={submitting}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Format" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="online">Online</SelectItem>
-                    <SelectItem value="in-person">In-Person</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Address - shown only for In-Person */}
-            {format === "in-person" && (
-              <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                <Label htmlFor="address">Meeting Address *</Label>
-                <Input
-                  id="address"
-                  placeholder="e.g., Central Library, 123 Main St, City"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  disabled={submitting}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Provide a public meeting location for safety
+            ) : (
+              <div className="text-center py-6 bg-muted/20 rounded-xl border border-dashed border-border">
+                <p className="text-sm text-muted-foreground">
+                  This user has no open swap requests.
                 </p>
               </div>
             )}
           </div>
 
           <div className="h-px bg-border my-4" />
+
+          {/* Description / Notes */}
+          <div className="space-y-2">
+            <Label htmlFor="notes">
+              Description{" "}
+              <span className="text-xs font-normal text-muted-foreground">
+                (Max 20 words)
+              </span>
+            </Label>
+            <Textarea
+              id="notes"
+              placeholder="Briefly describe your offer..."
+              value={notes}
+              onChange={(e) => {
+                const words = e.target.value.trim().split(/\s+/);
+                if (
+                  words.length <= 20 ||
+                  e.target.value.length < notes.length
+                ) {
+                  setNotes(e.target.value);
+                }
+              }}
+              className="resize-none"
+              rows={3}
+              disabled={submitting}
+            />
+            <p className="text-[10px] text-muted-foreground text-right">
+              {
+                notes
+                  .trim()
+                  .split(/\s+/)
+                  .filter((w) => w).length
+              }
+              /20 words
+            </p>
+          </div>
+
           {/* Session Days */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Available Days *</Label>
@@ -276,23 +307,10 @@ export const CreateOfferDialog = ({
             <Label htmlFor="schedule">Preferred Time</Label>
             <Input
               id="schedule"
-              placeholder="e.g., Evenings after 6 PM, mornings on weekends"
+              placeholder="e.g., Evenings after 6 PM"
               value={schedule}
               onChange={(e) => setSchedule(e.target.value)}
               disabled={submitting}
-            />
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Additional Notes</Label>
-            <Textarea
-              id="notes"
-              placeholder="Any additional details about your availability or preferences..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              disabled={submitting}
-              rows={3}
             />
           </div>
 
@@ -308,7 +326,7 @@ export const CreateOfferDialog = ({
             <Button
               variant="terracotta"
               onClick={handleSubmit}
-              disabled={submitting}
+              disabled={submitting || !selectedSwapId}
             >
               {submitting ? (
                 <>

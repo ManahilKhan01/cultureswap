@@ -360,8 +360,34 @@ export const offerService = {
   },
 
   /**
-   * Subscribe to offer changes for a specific swap
+   * Withdraw an offer (sender cancels their own pending offer)
+   * Uses an Edge Function to bypass RLS restrictions
    */
+  async withdrawOffer(offerId: string): Promise<Offer | null> {
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "withdraw-offer",
+        {
+          body: { offer_id: offerId },
+        },
+      );
+
+      if (error) {
+        console.error("Error withdrawing offer:", error);
+        throw new Error(error.message || "Failed to withdraw offer");
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.error || "Failed to withdraw offer");
+      }
+
+      return data.offer as Offer;
+    } catch (error) {
+      console.error("offerService.withdrawOffer error:", error);
+      throw error;
+    }
+  },
+
   subscribeToOffers(swapId: string, callback: (payload: any) => void) {
     return supabase
       .channel(`swap_offers:swap_id=eq.${swapId}`)

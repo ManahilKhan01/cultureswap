@@ -62,6 +62,7 @@ interface Swap {
   status: string;
   created_at: string;
   updated_at: string;
+  expires_at?: string;
 }
 
 const SwapsSkeleton = () => (
@@ -205,23 +206,25 @@ const Swaps = () => {
     };
 
     loadSwaps();
+  }, [currentUser?.id, activeTab, toast]);
 
-    // Subscribe to real-time updates
-    let subscription: any;
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        subscription = swapService.subscribeToUserSwaps(user.id, () => {
-          loadSwaps(); // Reload on any change
-        });
-      }
-    });
+  // Real-time subscription for swaps list
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const subscription = swapService.subscribeToUserSwaps(
+      currentUser.id,
+      () => {
+        loadSwaps();
+      },
+    );
 
     return () => {
       if (subscription) {
         supabase.removeChannel(subscription);
       }
     };
-  }, [toast]);
+  }, [currentUser?.id]);
 
   // Listen for profile updates to refresh user profiles
   useEffect(() => {
@@ -265,7 +268,9 @@ const Swaps = () => {
   });
 
   // Group swaps by status
-  const activeSwaps = filteredSwaps.filter((s) => s.status === "active");
+  const activeSwaps = filteredSwaps.filter(
+    (s) => s.status === "active" || s.status === "cancellation_requested",
+  );
   const openSwaps = filteredSwaps.filter((s) => s.status === "open"); // NEW: Open only
   const completedSwaps = filteredSwaps.filter((s) => s.status === "completed");
   const cancelledSwaps = filteredSwaps.filter((s) => s.status === "cancelled");
@@ -282,6 +287,12 @@ const Swaps = () => {
             Open
           </Badge>
         );
+      case "cancellation_requested":
+        return (
+          <Badge className="bg-orange-500/20 text-orange-600 border-orange-500/30">
+            Cancellation Requested
+          </Badge>
+        );
       case "completed":
         return (
           <Badge className="bg-green-500/20 text-green-600 border-green-500/30">
@@ -292,6 +303,15 @@ const Swaps = () => {
         return (
           <Badge className="bg-red-500/20 text-red-600 border-red-500/30">
             Cancelled
+          </Badge>
+        );
+      case "expired":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-gray-100 text-gray-600 border-gray-200"
+          >
+            Expired
           </Badge>
         );
       default:
@@ -371,17 +391,31 @@ const Swaps = () => {
   const handleCancelSwap = async (swapId: string) => {
     try {
       setCancellingSwapId(swapId);
-      await swapService.cancelSwap(swapId);
+      const result = await swapService.cancelSwap(swapId);
 
-      // Update local state
+      // Update local state with the new swap data
       setSwaps(
-        swaps.map((s) => (s.id === swapId ? { ...s, status: "cancelled" } : s)),
+        swaps.map((s) => (s.id === swapId ? { ...s, ...result.swap } : s)),
       );
 
-      toast({
-        title: "Swap Cancelled",
-        description: "The swap has been cancelled successfully.",
-      });
+      if (result.action === "requested") {
+        toast({
+          title: "Cancellation Requested",
+          description:
+            "Your partner must also confirm to fully cancel the swap.",
+        });
+      } else if (result.action === "confirmed") {
+        toast({
+          title: "Swap Cancelled",
+          description: "The swap has been cancelled by mutual agreement.",
+        });
+      } else if (result.action === "undone") {
+        toast({
+          title: "Cancellation Withdrawn",
+          description:
+            "Your cancellation request has been withdrawn. The swap is active again.",
+        });
+      }
     } catch (error: any) {
       console.error("Error cancelling swap:", error);
       toast({
@@ -474,6 +508,35 @@ const Swaps = () => {
             )}
           </div>
 
+          {/* Expiration Timer */}
+          {swap.status === "open" && swap.expires_at && (
+            <div className="flex items-center gap-2 p-2 px-3 rounded-lg bg-orange-50 border border-orange-100 text-xs text-orange-700">
+              <Clock className="h-3.5 w-3.5" />
+              <span className="font-semibold">Expires in:</span>
+              <span>
+                {(() => {
+                  const now = new Date();
+                  const expires = new Date(swap.expires_at);
+                  const diff = expires.getTime() - now.getTime();
+
+                  if (diff <= 0) return "Expired";
+
+                  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                  const hours = Math.floor(
+                    (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+                  );
+                  const minutes = Math.floor(
+                    (diff % (1000 * 60 * 60)) / (1000 * 60),
+                  );
+
+                  if (days > 0) return `${days}d ${hours}h`;
+                  if (hours > 0) return `${hours}h ${minutes}m`;
+                  return `${minutes}m`;
+                })()}
+              </span>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex gap-2 pt-2">
             {hasPartner && (
@@ -490,44 +553,123 @@ const Swaps = () => {
               <Link to={`/swap/${swap.id}`}>View Details</Link>
             </Button>
 
-            {/* Cancel Swap Button - only for active swaps */}
-            {(swap.status === "active" || swap.status === "open") && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-red-600 border-red-200 hover:bg-red-50"
-                    disabled={cancellingSwapId === swap.id}
-                  >
-                    {cancellingSwapId === swap.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <XCircle className="h-4 w-4" />
-                    )}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Cancel Swap?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to cancel this swap? This action
-                      cannot be undone.
-                      {hasPartner && " The other participant will be notified."}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Keep Swap</AlertDialogCancel>
-                    <AlertDialogAction
+            {/* Cancel/Confirm/Undo Swap Button - context-aware */}
+            {(swap.status === "active" ||
+              swap.status === "open" ||
+              swap.status === "cancellation_requested") &&
+              (() => {
+                const iRequested =
+                  swap.status === "cancellation_requested" &&
+                  swap.cancellation_requested_by === currentUser?.id;
+                const otherRequested =
+                  swap.status === "cancellation_requested" &&
+                  swap.cancellation_requested_by &&
+                  swap.cancellation_requested_by !== currentUser?.id;
+
+                if (otherRequested) {
+                  // Other user requested — show Confirm Cancellation
+                  return (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 border-red-300 hover:bg-red-50 text-xs px-2"
+                          disabled={cancellingSwapId === swap.id}
+                        >
+                          {cancellingSwapId === swap.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            "Confirm Cancel"
+                          )}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Confirm Cancellation?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Your swap partner has requested to cancel this swap.
+                            Confirming will permanently cancel it for both of
+                            you.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Keep Swap</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleCancelSwap(swap.id)}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Confirm Cancellation
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  );
+                }
+
+                if (iRequested) {
+                  // Current user requested — show Undo
+                  return (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-orange-600 border-orange-300 hover:bg-orange-50 text-xs px-2"
+                      disabled={cancellingSwapId === swap.id}
                       onClick={() => handleCancelSwap(swap.id)}
-                      className="bg-red-600 hover:bg-red-700"
                     >
-                      Cancel Swap
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
+                      {cancellingSwapId === swap.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        "Undo Request"
+                      )}
+                    </Button>
+                  );
+                }
+
+                // No request yet — show Request Cancel
+                return (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 border-red-200 hover:bg-red-50"
+                        disabled={cancellingSwapId === swap.id}
+                      >
+                        {cancellingSwapId === swap.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <XCircle className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Request Cancellation?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will notify your partner that you want to cancel.
+                          The swap will only be fully cancelled after they
+                          confirm.
+                          {hasPartner && " Your partner will be notified."}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Keep Swap</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleCancelSwap(swap.id)}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Request Cancellation
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                );
+              })()}
           </div>
         </CardContent>
       </Card>

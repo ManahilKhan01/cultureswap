@@ -132,7 +132,7 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
         setConversations(convs.slice(0, 7)); // Show max 7 conversations
         setConversationProfiles(profiles);
       } catch (error) {
-        console.error("Error loading conversations:", error);
+        // Silent catch for navbar conversations
       } finally {
         setLoadingConvs(false);
       }

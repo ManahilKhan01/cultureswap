@@ -5,16 +5,14 @@
 export const clearProfileCaches = () => {
   try {
     // Clear specific profile caches
-    localStorage.removeItem('navbar_profile_cache');
-    localStorage.removeItem('profile_page_cache');
-    localStorage.removeItem('settings_profile_cache');
+    localStorage.removeItem("navbar_profile_cache");
+    localStorage.removeItem("profile_page_cache");
+    localStorage.removeItem("settings_profile_cache");
 
     // You can add more cache keys here as needed
 
-    console.log('Profile caches cleared');
-  } catch (error) {
-    console.warn('Error clearing profile caches:', error);
-  }
+    // Clear cache
+  } catch (error) {}
 };
 
 /**
@@ -24,13 +22,13 @@ export const clearProfileCaches = () => {
 export const dispatchProfileUpdate = (profileData?: any) => {
   try {
     refreshImageCache(); // Update stable timestamp for images
-    window.dispatchEvent(new CustomEvent('profileUpdated', {
-      detail: profileData || {}
-    }));
-    console.log('Profile update event dispatched');
-  } catch (error) {
-    console.warn('Error dispatching profile update:', error);
-  }
+    window.dispatchEvent(
+      new CustomEvent("profileUpdated", {
+        detail: profileData || {},
+      }),
+    );
+    // Dispatch event
+  } catch (error) {}
 };
 
 /**
@@ -42,9 +40,7 @@ export const refreshProfileInCache = (userId: string, profileData: any) => {
     refreshImageCache();
     clearProfileCaches();
     dispatchProfileUpdate(profileData);
-  } catch (error) {
-    console.warn('Error refreshing profile in cache:', error);
-  }
+  } catch (error) {}
 };
 
 // Use a stable timestamp that only changes when explicitly requested or on page load
@@ -54,17 +50,20 @@ let lastGlobalUpdate = Date.now().toString();
  * Generate cache-busted URL with stable timestamp
  * Forces browser to reload image only when needed, preventing blinking
  */
-export const getCacheBustedImageUrl = (imageUrl: string | null | undefined): string => {
-  if (!imageUrl) return '/profile.svg';
+export const getCacheBustedImageUrl = (
+  imageUrl: string | null | undefined,
+): string => {
+  if (!imageUrl) return "/profile.svg";
 
   // If already has cache-busting parameter, return as-is
-  if (imageUrl.includes('?v=')) return imageUrl;
+  if (imageUrl.includes("?v=")) return imageUrl;
 
   // If it's the default placeholder or AI assistant icon, no need for cache-busting
-  if (imageUrl.includes('/profile.svg') || imageUrl.includes('/Ai.svg')) return imageUrl;
+  if (imageUrl.includes("/profile.svg") || imageUrl.includes("/Ai.svg"))
+    return imageUrl;
 
   // Add a stable timestamp to force cache invalidation only when global state changes
-  const separator = imageUrl.includes('?') ? '&' : '?';
+  const separator = imageUrl.includes("?") ? "&" : "?";
   return `${imageUrl}${separator}v=${lastGlobalUpdate}`;
 };
 
@@ -82,19 +81,16 @@ export const refreshImageCache = () => {
 export const invalidateProfileImageCache = (imageUrl: string) => {
   try {
     // Clear any cached image elements
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const images = document.querySelectorAll(`img[src*="${imageUrl}"]`);
       images.forEach((img) => {
         const htmlImg = img as HTMLImageElement;
         const currentSrc = htmlImg.src;
-        htmlImg.src = ''; // Clear src
+        htmlImg.src = ""; // Clear src
         setTimeout(() => {
           htmlImg.src = getCacheBustedImageUrl(currentSrc); // Reload with cache-busting
         }, 0);
       });
     }
-  } catch (error) {
-    console.warn('Error invalidating profile image cache:', error);
-  }
+  } catch (error) {}
 };
-

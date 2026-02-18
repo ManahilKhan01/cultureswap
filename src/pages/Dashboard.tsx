@@ -213,7 +213,6 @@ const Dashboard = () => {
 
     // Listen for profile updates from other pages
     const handleProfileUpdate = () => {
-      console.log("Profile updated event received, refreshing dashboard...");
       fetchDashboardData();
     };
 

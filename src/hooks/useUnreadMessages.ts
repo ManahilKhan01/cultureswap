@@ -86,7 +86,7 @@ export const useUnreadMessages = (userId: string | null) => {
           .eq("read", false);
 
         if (error) {
-          console.error("Error marking messages as read:", error);
+          // console.error("Error marking messages as read:", error);
           return false;
         }
 
@@ -105,7 +105,7 @@ export const useUnreadMessages = (userId: string | null) => {
 
         return true;
       } catch (error) {
-        console.error("Error marking conversation as read:", error);
+        // console.error("Error marking conversation as read:", error);
         return false;
       }
     },
@@ -124,7 +124,7 @@ export const useUnreadMessages = (userId: string | null) => {
           .eq("id", messageId);
 
         if (error) {
-          console.error("Error marking single message as read:", error);
+          // console.error("Error marking single message as read:", error);
           return false;
         }
 
@@ -148,7 +148,7 @@ export const useUnreadMessages = (userId: string | null) => {
 
         return true;
       } catch (error) {
-        console.error("Error marking message as read:", error);
+        // console.error("Error marking message as read:", error);
         return false;
       }
     },
@@ -176,7 +176,7 @@ export const useUnreadMessages = (userId: string | null) => {
           const newMsg = payload.new;
           // Filter in callback for reliability
           if (newMsg.receiver_id === userId) {
-            console.log("📨 New message for user (unread hook):", newMsg.id);
+            // console.log("📨 New message for user (unread hook):", newMsg.id);
             const convId = newMsg.conversation_id;
 
             setUnreadCounts((prev) => ({
