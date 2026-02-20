@@ -249,6 +249,16 @@ const Settings = () => {
       return;
     }
 
+    // Validate Bio
+    if (profile.bio.length > 500) {
+      toast({
+        title: "Validation Error",
+        description: "Bio cannot exceed 500 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Get current user with proper error handling
@@ -482,7 +492,20 @@ const Settings = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="bio">Bio</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="bio">Bio</Label>
+                    <span
+                      className={`text-xs ${
+                        profile.bio.length >= 500
+                          ? "text-red-500 font-bold"
+                          : profile.bio.length >= 400
+                            ? "text-orange-500 font-medium"
+                            : "text-green-500 font-medium"
+                      }`}
+                    >
+                      {profile.bio.length}/500
+                    </span>
+                  </div>
                   <Textarea
                     id="bio"
                     rows={4}
@@ -490,7 +513,20 @@ const Settings = () => {
                     onChange={(e) =>
                       setProfile({ ...profile, bio: e.target.value })
                     }
+                    maxLength={500}
+                    className={
+                      profile.bio.length >= 500
+                        ? "border-red-500 focus-visible:ring-red-500"
+                        : profile.bio.length >= 400
+                          ? "border-orange-500 focus-visible:ring-orange-500"
+                          : "border-green-500/50 focus-visible:ring-green-500/50"
+                    }
                   />
+                  {profile.bio.length >= 500 && (
+                    <p className="text-sm text-red-500 mt-1">
+                      Bio cannot exceed 500 characters
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">

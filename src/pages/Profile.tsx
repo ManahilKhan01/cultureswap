@@ -101,7 +101,7 @@ const Profile = () => {
           // Check Google Connection separately
           const { data: googleToken } = await supabase
             .from("google_tokens")
-            .select("id")
+            .select("user_id")
             .eq("user_id", user.id)
             .maybeSingle();
           setIsGoogleConnected(!!googleToken);
@@ -226,13 +226,60 @@ const Profile = () => {
       const { data: authData, error: authError } =
         await supabase.functions.invoke("google-calendar/auth");
 
-      if (authError || !authData?.url)
-        throw authError || new Error("Could not get auth URL");
+      if (authError) {
+        let errorMessage = authError.message || authError.toString();
+
+        // Try to extract the real error message
+        if (authError.context && typeof authError.context.json === "function") {
+          try {
+            const response = authError.context.clone();
+            const body = await response.json();
+            if (body && body.error) {
+              errorMessage = body.error;
+            }
+          } catch (e) {
+            console.error("Failed to parse edge function error body", e);
+          }
+        }
+        throw new Error(errorMessage);
+      }
+
+      if (!authData?.url) throw new Error("Could not get auth URL");
 
       window.location.href = authData.url;
     } catch (error: any) {
       console.error("Connection Error", error);
       alert(error.message || "Failed to connect to Google service.");
+    }
+  };
+
+  const handleDisconnectGoogle = async () => {
+    if (!userProfile?.id) return;
+
+    try {
+      // Opt-in to show loading state if you want, or just wait for the db call
+      const { error } = await supabase
+        .from("google_tokens")
+        .delete()
+        .eq("user_id", userProfile.id);
+
+      if (error) {
+        throw error;
+      }
+
+      // Update state immediately
+      setIsGoogleConnected(false);
+      toast({
+        title: "Disconnected",
+        description: "Google Calendar has been disconnected.",
+      });
+    } catch (error: any) {
+      console.error("Disconnection Error", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to disconnect Google Calendar.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -678,13 +725,13 @@ const Profile = () => {
               <Card className="bg-gradient-to-br from-terracotta to-terracotta/80 text-white border-0 shadow-lg shadow-terracotta/20 relative overflow-hidden group">
                 <div className="absolute top-[-20%] right-[-10%] h-32 w-32 bg-white/10 rounded-full blur-2xl group-hover:scale-110 transition-transform duration-700" />
                 <CardContent className="py-8 text-center relative z-10">
-                  <p className="text-4xl font-display font-bold mb-1 drop-shadow-sm">
+                  <div className="text-4xl font-display font-bold mb-1 drop-shadow-sm">
                     {bgLoading ? (
                       <Skeleton className="h-8 w-12 mx-auto bg-white/20" />
                     ) : (
                       swapsCount
                     )}
-                  </p>
+                  </div>
                   <p className="text-terracotta-foreground/90 text-sm font-medium uppercase tracking-widest">
                     Swaps Completed
                   </p>
@@ -742,6 +789,15 @@ const Profile = () => {
                           title="Reconnect Google Calendar if you are having issues"
                         >
                           Reconnect
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive"
+                          onClick={handleDisconnectGoogle}
+                          title="Remove Google Calendar connection"
+                        >
+                          Disconnect
                         </Button>
                       </>
                     ) : (

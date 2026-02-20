@@ -27,20 +27,31 @@ export const sessionService = {
 
       if (meetError) {
         console.error("Edge Function Error:", meetError);
-        // Extract the specific error message if available, otherwise use a generic one
-        // The edge function returns: { error: "Main error message", details: "..." }
-        // Supabase might wrap this in its own error structure depending on how invoke is called and fails
-        // But usually for 4xx/5xx responses that return JSON, we might need to parse it if Supabase doesn't automatically
+        let errorMessage = meetError.message || meetError.toString();
 
-        // If meetError is an object with a message, use it.
-        const errorMessage = meetError.message || meetError.toString();
+        // Try to extract the real error message from the response body if it's a FunctionsHttpError
+        if (meetError.context && typeof meetError.context.json === "function") {
+          try {
+            // The context body might have already been consumed by Supabase,
+            // but we can try cloning it or just try reading it.
+            const response = meetError.context.clone();
+            const body = await response.json();
+            if (body && body.error) {
+              errorMessage = body.error;
+            }
+          } catch (e) {
+            console.error("Failed to parse edge function error body", e);
+          }
+        }
 
-        // If the error message suggests a connection issue, guide the user
+        // Help the user gracefully handle missing connections
         if (
           errorMessage.includes("Google account not connected") ||
           errorMessage.includes("reconnect")
         ) {
-          throw new Error(errorMessage);
+          throw new Error(
+            "Please connect your Google Calendar in Profile Settings (Privacy tab/section) to schedule sessions.",
+          );
         }
 
         throw new Error(`Failed to generate Google Meet link: ${errorMessage}`);
@@ -104,9 +115,75 @@ export const sessionService = {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data || [];
+
+      const now = new Date();
+      let hasExpiredSessions = false;
+
+      // Automatically flag sessions as expired if they are purely in the past
+      // Let's say a session expires if it's been more than 2 hours since scheduled_at
+      const processedSessions = (data || []).map((session) => {
+        if (session.status === "scheduled" && session.scheduled_at) {
+          const scheduledTime = new Date(session.scheduled_at);
+          const expiryTime = new Date(
+            scheduledTime.getTime() + 2 * 60 * 60 * 1000,
+          ); // +2 hours
+
+          if (now > expiryTime) {
+            hasExpiredSessions = true;
+            return { ...session, status: "expired" };
+          }
+        }
+        return session;
+      });
+
+      // Fire and forget updating the DB if we found expired sessions
+      // We don't await this because we want to return the updated UI state immediately
+      if (hasExpiredSessions) {
+        const expiredIds = processedSessions
+          .filter(
+            (s) =>
+              s.status === "expired" &&
+              data.find((orig) => orig.id === s.id)?.status === "scheduled",
+          )
+          .map((s) => s.id);
+
+        if (expiredIds.length > 0) {
+          supabase
+            .from("swap_sessions")
+            .update({ status: "expired" })
+            .in("id", expiredIds)
+            .then(({ error }) => {
+              if (error) console.error("Error auto-expiring sessions:", error);
+            });
+        }
+      }
+
+      return processedSessions;
     } catch (error) {
       console.error("sessionService.getSessionsBySwap error:", error);
+      throw error;
+    }
+  },
+
+  // Delete a session
+  async deleteSession(sessionId: string) {
+    try {
+      // First, delete related history entries
+      await supabase
+        .from("swap_history")
+        .delete()
+        .eq("metadata->>session_id", sessionId);
+
+      // Then delete the session itself
+      const { error } = await supabase
+        .from("swap_sessions")
+        .delete()
+        .eq("id", sessionId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error("sessionService.deleteSession error:", error);
       throw error;
     }
   },

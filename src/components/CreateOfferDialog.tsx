@@ -174,7 +174,10 @@ export const CreateOfferDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent
+        className="max-w-md max-h-[90vh] overflow-hidden flex flex-col"
+        aria-describedby={undefined}
+      >
         <DialogHeader>
           <DialogTitle>Swap Offer</DialogTitle>
         </DialogHeader>

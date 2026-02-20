@@ -435,18 +435,26 @@ const SwapDetail = () => {
     ? (swap.completedSessions! / swap.totalSessions) * 100
     : 0;
 
+  // Handle scheduling a new session
   const handleScheduleSession = async () => {
     if (!sessionDate || !sessionTime) {
-      toast({ title: "Please select date and time", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Please select both date and time",
+        variant: "destructive",
+      });
       return;
     }
 
     try {
+      // Assuming setSchedulingSession and setShowScheduleDialog are defined elsewhere
+      // setSchedulingSession(true);
       const scheduledAt = new Date(
         `${sessionDate}T${sessionTime}`,
       ).toISOString();
+
       await sessionService.createSession({
-        swap_id: swap.id,
+        swap_id: id!,
         scheduled_at: scheduledAt,
       });
 
@@ -455,15 +463,36 @@ const SwapDetail = () => {
         description: `Session scheduled for ${sessionDate} at ${sessionTime}. Meet link generated!`,
       });
 
-      setScheduleOpen(false);
       setSessionDate("");
       setSessionTime("");
       loadSessions(); // This will refresh session list, count and next session
+      // setShowScheduleDialog(false);
     } catch (error: any) {
       console.error("Schedule session error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to schedule session",
+        variant: "destructive",
+      });
+    } finally {
+      // setSchedulingSession(false);
+    }
+  };
+
+  // Handle deleting a session
+  const handleDeleteSession = async (sessionId: string) => {
+    try {
+      await sessionService.deleteSession(sessionId);
+      toast({
+        title: "Session Deleted",
+        description: "The scheduled session has been successfully removed.",
+      });
+      loadSessions(); // Refresh list to remove it from UI
+    } catch (error: any) {
+      console.error("Delete session error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete session",
         variant: "destructive",
       });
     }
@@ -1030,7 +1059,7 @@ const SwapDetail = () => {
                         Schedule Next Session
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent aria-describedby={undefined}>
                       <DialogHeader>
                         <DialogTitle>Schedule Next Session</DialogTitle>
                       </DialogHeader>
@@ -1081,7 +1110,7 @@ const SwapDetail = () => {
                         Leave Review
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent aria-describedby={undefined}>
                       <DialogHeader>
                         <DialogTitle>Leave a Review</DialogTitle>
                       </DialogHeader>
@@ -1172,7 +1201,7 @@ const SwapDetail = () => {
                     open={showCancelReview}
                     onOpenChange={setShowCancelReview}
                   >
-                    <DialogContent>
+                    <DialogContent aria-describedby={undefined}>
                       <DialogHeader>
                         <DialogTitle>
                           Leave a Review for Your Swap Partner
@@ -1317,7 +1346,7 @@ const SwapDetail = () => {
                               {triggerLabel}
                             </Button>
                           </DialogTrigger>
-                          <DialogContent>
+                          <DialogContent aria-describedby={undefined}>
                             <DialogHeader>
                               <DialogTitle>{dialogTitle}</DialogTitle>
                               <DialogDescription>
@@ -1353,6 +1382,8 @@ const SwapDetail = () => {
                   swapId={swap.id}
                   sessions={sessions}
                   loading={fetchingSessions}
+                  currentUserId={currentUserId || undefined}
+                  onDeleteSession={handleDeleteSession}
                 />
               )}
 

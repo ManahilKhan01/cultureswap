@@ -230,9 +230,9 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
             {isLoggedIn ? (
               <>
                 {/* Messages Dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative">
+                {conversations.length === 0 && !loadingConvs ? (
+                  <Link to="/messages" className="relative">
+                    <Button variant="ghost" size="icon">
                       <MessageCircle className="h-5 w-5" />
                       {unreadMessages > 0 && (
                         <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 flex items-center justify-center bg-terracotta text-white text-[10px] shadow-sm ring-1 ring-white">
@@ -240,121 +240,134 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                         </Badge>
                       )}
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-80">
-                    <div className="p-3 border-b border-border">
-                      <h4 className="font-semibold">Messages</h4>
-                    </div>
-                    {loadingConvs ? (
-                      <div className="p-4 text-center text-muted-foreground text-sm">
-                        Loading conversations...
+                  </Link>
+                ) : (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="relative">
+                        <MessageCircle className="h-5 w-5" />
+                        {unreadMessages > 0 && (
+                          <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 flex items-center justify-center bg-terracotta text-white text-[10px] shadow-sm ring-1 ring-white">
+                            {unreadMessages > 9 ? "9+" : unreadMessages}
+                          </Badge>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-80">
+                      <div className="p-3 border-b border-border">
+                        <h4 className="font-semibold">Messages</h4>
                       </div>
-                    ) : (
-                      <>
-                        {conversations.length === 0 ? (
-                          <div className="p-4 text-center text-muted-foreground text-sm">
-                            No conversations yet
-                          </div>
-                        ) : (
-                          conversations.map((conv) => {
-                            const profile =
-                              conversationProfiles[conv.otherUserId];
-                            const isUnread =
-                              conv.lastMessage?.receiver_id ===
-                                currentUser?.id && !conv.lastMessage?.read;
-                            const isAssistant =
-                              profile?.full_name
-                                ?.toLowerCase()
-                                .includes("assistant") ||
-                              profile?.email === "assistant@cultureswap.app";
+                      {loadingConvs ? (
+                        <div className="p-4 text-center text-muted-foreground text-sm">
+                          Loading conversations...
+                        </div>
+                      ) : (
+                        <>
+                          {conversations.length === 0 ? (
+                            <div className="p-4 text-center text-muted-foreground text-sm">
+                              No conversations yet
+                            </div>
+                          ) : (
+                            conversations.map((conv) => {
+                              const profile =
+                                conversationProfiles[conv.otherUserId];
+                              const isUnread =
+                                conv.lastMessage?.receiver_id ===
+                                  currentUser?.id && !conv.lastMessage?.read;
+                              const isAssistant =
+                                profile?.full_name
+                                  ?.toLowerCase()
+                                  .includes("assistant") ||
+                                profile?.email === "assistant@cultureswap.app";
 
-                            return (
-                              <DropdownMenuItem
-                                key={conv.id}
-                                className={`p-3 cursor-pointer hover:bg-muted ${isAssistant ? "bg-blue-50/50" : ""}`}
-                                onClick={async () => {
-                                  // Mark conversation as read if it's unread
-                                  if (isUnread && conv.id) {
-                                    try {
-                                      await markConversationAsRead(conv.id);
-                                    } catch (error) {
-                                      console.error(
-                                        "Error marking conversation as read:",
-                                        error,
-                                      );
+                              return (
+                                <DropdownMenuItem
+                                  key={conv.id}
+                                  className={`p-3 cursor-pointer hover:bg-muted ${isAssistant ? "bg-blue-50/50" : ""}`}
+                                  onClick={async () => {
+                                    // Mark conversation as read if it's unread
+                                    if (isUnread && conv.id) {
+                                      try {
+                                        await markConversationAsRead(conv.id);
+                                      } catch (error) {
+                                        console.error(
+                                          "Error marking conversation as read:",
+                                          error,
+                                        );
+                                      }
                                     }
-                                  }
-                                  // Force navigation even if on same page to ensure params update
-                                  navigate(
-                                    `/messages?user=${conv.otherUserId}`,
-                                  );
-                                }}
-                              >
-                                <div className="flex items-start gap-3 w-full">
-                                  <div className="relative flex-shrink-0">
-                                    <img
-                                      src={getCacheBustedImageUrl(
-                                        profile?.profile_image_url,
+                                    // Force navigation even if on same page to ensure params update
+                                    navigate(
+                                      `/messages?user=${conv.otherUserId}`,
+                                    );
+                                  }}
+                                >
+                                  <div className="flex items-start gap-3 w-full">
+                                    <div className="relative flex-shrink-0">
+                                      <img
+                                        src={getCacheBustedImageUrl(
+                                          profile?.profile_image_url,
+                                        )}
+                                        alt="User"
+                                        className={`h-10 w-10 rounded-full object-cover shadow-sm ${isAssistant ? "ring-2 ring-blue-400 bg-blue-100" : ""}`}
+                                      />
+                                      {isAssistant && (
+                                        <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-white flex items-center justify-center">
+                                          <span className="text-white text-[8px] font-bold">
+                                            ✨
+                                          </span>
+                                        </div>
                                       )}
-                                      alt="User"
-                                      className={`h-10 w-10 rounded-full object-cover shadow-sm ${isAssistant ? "ring-2 ring-blue-400 bg-blue-100" : ""}`}
-                                    />
-                                    {isAssistant && (
-                                      <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-white flex items-center justify-center">
-                                        <span className="text-white text-[8px] font-bold">
-                                          ✨
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center justify-between mb-1">
+                                        <p
+                                          className={`font-medium text-sm truncate ${isUnread ? "font-bold" : ""} ${isAssistant ? "text-blue-700" : ""}`}
+                                        >
+                                          {isAssistant && "🤖 "}
+                                          {profile?.full_name || "User"}
+                                        </p>
+                                        <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
+                                          {new Date(
+                                            conv.lastMessage?.created_at,
+                                          ).toLocaleTimeString([], {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                          })}
                                         </span>
                                       </div>
-                                    )}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between mb-1">
-                                      <p
-                                        className={`font-medium text-sm truncate ${isUnread ? "font-bold" : ""} ${isAssistant ? "text-blue-700" : ""}`}
-                                      >
-                                        {isAssistant && "🤖 "}
-                                        {profile?.full_name || "User"}
-                                      </p>
-                                      <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
-                                        {new Date(
-                                          conv.lastMessage?.created_at,
-                                        ).toLocaleTimeString([], {
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                        })}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                      {isUnread && (
-                                        <div className="h-2 w-2 rounded-full bg-terracotta flex-shrink-0" />
-                                      )}
-                                      <p
-                                        className={`text-xs truncate ${isUnread ? "font-semibold text-foreground" : "text-muted-foreground"}`}
-                                      >
-                                        {conv.lastMessage?.content ||
-                                          "No messages yet"}
-                                      </p>
+                                      <div className="flex items-center gap-1">
+                                        {isUnread && (
+                                          <div className="h-2 w-2 rounded-full bg-terracotta flex-shrink-0" />
+                                        )}
+                                        <p
+                                          className={`text-xs truncate ${isUnread ? "font-semibold text-foreground" : "text-muted-foreground"}`}
+                                        >
+                                          {conv.lastMessage?.content ||
+                                            "No messages yet"}
+                                        </p>
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              </DropdownMenuItem>
-                            );
-                          })
-                        )}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                          <Button
-                            variant="ghost"
-                            className="w-full text-center text-sm font-bold text-terracotta hover:text-terracotta-dark hover:bg-terracotta/10 px-0 py-2 cursor-pointer h-auto transition-colors"
-                            onClick={() => navigate("/messages")}
-                          >
-                            View All Messages
-                          </Button>
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                                </DropdownMenuItem>
+                              );
+                            })
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem asChild>
+                            <Button
+                              variant="ghost"
+                              className="w-full text-center text-sm font-bold text-terracotta hover:text-terracotta-dark hover:bg-terracotta/10 px-0 py-2 cursor-pointer h-auto transition-colors"
+                              onClick={() => navigate("/messages")}
+                            >
+                              View All Messages
+                            </Button>
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
 
                 {/* Notifications */}
                 <DropdownMenu>
