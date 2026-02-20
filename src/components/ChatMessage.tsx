@@ -53,11 +53,6 @@ export const ChatMessage = ({
               </div>
             )}
           </div>
-          <span
-            className={`text-sm font-bold ${isAssistant ? "text-blue-700" : isMe ? "text-terracotta" : "text-foreground"}`}
-          >
-            {displayName}
-          </span>
         </div>
         <span className="text-[10px] font-medium text-muted-foreground/70">
           {formattedTime}

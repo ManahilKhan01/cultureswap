@@ -83,10 +83,6 @@ export const aiAssistantService = {
         .maybeSingle();
 
       if (insertError) {
-        console.warn(
-          "Could not create assistant profile, using fallback:",
-          insertError,
-        );
         // Return a virtual profile for display purposes
         cachedAssistantId = finalAssistantId;
         return {
@@ -119,8 +115,6 @@ export const aiAssistantService = {
         bio: assistantProfile.bio,
       };
     } catch (error) {
-      console.error("Error in getOrCreateAssistantUser:", error);
-
       // Absolute fallback: return a virtual assistant profile
       const fallbackId = "00000000-0000-4000-a000-000000000001";
       cachedAssistantId = fallbackId;
@@ -145,13 +139,12 @@ export const aiAssistantService = {
       // because assistant IDs aren't real auth users and would violate FK constraints
       // Instead, return a virtual conversation ID that works with message-based lookup
 
-      console.log("Using message-based conversation for assistant");
+      // Silent assistant conversation log
 
       // Return a deterministic ID based on user + assistant
       const virtualConvId = `assistant-conv-${userId}`;
       return virtualConvId;
     } catch (error) {
-      console.error("Error in getOrCreateAssistantConversation:", error);
       throw error;
     }
   },
@@ -204,15 +197,12 @@ YOUR PERSONALITY:
             apiKey,
           );
           if (response) return response;
-        } catch (apiError) {
-          console.error("OpenAI API error, falling back to rules:", apiError);
-        }
+        } catch (apiError) {}
       }
 
       // Fallback to rule-based responses
       return this.generateRuleBasedResponse(userMessage, context);
     } catch (error) {
-      console.error("Error generating response:", error);
       return this.getDefaultResponse();
     }
   },
@@ -230,13 +220,11 @@ YOUR PERSONALITY:
       });
 
       if (error) {
-        console.error("Supabase function error:", error);
         return null;
       }
 
       return data?.reply || null;
     } catch (error) {
-      console.error("Error calling chat-ai function:", error);
       return null;
     }
   },

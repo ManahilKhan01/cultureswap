@@ -165,89 +165,97 @@ const SwapDetail = () => {
       }
       return;
     }
+  }, [mockSwap]);
 
-    const loadSwap = async () => {
-      try {
-        setLoading(true);
+  const loadSwap = async () => {
+    try {
+      setLoading(true);
 
-        // Get current user
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+      // Get current user
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+
+      const swapData = await swapService.getSwapById(id!);
+
+      if (swapData) {
+        setSwap(swapData);
+
+        // Check if current user is involved in the swap
         if (user) {
-          setCurrentUserId(user.id);
-        }
+          const isOwner = swapData.user_id === user.id;
+          setIsCreator(isOwner);
 
-        const swapData = await swapService.getSwapById(id!);
-
-        if (swapData) {
-          setSwap(swapData);
-
-          // Check if current user is involved in the swap
-          if (user) {
-            const isOwner = swapData.user_id === user.id;
-            setIsCreator(isOwner);
-
-            // If viewing from Discover, load the swap creator's info
-            if (source === "discover") {
-              const creatorProfile = await profileService.getProfile(
+          // If viewing from Discover, load the swap creator's info
+          if (source === "discover") {
+            const creatorProfile = await profileService.getProfile(
+              swapData.user_id,
+            );
+            if (creatorProfile) {
+              const creatorRating = await reviewService.getAverageRating(
                 swapData.user_id,
               );
-              if (creatorProfile) {
-                const creatorRating = await reviewService.getAverageRating(
-                  swapData.user_id,
-                );
-                setSwapCreator({
-                  id: swapData.user_id,
-                  name: creatorProfile.full_name || "User",
-                  avatar: creatorProfile.profile_image_url || "/profile.svg",
-                  location: creatorProfile.city || "Location",
-                  country: creatorProfile.country || "Country",
-                  rating: creatorRating,
-                });
+              setSwapCreator({
+                id: swapData.user_id,
+                name: creatorProfile.full_name || "User",
+                avatar: creatorProfile.profile_image_url || "/profile.svg",
+                location: creatorProfile.city || "Location",
+                country: creatorProfile.country || "Country",
+                rating: creatorRating,
+              });
 
-                // Fetch creator presence
-                presenceService
-                  .getUserPresence(swapData.user_id)
-                  .then((p) => setCreatorStatus(p.status));
-              }
+              // Fetch creator presence
+              presenceService
+                .getUserPresence(swapData.user_id)
+                .then((p) => setCreatorStatus(p.status));
             }
+          }
 
-            // Correctly identify the partner ID
-            // If I am the owner, the partner is partner_id
-            // If I am the partner, the partner is user_id
-            const partnerId = isOwner ? swapData.partner_id : swapData.user_id;
+          // Correctly identify the partner ID
+          // If I am the owner, the partner is partner_id
+          // If I am the partner, the partner is user_id
+          const partnerId = isOwner ? swapData.partner_id : swapData.user_id;
 
-            if (partnerId) {
-              // Load partner profile
-              const profile = await profileService.getProfile(partnerId);
-              if (profile) {
-                const avgRating =
-                  await reviewService.getAverageRating(partnerId);
-                setRating(avgRating);
-                setPartner({
-                  id: partnerId,
-                  name: profile.full_name || "User",
-                  avatar: profile.profile_image_url || "/profile.svg",
-                  location: profile.city || "Location",
-                  country: profile.country || "Country",
-                  rating: avgRating,
-                });
+          if (partnerId) {
+            // Load partner profile
+            const profile = await profileService.getProfile(partnerId);
+            if (profile) {
+              const avgRating = await reviewService.getAverageRating(partnerId);
+              setRating(avgRating);
+              setPartner({
+                id: partnerId,
+                name: profile.full_name || "User",
+                avatar: profile.profile_image_url || "/profile.svg",
+                location: profile.city || "Location",
+                country: profile.country || "Country",
+                rating: avgRating,
+              });
 
-                // Fetch partner presence
-                presenceService
-                  .getUserPresence(partnerId)
-                  .then((p) => setPartnerStatus(p.status));
-              }
+              // Fetch partner presence
+              presenceService
+                .getUserPresence(partnerId)
+                .then((p) => setPartnerStatus(p.status));
             }
           }
         }
-      } catch (error) {
-        console.error("Error loading swap:", error);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Error loading swap:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (mockSwap) {
+      if (mockSwap.participantId) {
+        loadRating(mockSwap.participantId);
+      }
+      return;
+    }
 
     loadSwap();
   }, [id, mockSwap]);
@@ -302,6 +310,21 @@ const SwapDetail = () => {
       window.removeEventListener("profileUpdated", handleProfileUpdate);
     };
   }, [swapCreator?.id, partner?.id]);
+
+  // Real-time subscription for swap changes
+  useEffect(() => {
+    if (!id || mockSwap) return;
+
+    const subscription = swapService.subscribeToSwap(id, () => {
+      loadSwap();
+    });
+
+    return () => {
+      if (subscription) {
+        supabase.removeChannel(subscription);
+      }
+    };
+  }, [id, mockSwap, currentUserId]); // Added currentUserId to dependencies
 
   const loadSessions = async () => {
     try {
@@ -385,10 +408,22 @@ const SwapDetail = () => {
             Pending
           </Badge>
         );
+      case "cancellation_requested":
+        return (
+          <Badge className="bg-orange-500/20 text-orange-600 border-orange-500/30">
+            Cancellation Requested
+          </Badge>
+        );
       case "completed":
         return (
           <Badge className="bg-green-500/20 text-green-600 border-green-500/30">
             Completed
+          </Badge>
+        );
+      case "expired":
+        return (
+          <Badge className="bg-gray-100 text-gray-600 border-gray-200">
+            Expired
           </Badge>
         );
       default:
@@ -400,18 +435,26 @@ const SwapDetail = () => {
     ? (swap.completedSessions! / swap.totalSessions) * 100
     : 0;
 
+  // Handle scheduling a new session
   const handleScheduleSession = async () => {
     if (!sessionDate || !sessionTime) {
-      toast({ title: "Please select date and time", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Please select both date and time",
+        variant: "destructive",
+      });
       return;
     }
 
     try {
+      // Assuming setSchedulingSession and setShowScheduleDialog are defined elsewhere
+      // setSchedulingSession(true);
       const scheduledAt = new Date(
         `${sessionDate}T${sessionTime}`,
       ).toISOString();
+
       await sessionService.createSession({
-        swap_id: swap.id,
+        swap_id: id!,
         scheduled_at: scheduledAt,
       });
 
@@ -420,15 +463,36 @@ const SwapDetail = () => {
         description: `Session scheduled for ${sessionDate} at ${sessionTime}. Meet link generated!`,
       });
 
-      setScheduleOpen(false);
       setSessionDate("");
       setSessionTime("");
       loadSessions(); // This will refresh session list, count and next session
+      // setShowScheduleDialog(false);
     } catch (error: any) {
       console.error("Schedule session error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to schedule session",
+        variant: "destructive",
+      });
+    } finally {
+      // setSchedulingSession(false);
+    }
+  };
+
+  // Handle deleting a session
+  const handleDeleteSession = async (sessionId: string) => {
+    try {
+      await sessionService.deleteSession(sessionId);
+      toast({
+        title: "Session Deleted",
+        description: "The scheduled session has been successfully removed.",
+      });
+      loadSessions(); // Refresh list to remove it from UI
+    } catch (error: any) {
+      console.error("Delete session error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete session",
         variant: "destructive",
       });
     }
@@ -577,14 +641,32 @@ const SwapDetail = () => {
 
   const handleCancelSwap = async () => {
     try {
-      await swapService.cancelSwap(swap.id);
-      toast({
-        title: "Swap Cancelled",
-        description: "Please leave a review for your swap partner.",
-      });
+      const result = await swapService.cancelSwap(swap.id);
       setCancelOpen(false);
-      // Show review dialog after cancelling instead of redirecting
-      setShowCancelReview(true);
+
+      if (result.action === "requested") {
+        // Update local swap state to reflect cancellation_requested
+        setSwap((prev: any) => (prev ? { ...prev, ...result.swap } : prev));
+        toast({
+          title: "Cancellation Requested",
+          description:
+            "Your partner must also confirm to fully cancel the swap.",
+        });
+      } else if (result.action === "confirmed") {
+        setSwap((prev: any) => (prev ? { ...prev, ...result.swap } : prev));
+        toast({
+          title: "Swap Cancelled",
+          description: "Please leave a review for your swap partner.",
+        });
+        setShowCancelReview(true);
+      } else if (result.action === "undone") {
+        setSwap((prev: any) => (prev ? { ...prev, ...result.swap } : prev));
+        toast({
+          title: "Cancellation Withdrawn",
+          description:
+            "Your cancellation request has been withdrawn. The swap is active again.",
+        });
+      }
     } catch (error: any) {
       console.error("Error cancelling swap:", error);
       toast({
@@ -664,9 +746,9 @@ const SwapDetail = () => {
     <div className="flex-1 bg-background pb-12">
       <main className="container mx-auto px-4 py-8">
         <Button variant="ghost" asChild className="mb-6">
-          <Link to={source === 'discover' ? "/discover" : "/swaps"}>
+          <Link to={source === "discover" ? "/discover" : "/swaps"}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            {source === 'discover' ? "Back to Discover" : "Back to Swaps"}
+            {source === "discover" ? "Back to Discover" : "Back to Swaps"}
           </Link>
         </Button>
 
@@ -679,9 +761,34 @@ const SwapDetail = () => {
                     <CardTitle className="font-display text-2xl mb-2">
                       {swap.title}
                     </CardTitle>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                       {getStatusBadge(swap.status)}
-                      <Badge variant="outline">{swap.category}</Badge>
+                      <Badge variant="outline" className="bg-muted/50">
+                        {swap.category}
+                      </Badge>
+                      {swap.status === "open" && swap.expires_at && (
+                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 border border-orange-100 text-[10px] font-bold text-orange-700 uppercase tracking-tight">
+                          <Clock className="h-3 w-3" />
+                          <span>
+                            Expires:{" "}
+                            {(() => {
+                              const now = new Date();
+                              const expires = new Date(swap.expires_at);
+                              const diff = expires.getTime() - now.getTime();
+                              if (diff <= 0) return "Expired";
+                              const days = Math.floor(
+                                diff / (1000 * 60 * 60 * 24),
+                              );
+                              const hours = Math.floor(
+                                (diff % (1000 * 60 * 60 * 24)) /
+                                  (1000 * 60 * 60),
+                              );
+                              if (days > 0) return `${days}d ${hours}h`;
+                              return `${hours}h remaining`;
+                            })()}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -952,7 +1059,7 @@ const SwapDetail = () => {
                         Schedule Next Session
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent aria-describedby={undefined}>
                       <DialogHeader>
                         <DialogTitle>Schedule Next Session</DialogTitle>
                       </DialogHeader>
@@ -1003,7 +1110,7 @@ const SwapDetail = () => {
                         Leave Review
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent aria-describedby={undefined}>
                       <DialogHeader>
                         <DialogTitle>Leave a Review</DialogTitle>
                       </DialogHeader>
@@ -1094,7 +1201,7 @@ const SwapDetail = () => {
                     open={showCancelReview}
                     onOpenChange={setShowCancelReview}
                   >
-                    <DialogContent>
+                    <DialogContent aria-describedby={undefined}>
                       <DialogHeader>
                         <DialogTitle>
                           Leave a Review for Your Swap Partner
@@ -1190,41 +1297,80 @@ const SwapDetail = () => {
                     </DialogContent>
                   </Dialog>
 
-                  {swap.status !== "completed" && (
-                    <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="w-full text-destructive"
-                        >
-                          Cancel Swap
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Cancel Swap</DialogTitle>
-                          <DialogDescription>
-                            Are you sure you want to cancel this swap? This
-                            action cannot be undone.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <DialogFooter>
-                          <Button
-                            variant="outline"
-                            onClick={() => setCancelOpen(false)}
-                          >
-                            Keep Swap
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            onClick={handleCancelSwap}
-                          >
-                            Cancel Swap
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  )}
+                  {swap.status !== "completed" &&
+                    swap.status !== "cancelled" &&
+                    (() => {
+                      const iRequested =
+                        swap.status === "cancellation_requested" &&
+                        swap.cancellation_requested_by === currentUserId;
+                      const otherRequested =
+                        swap.status === "cancellation_requested" &&
+                        swap.cancellation_requested_by &&
+                        swap.cancellation_requested_by !== currentUserId;
+
+                      // Determine dialog content based on state
+                      const dialogTitle = otherRequested
+                        ? "Confirm Cancellation?"
+                        : iRequested
+                          ? "Withdraw Cancellation Request?"
+                          : "Request Cancellation?";
+
+                      const dialogDesc = otherRequested
+                        ? "Your swap partner has requested to cancel. Confirming will permanently cancel this swap for both of you."
+                        : iRequested
+                          ? "This will withdraw your cancellation request and restore the swap to active."
+                          : "This will notify your partner that you want to cancel. The swap will only be fully cancelled after they also confirm.";
+
+                      const actionLabel = otherRequested
+                        ? "Confirm Cancellation"
+                        : iRequested
+                          ? "Withdraw Request"
+                          : "Request Cancellation";
+
+                      const triggerLabel = otherRequested
+                        ? "Confirm Cancellation"
+                        : iRequested
+                          ? "Undo Cancellation Request"
+                          : "Cancel Swap";
+
+                      const triggerClass = otherRequested
+                        ? "w-full text-red-600"
+                        : iRequested
+                          ? "w-full text-orange-600"
+                          : "w-full text-destructive";
+
+                      return (
+                        <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" className={triggerClass}>
+                              {triggerLabel}
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent aria-describedby={undefined}>
+                            <DialogHeader>
+                              <DialogTitle>{dialogTitle}</DialogTitle>
+                              <DialogDescription>
+                                {dialogDesc}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                              <Button
+                                variant="outline"
+                                onClick={() => setCancelOpen(false)}
+                              >
+                                Keep Swap
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                onClick={handleCancelSwap}
+                              >
+                                {actionLabel}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      );
+                    })()}
                 </CardContent>
               </Card>
             )}
@@ -1236,6 +1382,8 @@ const SwapDetail = () => {
                   swapId={swap.id}
                   sessions={sessions}
                   loading={fetchingSessions}
+                  currentUserId={currentUserId || undefined}
+                  onDeleteSession={handleDeleteSession}
                 />
               )}
 

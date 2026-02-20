@@ -237,31 +237,23 @@ const Settings = () => {
     }
   };
 
-  const testConnectivity = async () => {
-    try {
-      console.log("DEBUG - Testing Supabase connectivity...");
-      const { data, error } = await supabase
-        .from("timezones")
-        .select("count", { count: "exact", head: true });
-      if (error) throw error;
-      alert("Connectivity Test: SUCCESS! Connected to Supabase.");
-    } catch (err: any) {
-      console.error("DEBUG - Connectivity Test FAILED:", err);
-      alert("Connectivity Test: FAILED! " + err.message);
-    }
-  };
-
   const handleProfileSave = async (skipImage: boolean = false) => {
-    console.log(
-      `DEBUG - handleProfileSave triggered (skipImage: ${skipImage})`,
-    );
-
     // Validate Name
     const nameError = validateName(profile.name);
     if (nameError) {
       toast({
         title: "Validation Error",
         description: nameError,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate Bio
+    if (profile.bio.length > 500) {
+      toast({
+        title: "Validation Error",
+        description: "Bio cannot exceed 500 characters",
         variant: "destructive",
       });
       return;
@@ -276,7 +268,6 @@ const Settings = () => {
       } = await supabase.auth.getUser();
 
       if (userError || !user) {
-        console.error("DEBUG - Auth Error:", userError);
         toast({
           title: "Authentication Error",
           description: "Your session has expired. Please log in again.",
@@ -286,24 +277,15 @@ const Settings = () => {
         return;
       }
 
-      console.log("DEBUG - User authenticated:", user.id);
-
       // Handle image upload FIRST if not skipped
       if (!skipImage && imageFile) {
-        console.log("DEBUG - Uploading image file...");
         try {
-          const uploadedProfile =
-            await profileService.uploadAndUpdateProfileImage(
-              user.id,
-              imageFile,
-            );
-          console.log("DEBUG - Image uploaded successfully:", uploadedProfile);
-
+          await profileService.uploadAndUpdateProfileImage(user.id, imageFile);
           // Image is already updated in the database via uploadAndUpdateProfileImage
           // Clear the imageFile so we don't try to upload it again
           setImageFile(null);
         } catch (imgError: any) {
-          console.error("DEBUG - Image upload error:", imgError);
+          console.error("Error uploading image:", imgError);
           toast({
             title: "Error",
             description:
@@ -334,7 +316,6 @@ const Settings = () => {
           : [],
       };
 
-      console.log("DEBUG - Starting database update (upsert)...");
       const { error: upsertErr } = await supabase.from("user_profiles").upsert({
         id: user.id,
         email: user.email,
@@ -343,11 +324,8 @@ const Settings = () => {
       });
 
       if (upsertErr) {
-        console.error("DEBUG - Upsert error:", upsertErr);
         throw upsertErr;
       }
-
-      console.log("DEBUG - Update successful");
 
       // Clear all profile-related caches
       clearProfileCaches();
@@ -514,7 +492,20 @@ const Settings = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="bio">Bio</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="bio">Bio</Label>
+                    <span
+                      className={`text-xs ${
+                        profile.bio.length >= 500
+                          ? "text-red-500 font-bold"
+                          : profile.bio.length >= 400
+                            ? "text-orange-500 font-medium"
+                            : "text-green-500 font-medium"
+                      }`}
+                    >
+                      {profile.bio.length}/500
+                    </span>
+                  </div>
                   <Textarea
                     id="bio"
                     rows={4}
@@ -522,7 +513,20 @@ const Settings = () => {
                     onChange={(e) =>
                       setProfile({ ...profile, bio: e.target.value })
                     }
+                    maxLength={500}
+                    className={
+                      profile.bio.length >= 500
+                        ? "border-red-500 focus-visible:ring-red-500"
+                        : profile.bio.length >= 400
+                          ? "border-orange-500 focus-visible:ring-orange-500"
+                          : "border-green-500/50 focus-visible:ring-green-500/50"
+                    }
                   />
+                  {profile.bio.length >= 500 && (
+                    <p className="text-sm text-red-500 mt-1">
+                      Bio cannot exceed 500 characters
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">

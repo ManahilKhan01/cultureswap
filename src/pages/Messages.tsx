@@ -150,6 +150,7 @@ const Messages = () => {
   const [editResponseValue, setEditResponseValue] = useState("");
   const [showDetails, setShowDetails] = useState(true);
   const [otherUserSwapCount, setOtherUserSwapCount] = useState(0);
+  const [activeSwapsBetween, setActiveSwapsBetween] = useState<any[]>([]);
 
   // Key to force OfferCard components to re-fetch when offers are updated
   const [offerRefreshKey, setOfferRefreshKey] = useState(0);
@@ -337,14 +338,12 @@ const Messages = () => {
       try {
         // Get assistant profile
         const assistant = await aiAssistantService.getOrCreateAssistantUser();
-        console.log("Assistant profile obtained:", assistant);
 
         // Get or create assistant conversation (returns virtual ID)
         const conversationId =
           await aiAssistantService.getOrCreateAssistantConversation(
             currentUser.id,
           );
-        console.log("Conversation ID:", conversationId);
 
         // For assistant chat, try to load from messages between user and assistant
         // If conversation ID is virtual (starts with "assistant-conv-"), query by users instead
@@ -352,17 +351,12 @@ const Messages = () => {
 
         if (conversationId.startsWith("assistant-conv-")) {
           // Use message-based lookup (avoids conversations table entirely)
-          console.log("Loading messages via message-based fallback");
           try {
             convMessages = await messageService.getMessagesBetweenUsers(
               currentUser.id,
               assistant.id,
             );
           } catch (msgError) {
-            console.warn(
-              "Could not load from messages, starting fresh:",
-              msgError,
-            );
             convMessages = [];
           }
         } else {
@@ -371,18 +365,12 @@ const Messages = () => {
             convMessages =
               await messageService.getMessagesByConversation(conversationId);
           } catch (convError) {
-            console.warn(
-              "Conversation lookup failed, trying message fallback:",
-              convError,
-            );
             convMessages = await messageService.getConversation(
               currentUser.id,
               assistant.id,
             );
           }
         }
-
-        console.log("Messages loaded:", convMessages.length);
 
         // If no messages exist, add Swapy's automatic greeting
         if (convMessages.length === 0) {
@@ -397,7 +385,6 @@ const Messages = () => {
             is_assistant: true,
           };
           convMessages = [greetingMessage];
-          console.log("Added automatic greeting from Swapy");
         }
 
         // Load attachments in bulk for better performance
@@ -415,9 +402,7 @@ const Messages = () => {
               }
               attachmentsMap[att.message_id].push(att);
             }
-          } catch (e) {
-            console.warn("Could not load attachments:", e);
-          }
+          } catch (e) {}
         }
 
         // Set user profiles
@@ -443,11 +428,9 @@ const Messages = () => {
           description: "Assistant chat opened",
         });
       } catch (error) {
-        console.error("Full error opening assistant chat:", error);
         throw error;
       }
     } catch (error: any) {
-      console.error("Error opening assistant chat:", error);
       toast({
         title: "Error",
         description:
@@ -507,9 +490,7 @@ const Messages = () => {
       if (allUserIds.length > 0) {
         presenceService.getBatchPresence(allUserIds).then(setPresenceMap);
       }
-    } catch (error) {
-      console.error("Error loading conversations:", error);
-    }
+    } catch (error) {}
   };
 
   // Effect 1: Initial load of auth and conversation list
@@ -524,7 +505,6 @@ const Messages = () => {
         setCurrentUser(user);
         await loadConversations(user.id);
       } catch (error) {
-        console.error("Error in initial load:", error);
       } finally {
         setLoading(false);
       }
@@ -595,13 +575,26 @@ const Messages = () => {
             swapId: swapIdParam,
           });
 
-          // Fetch swap count for the other user
+          // Fetch swap count and active swaps for the other user
           try {
-            const count = await swapService.getCompletedSwapsCount(userIdParam);
+            const [count, activeSwapsResult] = await Promise.all([
+              swapService.getCompletedSwapsCount(userIdParam),
+              supabase
+                .from("swaps")
+                .select(
+                  "id, title, skill_offered, skill_wanted, status, created_at",
+                )
+                .eq("status", "active")
+                .or(
+                  `and(user_id.eq.${currentUser.id},partner_id.eq.${userIdParam}),and(user_id.eq.${userIdParam},partner_id.eq.${currentUser.id})`,
+                )
+                .order("created_at", { ascending: false }),
+            ]);
             setOtherUserSwapCount(count);
+            setActiveSwapsBetween(activeSwapsResult.data || []);
           } catch (e) {
-            console.warn("Could not fetch user swap count:", e);
             setOtherUserSwapCount(0);
+            setActiveSwapsBetween([]);
           }
         } else {
           setSelectedConversation(null);
@@ -609,7 +602,6 @@ const Messages = () => {
           setCurrentSwap(null);
         }
       } catch (error) {
-        console.error("Error loading chat detail:", error);
       } finally {
         setMessagesLoading(false);
       }
@@ -656,7 +648,7 @@ const Messages = () => {
                 }
               }
             })
-            .catch((err) => console.error("Polling error:", err));
+            .catch((err) => {});
         }
       }
     }, 3000);
@@ -681,14 +673,11 @@ const Messages = () => {
           const newMsg = payload.new as any;
           // Filter in callback for reliability
           if (newMsg && newMsg.receiver_id === currentUser.id) {
-            console.log("✅ Global message received for user:", newMsg.id);
             loadConversations(currentUser.id);
           }
         },
       )
-      .subscribe((status) => {
-        console.log("📡 Global messages subscription status:", status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
@@ -701,9 +690,6 @@ const Messages = () => {
 
     // Skip real-time subscriptions for virtual assistant conversations
     if (aiAssistantService.isAssistantConversation(selectedConversation.id)) {
-      console.log(
-        "Using virtual conversation, skipping real-time subscriptions",
-      );
       return;
     }
 
@@ -718,31 +704,15 @@ const Messages = () => {
         },
         async (payload) => {
           const newMsg = payload.new as any;
-          console.log("📨 Real-time payload received:", {
-            eventType: payload.eventType,
-            msgId: newMsg?.id,
-            conversationId: newMsg?.conversation_id,
-            expectedConversation: selectedConversation.id,
-            senderId: newMsg?.sender_id,
-            currentUserId: currentUser.id,
-          });
 
           // Filter in callback for reliability
           if (!newMsg || newMsg.conversation_id !== selectedConversation.id) {
-            console.log("❌ Message filtered out - wrong conversation");
             return;
           }
 
           if (payload.eventType === "INSERT") {
-            console.log(
-              "✅ Real-time message received:",
-              newMsg.id,
-              "from:",
-              newMsg.sender_id,
-            );
             setMessages((prev) => {
               if (prev.find((m) => m.id === newMsg.id)) {
-                console.log("⚠️ Message already exists, skipping:", newMsg.id);
                 return prev;
               }
               const next = [...prev, newMsg].sort(
@@ -772,7 +742,6 @@ const Messages = () => {
               msgContent.includes("declined") ||
               msgContent.includes("offer")
             ) {
-              console.log("Offer-related message, refreshing cards");
               setOfferRefreshKey((prev) => prev + 1);
             }
           }
@@ -792,11 +761,6 @@ const Messages = () => {
             changedOffer &&
             changedOffer.conversation_id === selectedConversation.id
           ) {
-            console.log(
-              "Offer updated in real-time:",
-              changedOffer.id,
-              changedOffer.status,
-            );
             // Re-fetch messages to refresh any OfferCard components
             const msgs = await messageService.getMessagesByConversation(
               selectedConversation.id,
@@ -807,20 +771,7 @@ const Messages = () => {
           }
         },
       )
-      .subscribe((status) => {
-        console.log(
-          "📡 Chat subscription status:",
-          status,
-          "for conversation:",
-          selectedConversation.id,
-        );
-        if (status === "SUBSCRIBED") {
-          console.log(
-            "✅ Real-time chat subscription ACTIVE for:",
-            selectedConversation.id,
-          );
-        }
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
@@ -927,7 +878,6 @@ const Messages = () => {
 
       setAutoReplyPreview(reply);
     } catch (error) {
-      console.error("Error generating auto reply:", error);
       toast({
         title: "Error",
         description: "Failed to generate AI reply",
@@ -1004,9 +954,7 @@ const Messages = () => {
         window.open(url, "_blank");
         // Small delay to avoid browser blocking multiple tabs
         await new Promise((resolve) => setTimeout(resolve, 500));
-      } catch (error) {
-        console.error("Error downloading file:", error);
-      }
+      } catch (error) {}
     }
     toast({
       title: "Downloading...",
@@ -1040,7 +988,6 @@ const Messages = () => {
         };
 
         setMessages((prev) => [...prev, newMessage]);
-        console.log("Created local assistant message:", newMessage);
       } else {
         // For regular conversations, save to database
         newMessage = await messageService.sendMessage({
@@ -1275,7 +1222,7 @@ const Messages = () => {
 
   return (
     <div className="flex flex-col h-[calc(100dvh-72px)] md:h-[calc(100vh-80px)] bg-background overflow-hidden">
-      <div className="flex-1 overflow-hidden p-0 md:p-4 lg:p-6 bg-muted/30">
+      <div className="flex-1 overflow-hidden p-0 md:p-4 lg:p-6 bg-background">
         <div className="h-full bg-white rounded-none md:rounded-3xl border-none md:border border-border shadow-2xl overflow-hidden flex flex-col relative">
           <div className="flex flex-1 overflow-hidden">
             {/* Left Panel: Conversation List */}
@@ -1530,102 +1477,7 @@ const Messages = () => {
             >
               {selectedConversation ? (
                 <>
-                  {/* Chat Header */}
-                  <div className="p-3 px-3 md:px-4 border-b border-border flex items-center justify-between sticky top-0 backdrop-blur-sm z-10 bg-white/40 shadow-sm">
-                    <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="md:hidden -ml-2 rounded-full"
-                        onClick={() => {
-                          setSelectedConversation(null);
-                          setSearchParams({});
-                        }}
-                      >
-                        <ChevronLeft className="h-6 w-6" />
-                      </Button>
-                      <div className="relative">
-                        <img
-                          key={getCacheBustedImageUrl(
-                            otherUserProfile?.profile_image_url,
-                          )}
-                          src={getCacheBustedImageUrl(
-                            otherUserProfile?.profile_image_url,
-                          )}
-                          alt="Avatar"
-                          className="h-10 w-10 rounded-full object-cover shadow-sm ring-1 ring-border"
-                        />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold leading-none mb-1.5">
-                          {otherUserProfile?.full_name || "User"}
-                        </p>
-                        <p className="text-[11px] font-medium truncate flex items-center gap-1.5 text-muted-foreground">
-                          {isAssistantUser(otherUserProfile) ? null : (
-                            <>
-                              {presenceMap[otherUserProfile?.id]?.status ===
-                                "online" && (
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                              )}
-                              Local time:{" "}
-                              {(() => {
-                                try {
-                                  const timezone = otherUserProfile?.timezone;
-                                  // Check if timezone is in valid IANA format, otherwise use local
-                                  const validTimezone =
-                                    timezone && !timezone.startsWith("UTC")
-                                      ? timezone
-                                      : Intl.DateTimeFormat().resolvedOptions()
-                                          .timeZone;
-                                  return new Date().toLocaleTimeString(
-                                    "en-US",
-                                    {
-                                      timeZone: validTimezone,
-                                      hour: "numeric",
-                                      minute: "2-digit",
-                                      hour12: true,
-                                    },
-                                  );
-                                } catch (e) {
-                                  // Fallback if timezone parsing fails
-                                  return new Date().toLocaleTimeString(
-                                    "en-US",
-                                    {
-                                      hour: "numeric",
-                                      minute: "2-digit",
-                                      hour12: true,
-                                    },
-                                  );
-                                }
-                              })()}
-                            </>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 md:gap-4">
-                      {canCreateOffer && (
-                        <Button
-                          variant="terracotta"
-                          size="sm"
-                          onClick={() => setCreateOfferOpen(true)}
-                          className="rounded-full px-3 md:px-4 shadow-md transition-transform hover:scale-105 hidden sm:flex shrink-0"
-                        >
-                          <Handshake className="h-4 w-4 mr-1.5 md:mr-2" />
-                          <span className="text-xs md:text-sm">Send Offer</span>
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setShowDetails(!showDetails)}
-                        className={`rounded-full transition-colors ${showDetails ? "text-terracotta bg-terracotta/5" : "text-muted-foreground"}`}
-                      >
-                        <User className="h-5 w-5" />
-                      </Button>
-                    </div>
-                  </div>
+                  {/* Chat Header Removed */}
 
                   {/* Messages Stream */}
                   <div
@@ -2150,6 +2002,43 @@ const Messages = () => {
                           </div>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Active Swaps Section */}
+                    <div className="pt-6 border-t border-border mb-6">
+                      <h2 className="text-sm font-bold text-muted-foreground/60 uppercase tracking-wider mb-4">
+                        Active Swaps
+                      </h2>
+                      {activeSwapsBetween.length > 0 ? (
+                        <div className="space-y-2">
+                          {activeSwapsBetween.map((swap) => (
+                            <div
+                              key={swap.id}
+                              className="p-3 rounded-xl bg-teal/5 border border-teal/20 hover:border-teal/40 transition-colors cursor-pointer"
+                              onClick={() => (window.location.href = `/swaps`)}
+                            >
+                              <p className="text-xs font-semibold text-foreground truncate mb-1">
+                                {swap.title || "Untitled Swap"}
+                              </p>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] bg-teal/10 text-teal-dark px-1.5 py-0.5 rounded font-medium truncate max-w-[80px]">
+                                  {swap.skill_offered}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground">
+                                  ↔
+                                </span>
+                                <span className="text-[10px] bg-terracotta/10 text-terracotta px-1.5 py-0.5 rounded font-medium truncate max-w-[80px]">
+                                  {swap.skill_wanted}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          No active swaps yet. Send a swap offer to get started!
+                        </p>
+                      )}
                     </div>
 
                     <div className="pt-6 border-t border-border mb-8">

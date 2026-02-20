@@ -102,8 +102,6 @@ const Signup = () => {
 
       if (authError) throw authError;
 
-      console.log("Auth user created:", authData.user);
-
       // Create in user_profiles table (new)
       if (authData.user) {
         const { error: profileError } = await supabase
@@ -125,7 +123,6 @@ const Signup = () => {
           console.error("Profile creation error:", profileError);
           throw new Error(`Profile creation failed: ${profileError.message}`);
         }
-        console.log("User profile created in user_profiles table");
 
         // Upload profile image if provided
         if (profileImage) {
@@ -134,7 +131,6 @@ const Signup = () => {
               authData.user.id,
               profileImage,
             );
-            console.log("Profile image uploaded successfully");
           } catch (imageError) {
             console.error("Error uploading profile image:", imageError);
             // Continue with signup even if image upload fails
