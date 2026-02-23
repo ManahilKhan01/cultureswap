@@ -47,7 +47,7 @@ const ForgotPassword = () => {
         {/* Logo */}
         <Link to="/" className="flex items-center justify-center gap-2 mb-8">
           <img 
-            src="../public/logo.svg" 
+            src="/logo.svg" 
             alt="CultureSwap Logo" 
             className="h-40 w-40 object-contain"
           />
