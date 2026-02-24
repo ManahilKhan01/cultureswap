@@ -121,7 +121,17 @@ export const OfferCard = ({
   const isReceiver = offer.receiver_id === currentUserId;
   const isSender = offer.sender_id === currentUserId;
   const isPending = offer.status === "pending";
-  const canRespond = isReceiver && isPending;
+
+  const isExpired = (() => {
+    if (!offer.expires_in_days || offer.status !== "pending") return false;
+    const createdAt = new Date(offer.created_at);
+    const expiresAt = new Date(
+      createdAt.getTime() + offer.expires_in_days * 24 * 60 * 60 * 1000,
+    );
+    return new Date() > expiresAt;
+  })();
+
+  const canRespond = isReceiver && isPending && !isExpired;
   const canWithdraw = isSender && isPending;
 
   const handleAccept = async () => {
@@ -226,8 +236,15 @@ export const OfferCard = ({
           : "border-neutral-200 bg-neutral-50/50"
       }`}
     >
-      <div className="bg-terracotta text-white px-4 py-2 flex items-center">
+      <div className="bg-terracotta text-white px-4 py-2 flex items-center justify-between">
         <span className="text-xs font-bold font-display">swap offer</span>
+        {offer.status === "pending" && offer.expires_in_days && !isExpired && (
+          <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-medium tracking-wide flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            Expires in {offer.expires_in_days} day
+            {offer.expires_in_days !== 1 ? "s" : ""}
+          </span>
+        )}
       </div>
 
       <CardContent className="p-4 space-y-4">
@@ -368,11 +385,19 @@ export const OfferCard = ({
         {/* Status footer */}
         <div className="flex items-center justify-between pt-1 border-t border-border/40">
           <div className="flex items-center gap-2">
-            {offer.status === "pending" && (
+            {offer.status === "pending" && !isExpired && (
               <>
                 <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
                 <span className="text-[11px] text-amber-600 font-semibold uppercase tracking-wide">
                   Pending
+                </span>
+              </>
+            )}
+            {offer.status === "pending" && isExpired && (
+              <>
+                <XCircle className="h-3.5 w-3.5 text-neutral-400" />
+                <span className="text-[11px] text-neutral-500 font-semibold uppercase tracking-wide">
+                  Expired
                 </span>
               </>
             )}

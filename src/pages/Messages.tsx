@@ -1222,8 +1222,8 @@ const Messages = () => {
 
   return (
     <div className="flex flex-col h-[calc(100dvh-72px)] md:h-[calc(100vh-80px)] bg-background overflow-hidden">
-      <div className="flex-1 overflow-hidden p-0 md:p-4 lg:p-6 bg-background">
-        <div className="h-full bg-white rounded-none md:rounded-3xl border-none md:border border-border shadow-2xl overflow-hidden flex flex-col relative">
+      <div className="flex-1 overflow-hidden bg-background">
+        <div className="h-full bg-white overflow-hidden flex flex-col relative shadow-none">
           <div className="flex flex-1 overflow-hidden">
             {/* Left Panel: Conversation List */}
             <div
