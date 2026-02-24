@@ -33,6 +33,7 @@ export interface Offer {
   schedule?: string;
   notes?: string;
   status: "pending" | "accepted" | "rejected";
+  expires_in_days?: number;
   created_at: string;
   updated_at: string;
 }

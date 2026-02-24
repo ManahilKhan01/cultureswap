@@ -58,6 +58,7 @@ export const CreateOfferDialog = ({
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [schedule, setSchedule] = useState("");
   const [notes, setNotes] = useState("");
+  const [expiresIn, setExpiresIn] = useState<string>("");
 
   useEffect(() => {
     if (open && receiverId) {
@@ -145,7 +146,8 @@ export const CreateOfferDialog = ({
         duration: selectedSwap.duration || "60 mins", // Default or from swap
         schedule: schedule || undefined,
         notes: notes || undefined,
-      });
+        ...(expiresIn ? { expires_in_days: parseInt(expiresIn, 10) } : {}),
+      } as any);
 
       toast({
         title: "Offer Sent!",
@@ -244,7 +246,43 @@ export const CreateOfferDialog = ({
             )}
           </div>
 
-          <div className="h-px bg-border my-4" />
+          {/* Offer expiration */}
+          <div className="flex items-center justify-between border-b border-border pb-4 my-4">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="expires-check"
+                checked={!!expiresIn}
+                onCheckedChange={(checked) => setExpiresIn(checked ? "1" : "")}
+                disabled={submitting}
+              />
+              <Label
+                htmlFor="expires-check"
+                className="text-sm font-medium cursor-pointer"
+              >
+                Offer expires in
+              </Label>
+            </div>
+            {!!expiresIn && (
+              <Select
+                value={expiresIn}
+                onValueChange={setExpiresIn}
+                disabled={submitting}
+              >
+                <SelectTrigger className="w-[120px] h-8">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 day</SelectItem>
+                  <SelectItem value="2">2 days</SelectItem>
+                  <SelectItem value="3">3 days</SelectItem>
+                  <SelectItem value="4">4 days</SelectItem>
+                  <SelectItem value="5">5 days</SelectItem>
+                  <SelectItem value="6">6 days</SelectItem>
+                  <SelectItem value="7">7 days</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          </div>
 
           {/* Description / Notes */}
           <div className="space-y-2">
