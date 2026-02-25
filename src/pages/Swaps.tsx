@@ -434,7 +434,10 @@ const Swaps = () => {
     const hasPartner = !!swap.partner_id;
 
     return (
-      <Card className="group hover:shadow-lg transition-all duration-300 border-border/50 hover:border-primary/30">
+      <Card
+        className="group hover:border-primary/30 transition-all duration-300 border-border/50 cursor-pointer"
+        onClick={() => navigate(`/swap/${swap.id}`)}
+      >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
@@ -536,141 +539,6 @@ const Swaps = () => {
               </span>
             </div>
           )}
-
-          {/* Actions */}
-          <div className="flex gap-2 pt-2">
-            {hasPartner && (
-              <Button variant="outline" size="sm" className="flex-1" asChild>
-                <Link
-                  to={`/messages?user=${otherUser?.id || swap.partner_id}&swap=${swap.id}`}
-                >
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  Message
-                </Link>
-              </Button>
-            )}
-            <Button variant="terracotta" size="sm" className="flex-1" asChild>
-              <Link to={`/swap/${swap.id}`}>View Details</Link>
-            </Button>
-
-            {/* Cancel/Confirm/Undo Swap Button - context-aware */}
-            {(swap.status === "active" ||
-              swap.status === "open" ||
-              swap.status === "cancellation_requested") &&
-              (() => {
-                const iRequested =
-                  swap.status === "cancellation_requested" &&
-                  swap.cancellation_requested_by === currentUser?.id;
-                const otherRequested =
-                  swap.status === "cancellation_requested" &&
-                  swap.cancellation_requested_by &&
-                  swap.cancellation_requested_by !== currentUser?.id;
-
-                if (otherRequested) {
-                  // Other user requested — show Confirm Cancellation
-                  return (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-red-600 border-red-300 hover:bg-red-50 text-xs px-2"
-                          disabled={cancellingSwapId === swap.id}
-                        >
-                          {cancellingSwapId === swap.id ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            "Confirm Cancel"
-                          )}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>
-                            Confirm Cancellation?
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Your swap partner has requested to cancel this swap.
-                            Confirming will permanently cancel it for both of
-                            you.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Keep Swap</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleCancelSwap(swap.id)}
-                            className="bg-red-600 hover:bg-red-700"
-                          >
-                            Confirm Cancellation
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  );
-                }
-
-                if (iRequested) {
-                  // Current user requested — show Undo
-                  return (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-orange-600 border-orange-300 hover:bg-orange-50 text-xs px-2"
-                      disabled={cancellingSwapId === swap.id}
-                      onClick={() => handleCancelSwap(swap.id)}
-                    >
-                      {cancellingSwapId === swap.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        "Undo Request"
-                      )}
-                    </Button>
-                  );
-                }
-
-                // No request yet — show Request Cancel
-                return (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-red-600 border-red-200 hover:bg-red-50"
-                        disabled={cancellingSwapId === swap.id}
-                      >
-                        {cancellingSwapId === swap.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <XCircle className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          Request Cancellation?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will notify your partner that you want to cancel.
-                          The swap will only be fully cancelled after they
-                          confirm.
-                          {hasPartner && " Your partner will be notified."}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Keep Swap</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleCancelSwap(swap.id)}
-                          className="bg-red-600 hover:bg-red-700"
-                        >
-                          Request Cancellation
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                );
-              })()}
-          </div>
         </CardContent>
       </Card>
     );

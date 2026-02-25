@@ -143,7 +143,7 @@
   }
 
   .hover-lift {
-    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
+    @apply transition-all duration-300 hover:-translate-y-1;
   }
 
   .hover-darken {
@@ -154,9 +154,6 @@
     @apply transition-transform duration-200 hover:scale-105 active:scale-95;
   }
 
-  .card-shadow {
-    box-shadow: 0 4px 20px -4px hsl(var(--terracotta) / 0.15);
-  }
 
   @keyframes shimmer {
     0% {
