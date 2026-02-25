@@ -35,9 +35,10 @@ const MainLayout = () => {
   }, []);
 
   const location = useLocation();
-  const isMessagesOrSwapDetail =
-    location.pathname.startsWith("/messages") ||
-    location.pathname.startsWith("/swap/");
+  const isHideFooter =
+    location.pathname === "/swaps" ||
+    location.pathname.startsWith("/swap/") ||
+    location.pathname.startsWith("/messages");
 
   // Show a blank state or loader if still checking initial auth
   if (loading) return null;
@@ -45,10 +46,10 @@ const MainLayout = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background w-full">
       <Navbar isLoggedIn={isLoggedIn} />
-      <main className="flex-grow">
+      <main className="flex-grow flex flex-col min-h-0">
         <Outlet context={{ isLoggedIn }} />
       </main>
-      {!isMessagesOrSwapDetail && <Footer />}
+      {!isHideFooter && <Footer />}
     </div>
   );
 };

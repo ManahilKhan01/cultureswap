@@ -165,7 +165,7 @@ const Signup = () => {
       }}
     >
       <div className="absolute inset-0 bg-black/40"></div>
-      <Card className="w-full max-w-md shadow-lg relative z-10">
+      <Card className="w-full max-w-md border border-border/50 relative z-10">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Create an account</CardTitle>
         </CardHeader>
@@ -213,7 +213,7 @@ const Signup = () => {
                     />
                     <Label
                       htmlFor="profileImage"
-                      className="flex items-center justify-center gap-2 w-full h-10 px-4 bg-terracotta hover:bg-terracotta/90 text-white rounded-md cursor-pointer transition-all text-xs sm:text-sm font-medium shadow-sm active:scale-95"
+                      className="flex items-center justify-center gap-2 w-full h-10 px-4 bg-terracotta hover:bg-terracotta/90 text-white rounded-md cursor-pointer transition-all text-xs sm:text-sm font-medium active:scale-95 border border-terracotta/20"
                     >
                       <Upload className="h-4 w-4" />
                       Upload
@@ -363,7 +363,7 @@ const Signup = () => {
 
             <Button
               type="submit"
-              className="w-full bg-terracotta hover:bg-terracotta/90 text-white shadow-md transition-all active:scale-95"
+              className="w-full bg-terracotta hover:bg-terracotta/90 text-white transition-all active:scale-95 border border-terracotta/20"
               size="lg"
               disabled={isLoading}
             >

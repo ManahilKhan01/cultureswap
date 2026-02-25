@@ -184,7 +184,7 @@ const Index = () => {
               <Link
                 key={category.id}
                 to={`/discover?category=${category.id}`}
-                className="bg-card rounded-xl p-6 border border-border hover:border-terracotta/50 hover:shadow-warm transition-all group"
+                className="bg-card rounded-xl p-6 border border-border hover:border-terracotta/50 transition-all group"
               >
                 <span className="text-3xl mb-3 block">{category.icon}</span>
                 <h3 className="font-semibold mb-1 group-hover:text-terracotta transition-colors">

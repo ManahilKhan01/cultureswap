@@ -467,7 +467,7 @@ const Profile = () => {
                 </CardContent>
               </Card>
 
-              <Card className="border-border/50 shadow-sm overflow-hidden">
+              <Card className="border-border/50 overflow-hidden">
                 <CardHeader className="bg-muted/30 pb-4">
                   <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                     User Reviews Summary
@@ -553,7 +553,7 @@ const Profile = () => {
                 <TabsList className="mb-6 bg-muted/50 p-1 border border-border/50 rounded-xl">
                   <TabsTrigger
                     value="reviews"
-                    className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                    className="rounded-lg data-[state=active]:bg-white data-[state=active]:border data-[state=active]:border-border/50"
                   >
                     Reviews
                   </TabsTrigger>
@@ -569,7 +569,7 @@ const Profile = () => {
                   value="skills"
                   className="space-y-6 focus-visible:outline-none"
                 >
-                  <Card className="border-border/50 shadow-sm overflow-hidden group">
+                  <Card className="border-border/50 overflow-hidden group">
                     <div className="h-1 w-full bg-terracotta/10 translate-y-[-1px] group-hover:bg-terracotta/30 transition-colors" />
                     <CardHeader>
                       <CardTitle className="text-lg flex items-center gap-2 text-terracotta">
@@ -579,7 +579,7 @@ const Profile = () => {
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
                         {userProfile.skills_offered &&
-                        userProfile.skills_offered.length > 0 ? (
+                          userProfile.skills_offered.length > 0 ? (
                           userProfile.skills_offered.map((skill: string) => (
                             <Badge
                               key={skill}
@@ -607,7 +607,7 @@ const Profile = () => {
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
                         {userProfile.skills_wanted &&
-                        userProfile.skills_wanted.length > 0 ? (
+                          userProfile.skills_wanted.length > 0 ? (
                           userProfile.skills_wanted.map((skill: string) => (
                             <Badge
                               key={skill}
@@ -685,7 +685,7 @@ const Profile = () => {
             </div>
 
             <div className="space-y-6">
-              <Card className="border-border/50 shadow-sm overflow-hidden">
+              <Card className="border-border/50 overflow-hidden">
                 <CardHeader className="bg-muted/30 pb-4">
                   <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                     Profile Details
@@ -722,10 +722,10 @@ const Profile = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-terracotta to-terracotta/80 text-white border-0 shadow-lg shadow-terracotta/20 relative overflow-hidden group">
+              <Card className="bg-gradient-to-br from-terracotta to-terracotta/80 text-white border-0 relative overflow-hidden group">
                 <div className="absolute top-[-20%] right-[-10%] h-32 w-32 bg-white/10 rounded-full blur-2xl group-hover:scale-110 transition-transform duration-700" />
                 <CardContent className="py-8 text-center relative z-10">
-                  <div className="text-4xl font-display font-bold mb-1 drop-shadow-sm">
+                  <div className="text-4xl font-display font-bold mb-1">
                     {bgLoading ? (
                       <Skeleton className="h-8 w-12 mx-auto bg-white/20" />
                     ) : (
@@ -815,7 +815,7 @@ const Profile = () => {
               </Card>
 
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                <Card className="border-border/50 shadow-sm overflow-hidden">
+                <Card className="border-border/50 overflow-hidden">
                   <CardHeader className="bg-muted/30 pb-4">
                     <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                       Latest Swaps

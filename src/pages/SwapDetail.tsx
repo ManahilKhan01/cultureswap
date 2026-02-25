@@ -57,8 +57,8 @@ const SwapDetailSkeleton = () => (
     <main className="container mx-auto px-4 py-8">
       <Skeleton className="h-10 w-32 mb-6" />
 
-      <div className="grid lg:grid-cols-5 gap-8">
-        <div className="lg:col-span-3 space-y-6">
+      <div className="flex flex-col lg:flex-row gap-8">
+        <div className="w-full lg:w-3/4 space-y-6">
           <Card>
             <CardHeader className="space-y-4">
               <Skeleton className="h-8 w-[60%]" />
@@ -96,7 +96,7 @@ const SwapDetailSkeleton = () => (
           </Card>
         </div>
 
-        <div className="lg:col-span-2 space-y-6">
+        <div className="w-full lg:w-1/4 space-y-6">
           {[1, 2].map((i) => (
             <Card key={i}>
               <CardHeader>
@@ -752,8 +752,8 @@ const SwapDetail = () => {
           </Link>
         </Button>
 
-        <div className="grid lg:grid-cols-5 gap-8">
-          <div className="lg:col-span-3 space-y-6">
+        <div className="flex flex-col lg:flex-row gap-8">
+          <div className="w-full lg:w-3/4 space-y-6">
             <Card>
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -781,7 +781,7 @@ const SwapDetail = () => {
                               );
                               const hours = Math.floor(
                                 (diff % (1000 * 60 * 60 * 24)) /
-                                  (1000 * 60 * 60),
+                                (1000 * 60 * 60),
                               );
                               if (days > 0) return `${days}d ${hours}h`;
                               return `${hours}h remaining`;
@@ -805,7 +805,7 @@ const SwapDetail = () => {
                       {swap.skillOffered || swap.skill_offered}
                     </p>
                   </div>
-                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-background shadow-md">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-background border border-border/50">
                     <ArrowLeftRight className="h-6 w-6 text-primary" />
                   </div>
                   <div className="flex-1 text-center">
@@ -909,7 +909,7 @@ const SwapDetail = () => {
             )}
           </div>
 
-          <div className="lg:col-span-2 space-y-6">
+          <div className="w-full lg:w-1/4 space-y-6">
             {/* Show Swap Creator card when viewing from Discover */}
             {source === "discover" && swapCreator && (
               <Card>
@@ -1141,8 +1141,8 @@ const SwapDetail = () => {
                             maxLength={500}
                             className={
                               !reviewValidation.isValid ||
-                              reviewValidation.wordCount === 80 ||
-                              reviewValidation.charCount === 500
+                                reviewValidation.wordCount === 80 ||
+                                reviewValidation.charCount === 500
                                 ? "border-destructive focus-visible:ring-destructive"
                                 : reviewValidation.wordCount > 0
                                   ? "border-green-500 focus-visible:ring-green-500"
@@ -1161,15 +1161,14 @@ const SwapDetail = () => {
                               </p>
                             )}
                             <div
-                              className={`font-medium ${
-                                !reviewValidation.isValid ||
+                              className={`font-medium ${!reviewValidation.isValid ||
                                 reviewValidation.wordCount === 80 ||
                                 reviewValidation.charCount === 500
-                                  ? "text-destructive"
-                                  : reviewValidation.wordCount > 0
-                                    ? "text-green-600"
-                                    : "text-muted-foreground"
-                              }`}
+                                ? "text-destructive"
+                                : reviewValidation.wordCount > 0
+                                  ? "text-green-600"
+                                  : "text-muted-foreground"
+                                }`}
                             >
                               <span>
                                 {reviewValidation.charCount} / 500 characters
@@ -1239,8 +1238,8 @@ const SwapDetail = () => {
                             maxLength={500}
                             className={
                               !reviewValidation.isValid ||
-                              reviewValidation.wordCount === 80 ||
-                              reviewValidation.charCount === 500
+                                reviewValidation.wordCount === 80 ||
+                                reviewValidation.charCount === 500
                                 ? "border-destructive focus-visible:ring-destructive"
                                 : reviewValidation.wordCount > 0
                                   ? "border-green-500 focus-visible:ring-green-500"
@@ -1259,15 +1258,14 @@ const SwapDetail = () => {
                               </p>
                             )}
                             <div
-                              className={`font-medium ${
-                                !reviewValidation.isValid ||
+                              className={`font-medium ${!reviewValidation.isValid ||
                                 reviewValidation.wordCount === 80 ||
                                 reviewValidation.charCount === 500
-                                  ? "text-destructive"
-                                  : reviewValidation.wordCount > 0
-                                    ? "text-green-600"
-                                    : "text-muted-foreground"
-                              }`}
+                                ? "text-destructive"
+                                : reviewValidation.wordCount > 0
+                                  ? "text-green-600"
+                                  : "text-muted-foreground"
+                                }`}
                             >
                               <span>
                                 {reviewValidation.charCount} / 500 characters
@@ -1389,7 +1387,7 @@ const SwapDetail = () => {
 
             {/* Slide-in Chat Panel */}
             {partner && currentUserId && isChatOpen && (
-              <div className="fixed inset-y-0 right-0 w-full sm:w-[400px] z-50 bg-background shadow-2xl animate-in slide-in-from-right duration-300">
+              <div className="fixed inset-y-0 right-0 w-full sm:w-[400px] z-50 bg-background border-l border-border animate-in slide-in-from-right duration-300">
                 <SwapChatPanel
                   swapId={swap.id}
                   currentUserId={currentUserId}

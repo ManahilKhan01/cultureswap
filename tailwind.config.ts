@@ -98,9 +98,6 @@ export default {
         "2xl": "calc(var(--radius) + 8px)",
       },
       boxShadow: {
-        warm: "0 4px 20px -4px hsl(var(--terracotta) / 0.15)",
-        "warm-lg": "0 10px 40px -10px hsl(var(--terracotta) / 0.2)",
-        teal: "0 4px 20px -4px hsl(var(--teal) / 0.15)",
       },
       keyframes: {
         "accordion-down": {

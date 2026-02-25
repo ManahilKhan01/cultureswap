@@ -495,13 +495,12 @@ const Settings = () => {
                   <div className="flex items-center justify-between">
                     <Label htmlFor="bio">Bio</Label>
                     <span
-                      className={`text-xs ${
-                        profile.bio.length >= 500
+                      className={`text-xs ${profile.bio.length >= 500
                           ? "text-red-500 font-bold"
                           : profile.bio.length >= 400
                             ? "text-orange-500 font-medium"
                             : "text-green-500 font-medium"
-                      }`}
+                        }`}
                     >
                       {profile.bio.length}/500
                     </span>
@@ -583,7 +582,7 @@ const Settings = () => {
                     variant="terracotta"
                     onClick={() => handleProfileSave(false)}
                     disabled={isLoading}
-                    className="shadow-md transition-all active:scale-95 px-8"
+                    className="transition-all active:scale-95 px-8"
                   >
                     {isLoading ? (
                       <>

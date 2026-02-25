@@ -61,7 +61,7 @@ const DiscoverSkeleton = () => (
     <main className="w-full px-4 md:px-8 pb-8 pt-2">
       {/* Category Scroller Skeleton */}
       <div className="mb-6">
-        <div className="flex items-center gap-8 px-10 border-b border-border/50 pb-4 overflow-hidden">
+        <div className="flex items-center gap-8 px-10 border-b border-border/50 py-4 overflow-hidden">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
             <div
               key={i}
@@ -363,7 +363,7 @@ const Discover = () => {
       <main className="w-full px-4 md:px-8 pb-8 pt-2">
         {/* Category Scroller (Minimalist) */}
         <div className="mb-6">
-          <div className="relative group flex items-center border-b border-border/50 pb-4">
+          <div className="relative group flex items-center border-b border-border/50 py-4">
             {showLeftArrow && (
               <button
                 onClick={() => scroll("left")}
@@ -381,11 +381,10 @@ const Discover = () => {
             >
               <button
                 onClick={() => setSelectedCategory("all")}
-                className={`whitespace-nowrap text-sm font-medium transition-colors ${
-                  selectedCategory === "all"
-                    ? "text-terracotta"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                className={`whitespace-nowrap text-sm font-medium transition-colors ${selectedCategory === "all"
+                  ? "text-terracotta"
+                  : "text-muted-foreground hover:text-foreground"
+                  }`}
               >
                 All Categories
               </button>
@@ -394,11 +393,10 @@ const Discover = () => {
                 <button
                   key={cat.id}
                   onClick={() => selectCategory(cat.name)}
-                  className={`whitespace-nowrap text-sm font-medium transition-colors ${
-                    selectedCategory === cat.name
-                      ? "text-terracotta"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
+                  className={`whitespace-nowrap text-sm font-medium transition-colors ${selectedCategory === cat.name
+                    ? "text-terracotta"
+                    : "text-muted-foreground hover:text-foreground"
+                    }`}
                 >
                   {cat.name}
                 </button>
