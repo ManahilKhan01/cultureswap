@@ -179,12 +179,10 @@ const Discover = () => {
         // 1. Fetch basic swaps FIRST (Very Fast)
         const allSwaps = await swapService.getAllSwaps();
 
-        // Filter out current user's swaps (Show only OTHER users' swaps)
-        const otherUsersSwaps = user
-          ? allSwaps.filter((s) => s.user_id !== user.id)
-          : allSwaps;
+        // Keep all open swaps in state; we will filter out current user's swaps at render time based on reliable `userProfile` state
+        const openSwaps = allSwaps.filter((s) => s.status === "open");
 
-        setSwaps(otherUsersSwaps.map((s) => ({ ...s, rating: 0 })));
+        setSwaps(openSwaps.map((s) => ({ ...s, rating: 0 })));
         setLoading(false); // Show cards immediately!
 
         // 2. Fetch profiles and ratings in background (Slower)
@@ -283,6 +281,14 @@ const Discover = () => {
 
   const filteredSwaps = swaps.filter((swap) => {
     const profile = profilesMap[swap.user_id];
+
+    // Extra safety mechanism: if userProfile is loaded, don't show their swaps
+    if (
+      userProfile &&
+      (swap.user_id === userProfile.id || swap.partner_id === userProfile.id)
+    ) {
+      return false;
+    }
 
     // Search by location (city, country) and format (onsite, in-person, hybrid)
     const searchTerms = searchQuery.toLowerCase();
