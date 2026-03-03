@@ -143,6 +143,7 @@ const SwapDetail = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
   const [fetchingSessions, setFetchingSessions] = useState(false);
+  const [showExpiredSessions, setShowExpiredSessions] = useState(false);
   const [partnerStatus, setPartnerStatus] = useState<UserStatus>("offline");
   const [creatorStatus, setCreatorStatus] = useState<UserStatus>("offline");
 
@@ -781,7 +782,7 @@ const SwapDetail = () => {
                               );
                               const hours = Math.floor(
                                 (diff % (1000 * 60 * 60 * 24)) /
-                                (1000 * 60 * 60),
+                                  (1000 * 60 * 60),
                               );
                               if (days > 0) return `${days}d ${hours}h`;
                               return `${hours}h remaining`;
@@ -875,7 +876,11 @@ const SwapDetail = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+                  <div
+                    className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted/70 transition-colors"
+                    onClick={() => setShowExpiredSessions(!showExpiredSessions)}
+                    title="Click to toggle expired sessions"
+                  >
                     <Video className="h-5 w-5 text-teal" />
                     <div>
                       <p className="text-sm text-muted-foreground">
@@ -1141,8 +1146,8 @@ const SwapDetail = () => {
                             maxLength={500}
                             className={
                               !reviewValidation.isValid ||
-                                reviewValidation.wordCount === 80 ||
-                                reviewValidation.charCount === 500
+                              reviewValidation.wordCount === 80 ||
+                              reviewValidation.charCount === 500
                                 ? "border-destructive focus-visible:ring-destructive"
                                 : reviewValidation.wordCount > 0
                                   ? "border-green-500 focus-visible:ring-green-500"
@@ -1161,14 +1166,15 @@ const SwapDetail = () => {
                               </p>
                             )}
                             <div
-                              className={`font-medium ${!reviewValidation.isValid ||
+                              className={`font-medium ${
+                                !reviewValidation.isValid ||
                                 reviewValidation.wordCount === 80 ||
                                 reviewValidation.charCount === 500
-                                ? "text-destructive"
-                                : reviewValidation.wordCount > 0
-                                  ? "text-green-600"
-                                  : "text-muted-foreground"
-                                }`}
+                                  ? "text-destructive"
+                                  : reviewValidation.wordCount > 0
+                                    ? "text-green-600"
+                                    : "text-muted-foreground"
+                              }`}
                             >
                               <span>
                                 {reviewValidation.charCount} / 500 characters
@@ -1238,8 +1244,8 @@ const SwapDetail = () => {
                             maxLength={500}
                             className={
                               !reviewValidation.isValid ||
-                                reviewValidation.wordCount === 80 ||
-                                reviewValidation.charCount === 500
+                              reviewValidation.wordCount === 80 ||
+                              reviewValidation.charCount === 500
                                 ? "border-destructive focus-visible:ring-destructive"
                                 : reviewValidation.wordCount > 0
                                   ? "border-green-500 focus-visible:ring-green-500"
@@ -1258,14 +1264,15 @@ const SwapDetail = () => {
                               </p>
                             )}
                             <div
-                              className={`font-medium ${!reviewValidation.isValid ||
+                              className={`font-medium ${
+                                !reviewValidation.isValid ||
                                 reviewValidation.wordCount === 80 ||
                                 reviewValidation.charCount === 500
-                                ? "text-destructive"
-                                : reviewValidation.wordCount > 0
-                                  ? "text-green-600"
-                                  : "text-muted-foreground"
-                                }`}
+                                  ? "text-destructive"
+                                  : reviewValidation.wordCount > 0
+                                    ? "text-green-600"
+                                    : "text-muted-foreground"
+                              }`}
                             >
                               <span>
                                 {reviewValidation.charCount} / 500 characters
@@ -1382,6 +1389,7 @@ const SwapDetail = () => {
                   loading={fetchingSessions}
                   currentUserId={currentUserId || undefined}
                   onDeleteSession={handleDeleteSession}
+                  showExpired={showExpiredSessions}
                 />
               )}
 
