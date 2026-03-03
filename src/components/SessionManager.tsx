@@ -17,6 +17,7 @@ interface SessionManagerProps {
   loading?: boolean;
   currentUserId?: string;
   onDeleteSession?: (sessionId: string) => void;
+  showExpired?: boolean;
 }
 
 export const SessionManager = ({
@@ -25,6 +26,7 @@ export const SessionManager = ({
   loading = false,
   currentUserId,
   onDeleteSession,
+  showExpired = false,
 }: SessionManagerProps) => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -89,6 +91,12 @@ export const SessionManager = ({
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
+  const displayedSessions = showExpired
+    ? sessions
+    : sessions.filter(
+        (s) => s.status !== "expired" && s.status !== "cancelled",
+      );
+
   return (
     <Card>
       <CardHeader>
@@ -101,14 +109,14 @@ export const SessionManager = ({
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-terracotta" />
           </div>
-        ) : sessions.length === 0 ? (
+        ) : displayedSessions.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Video className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">No sessions yet</p>
+            <p className="text-sm">No scheduled sessions</p>
           </div>
         ) : (
           <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-terracotta/20 scrollbar-track-transparent">
-            {sessions.map((session) => (
+            {displayedSessions.map((session) => (
               <div
                 key={session.id}
                 className="p-4 rounded-xl border border-border bg-muted/30 hover:bg-muted/50 transition-colors space-y-3 relative overflow-hidden"
