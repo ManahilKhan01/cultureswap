@@ -1958,6 +1958,29 @@ const Messages = () => {
               !isAssistantUser(otherUserProfile) && (
                 <div className="hidden lg:flex w-64 lg:w-72 border-l border-border flex-col bg-muted/5 animate-in slide-in-from-right-4 duration-300">
                   <div className="p-4 lg:p-6 flex flex-col h-full overflow-y-auto">
+                    {/* User Avatar & Name */}
+                    <div className="flex flex-col items-center text-center pb-6 mb-6 border-b border-border/50">
+                      <img
+                        src={
+                          otherUserProfile?.profile_image_url
+                            ? getCacheBustedImageUrl(
+                                otherUserProfile.profile_image_url,
+                              )
+                            : "/profile.svg"
+                        }
+                        alt={otherUserProfile?.full_name || "Profile"}
+                        className="h-20 w-20 rounded-full object-cover ring-4 ring-background shadow-sm mb-3"
+                      />
+                      <h2 className="text-base font-bold text-foreground">
+                        {otherUserProfile?.full_name || "User"}
+                      </h2>
+                      {otherUserProfile?.profession && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {otherUserProfile.profession}
+                        </p>
+                      )}
+                    </div>
+
                     <div className="mb-8">
                       <h2 className="text-sm font-bold text-muted-foreground/60 uppercase tracking-wider mb-6">
                         About{" "}
