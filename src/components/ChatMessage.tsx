@@ -140,10 +140,91 @@ export const ChatMessage = ({
         </div>
       </div>
 
-      <div className="flex-shrink-0 pt-1.5 px-2">
-        <span className="text-[10px] font-medium text-muted-foreground/60">
-          {formattedTime}
-        </span>
+      {/* Message Content Container */}
+      <div className="max-w-[85%] md:max-w-[70%] relative flex flex-col items-start">
+        {/* Text Content */}
+        {message.content && message.content.trim() && (
+          <div
+            className={`relative rounded-2xl px-4 py-3 shadow-sm ${isMe || !isMe
+              ? "bg-white text-foreground rounded-tl-none"
+              : ""
+              }`}
+          >
+            <p className="text-[14.5px] leading-relaxed whitespace-pre-wrap font-medium">
+              {message.content}
+            </p>
+          </div>
+        )}
+
+        {/* Attachments Section */}
+        {attachments.length > 0 && (
+          <div className="mt-3 space-y-3 flex flex-col items-start">
+            {attachments.length > 1 && onDownloadAll && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDownloadAll(attachments)}
+                className="h-8 text-[11px] font-bold tracking-tight rounded-lg bg-white/80 backdrop-blur border-border/50 hover:bg-terracotta/5 hover:text-terracotta transition-all"
+              >
+                <Download className="h-3.5 w-3.5 mr-1.5" />
+                Download All ({attachments.length})
+              </Button>
+            )}
+
+            <div
+              className={`grid gap-3 ${attachments.length > 1 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}
+            >
+              {attachments.map((attachment) => {
+                const isImage = attachmentService.isImage(attachment.file_type);
+                return (
+                  <div
+                    key={attachment.id}
+                    className="group/card relative bg-white border border-border/40 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 w-full max-w-[300px]"
+                  >
+                    {isImage ? (
+                      <div className="relative aspect-video bg-muted/20 overflow-hidden">
+                        <img
+                          src={attachment.url}
+                          alt={attachment.file_name}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-black/5 opacity-0 group-hover/card:opacity-100 transition-opacity" />
+                      </div>
+                    ) : (
+                      <div className="p-4 flex items-center justify-center bg-muted/10 h-[100px]">
+                        <FileText className="h-10 w-10 text-terracotta/40" />
+                      </div>
+                    )}
+
+                    <div className="p-3 bg-white flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className="text-[12px] font-bold text-foreground truncate"
+                          title={attachment.file_name}
+                        >
+                          {attachment.file_name}
+                        </p>
+                        <p className="text-[10px] font-medium text-muted-foreground/70">
+                          {attachmentService.formatFileSize(
+                            attachment.file_size,
+                          )}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDownload(attachment)}
+                        className="h-8 w-8 rounded-full bg-soft-sand/50 hover:bg-terracotta hover:text-white transition-all shrink-0"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

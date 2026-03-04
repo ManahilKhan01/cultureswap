@@ -253,7 +253,7 @@ export const SwapChatPanel = ({
   };
 
   return (
-    <Card className="h-full flex flex-col shadow-xl">
+    <Card className="h-full flex flex-col shadow-xl rounded-none border-0">
       <CardHeader className="border-b p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -262,11 +262,10 @@ export const SwapChatPanel = ({
                 <img
                   src={otherUserAvatar}
                   alt={otherUserName}
-                  className={`h-10 w-10 rounded-full object-cover ring-2 ${
-                    otherUserName?.toLowerCase().includes("assistant")
+                  className={`h-10 w-10 rounded-full object-cover ring-2 ${otherUserName?.toLowerCase().includes("assistant")
                       ? "ring-blue-400 bg-blue-100"
                       : "ring-border"
-                  }`}
+                    }`}
                 />
                 {otherUserName?.toLowerCase().includes("assistant") && (
                   <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-white text-[10px] flex items-center justify-center text-white font-bold">
@@ -309,7 +308,7 @@ export const SwapChatPanel = ({
         <div className="flex-1 min-h-0 flex flex-col">
           <div
             ref={scrollRef}
-            className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/5 scroll-smooth"
+            className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/5 scroll-smooth [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-muted-foreground/20 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
           >
             {loading ? (
               <div className="flex items-center justify-center h-full">
@@ -333,13 +332,13 @@ export const SwapChatPanel = ({
                 // Construct a profile object for ChatMessage
                 const senderProfile = isMe
                   ? {
-                      full_name: "You",
-                      profile_image_url: null, // Will fallback to default in ChatMessage if needed
-                    }
+                    full_name: "You",
+                    profile_image_url: null, // Will fallback to default in ChatMessage if needed
+                  }
                   : {
-                      full_name: otherUserName,
-                      profile_image_url: otherUserAvatar,
-                    };
+                    full_name: otherUserName,
+                    profile_image_url: otherUserAvatar,
+                  };
 
                 if (hasOffer) {
                   return (
@@ -375,18 +374,18 @@ export const SwapChatPanel = ({
         </div>
 
         {/* Input Area */}
-        <div className="p-4 border-t bg-muted/10 backdrop-blur-sm">
+        <div className="p-4 border-t bg-background">
           {/* Selected Files Preview */}
           {selectedFiles.length > 0 && (
-            <div className="mb-2 space-y-1">
+            <div className="mb-3 space-y-1.5">
               {selectedFiles.map((file, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-2 p-2 bg-muted/50 rounded text-sm"
+                  className="flex items-center gap-2 p-2 bg-muted rounded-md text-sm shadow-sm"
                 >
-                  <Paperclip className="h-3 w-3" />
-                  <span className="flex-1 truncate">{file.name}</span>
-                  <button onClick={() => removeFile(index)}>
+                  <Paperclip className="h-4 w-4 text-muted-foreground" />
+                  <span className="flex-1 truncate font-medium">{file.name}</span>
+                  <button onClick={() => removeFile(index)} className="hover:bg-background rounded-full p-1 transition-colors">
                     <X className="h-4 w-4" />
                   </button>
                 </div>
@@ -404,7 +403,16 @@ export const SwapChatPanel = ({
               accept="image/*,.pdf,.doc,.docx"
             />
 
-            <div className="flex-1 bg-muted/30 rounded-2xl border border-border px-3 py-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => fileInputRef.current?.click()}
+              className="rounded-full shrink-0 h-10 w-10 text-muted-foreground hover:bg-muted"
+            >
+              <Paperclip className="h-5 w-5" />
+            </Button>
+
+            <div className="flex-1 bg-muted/40 hover:bg-muted/60 focus-within:bg-background focus-within:ring-1 focus-within:ring-border rounded-2xl border border-transparent transition-all px-4 py-1.5">
               <Textarea
                 placeholder="Type your message..."
                 value={messageText}
@@ -415,10 +423,11 @@ export const SwapChatPanel = ({
                     handleSendMessage();
                   }
                 }}
-                className="resize-none border-none focus-visible:ring-0 px-1 py-2 text-sm min-h-[40px] max-h-[120px] bg-transparent"
+                className="resize-none border-none focus-visible:ring-0 p-0 text-sm min-h-[36px] max-h-[120px] bg-transparent py-2 flex items-center"
                 rows={1}
               />
             </div>
+
             <Button
               variant="terracotta"
               size="icon"
@@ -426,12 +435,12 @@ export const SwapChatPanel = ({
               disabled={
                 sending || (!messageText.trim() && selectedFiles.length === 0)
               }
-              className="rounded-2xl"
+              className="rounded-full shrink-0 h-10 w-10 shadow-md transition-transform hover:scale-105 active:scale-95"
             >
               {sending ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
-                <Send className="h-5 w-5" />
+                <Send className="h-4 w-4 -ml-0.5" />
               )}
             </Button>
           </div>

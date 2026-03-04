@@ -97,7 +97,7 @@ const Footer = () => {
     <footer className="bg-white text-foreground w-full border-t-[2px] border-terracotta/20 relative">
       {/* Newsletter Section */}
       <div className="border-b border-muted/20">
-        <div className="container mx-auto px-3 sm:px-4 md:px-6 py-8 sm:py-10 md:py-12">
+        <div className="container mx-auto px-3 sm:px-4 md:px-6 pt-8 pb-3 md:pt-10 md:pb-5">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="text-center md:text-left">
               <h3 className="font-display text-2xl font-semibold mb-2">
@@ -129,7 +129,7 @@ const Footer = () => {
       </div>
 
       {/* Links Section */}
-      <div className="container mx-auto px-3 sm:px-4 md:px-6 py-10 sm:py-12 md:py-16">
+      <div className="container mx-auto px-3 sm:px-4 md:px-6 pt-5 pb-4 md:pt-6 md:pb-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {Object.entries(footerLinks).map(([category, links]) => (
             <div key={category}>
@@ -179,7 +179,7 @@ const Footer = () => {
       </div>
       {/* Bottom Bar */}
       <div className="border-t border-muted/20">
-        <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-5 md:py-6">
+        <div className="container mx-auto px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-3">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
             <p>
               © {new Date().getFullYear()} CultureSwap. All rights reserved.

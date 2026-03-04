@@ -29,6 +29,7 @@ import {
   type UserStatus,
 } from "@/lib/presenceService";
 import { StatusDot } from "@/components/StatusDot";
+import { useToast } from "@/hooks/use-toast";
 
 const ProfileSkeleton = () => (
   <div className="min-h-screen bg-background animate-pulse">
@@ -64,6 +65,7 @@ const ProfileSkeleton = () => (
 );
 
 const Profile = () => {
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -75,39 +77,73 @@ const Profile = () => {
   const [userStatus, setUserStatus] = useState<UserStatus>("offline");
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
 
+  const checkCache = (currentUserId: string) => {
+    const cached = localStorage.getItem("profile_page_cache");
+    if (cached) {
+      try {
+        const {
+          profile,
+          reviews: cachedReviews,
+          rating: cachedRating,
+          swapsCount: cachedSwaps,
+          latestSwaps,
+          timestamp,
+        } = JSON.parse(cached);
+        const age = Date.now() - timestamp;
+
+        if (age < 5 * 60 * 1000 && profile?.id === currentUserId) {
+          setUserProfile(profile);
+          setReviews(cachedReviews);
+          setRating(cachedRating);
+          setSwapsCount(cachedSwaps);
+          setLatestSwaps(latestSwaps || []);
+          setLoading(false);
+          return true;
+        }
+      } catch {
+        console.error("Error parsing cache");
+      }
+    }
+    return false;
+  };
+
   useEffect(() => {
+    console.log("Loading profile data...");
+
     const loadProfileData = async () => {
       try {
         const {
           data: { user },
         } = await supabase.auth.getUser();
 
-        if (user) {
-          // Check cache first with validated user ID
-          const cacheHit = checkCache(user.id);
+        console.log("User data:", user);
 
-          // 1. Load basic profile first (Fastest) if no cache or background refresh needed
+        if (user) {
+          const cacheHit = checkCache(user.id);
+          console.log("Cache hit:", cacheHit);
+
           if (!cacheHit) {
             const profile = await profileService.getProfile(user.id);
+            console.log("Fetched profile:", profile);
             if (profile) {
               setUserProfile(profile);
-              setLoading(false); // Show basic info immediately
+              setLoading(false);
+            } else {
+              console.warn("Profile data is null or undefined.");
             }
           }
 
-          // 2. Load heavier data in background (Async) always to ensure fresh data
           setBgLoading(true);
 
-          // Check Google Connection separately
           const { data: googleToken } = await supabase
             .from("google_tokens")
             .select("user_id")
             .eq("user_id", user.id)
             .maybeSingle();
+          console.log("Google token:", googleToken);
           setIsGoogleConnected(!!googleToken);
 
           Promise.all([
-            // If we didn't get profile from cache/fetch yet, fetch it now
             !userProfile && !cacheHit
               ? profileService.getProfile(user.id)
               : Promise.resolve(null),
@@ -116,77 +152,35 @@ const Profile = () => {
             swapService.getCompletedSwapsCount(user.id),
             swapService.getSwapsByUser(user.id),
           ])
-            .then(
-              ([
+            .then((results) => {
+              const [fetchedProfile, userReviews, avgRating, completedCount, userSwaps] = results;
+
+              console.log("Fetched data:", {
                 fetchedProfile,
                 userReviews,
                 avgRating,
                 completedCount,
                 userSwaps,
-              ]) => {
-                if (fetchedProfile) setUserProfile(fetchedProfile);
-                setReviews(userReviews);
-                setRating(avgRating);
-                setSwapsCount(completedCount);
-                setLatestSwaps(userSwaps.slice(0, 3));
-                setBgLoading(false);
+              });
 
-                // Cache everything for next time
-                localStorage.setItem(
-                  "profile_page_cache",
-                  JSON.stringify({
-                    profile: fetchedProfile || userProfile, // Use latest
-                    reviews: userReviews,
-                    rating: avgRating,
-                    swapsCount: completedCount,
-                    latestSwaps: userSwaps.slice(0, 3),
-                    timestamp: Date.now(),
-                  }),
-                );
-              },
-            )
-            .catch(() => setBgLoading(false));
-
-          // Fetch user presence
-          presenceService
-            .getUserPresence(user.id)
-            .then((p) => setUserStatus(p.status));
+              if (fetchedProfile) setUserProfile(fetchedProfile);
+              setReviews(userReviews);
+              setRating(avgRating);
+              setSwapsCount(completedCount);
+              setLatestSwaps(userSwaps.slice(0, 3));
+              setBgLoading(false);
+            })
+            .catch((error) => {
+              console.error("Error in Promise.all:", error);
+              setBgLoading(false);
+            });
+        } else {
+          console.warn("User data is null or undefined.");
         }
       } catch (error) {
         console.error("Error loading profile:", error);
         setLoading(false);
       }
-    };
-
-    // Load from cache first for instant display
-    const checkCache = (currentUserId: string) => {
-      const cached = localStorage.getItem("profile_page_cache");
-      if (cached) {
-        try {
-          const {
-            profile,
-            reviews: cachedReviews,
-            rating: cachedRating,
-            swapsCount: cachedSwaps,
-            timestamp,
-          } = JSON.parse(cached);
-          const age = Date.now() - timestamp;
-
-          // Use cache if less than 5 minutes old AND belongs to current user
-          if (age < 5 * 60 * 1000 && profile?.id === currentUserId) {
-            setUserProfile(profile);
-            setReviews(cachedReviews);
-            setRating(cachedRating);
-            setSwapsCount(cachedSwaps);
-            setLatestSwaps(JSON.parse(cached).latestSwaps || []);
-            setLoading(false);
-            return true;
-          }
-        } catch {
-          // Ignore cache errors
-        }
-      }
-      return false;
     };
 
     loadProfileData();
@@ -314,7 +308,7 @@ const Profile = () => {
                 key={getCacheBustedImageUrl(userProfile.profile_image_url)}
                 src={getCacheBustedImageUrl(userProfile.profile_image_url)}
                 alt={userProfile.full_name}
-                className="h-32 w-32 rounded-2xl object-cover border-4 border-white shadow-warm transition-transform duration-500 group-hover:scale-105"
+                className="h-32 w-32 rounded-2xl object-cover border-4 border-white transition-transform duration-500 group-hover:scale-105"
               />
               <StatusDot
                 displayStatus={userStatus}
@@ -467,7 +461,7 @@ const Profile = () => {
                 </CardContent>
               </Card>
 
-              <Card className="border-border/50 overflow-hidden">
+              <Card className="border-border/50 overflow-hidden group">
                 <CardHeader className="bg-muted/30 pb-4">
                   <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                     User Reviews Summary
@@ -643,7 +637,7 @@ const Profile = () => {
                     reviews.map((review: any) => (
                       <Card
                         key={review.id}
-                        className="border-border/50 hover:shadow-md transition-shadow"
+                        className="border-border/50 overflow-hidden"
                       >
                         <CardContent className="pt-6">
                           <div className="flex items-center gap-3 mb-3">

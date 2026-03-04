@@ -135,12 +135,12 @@ const Messages = () => {
     return saved
       ? JSON.parse(saved)
       : [
-          "I will text you later.",
-          "I will let you know.",
-          "Sounds good, thanks!",
-          "Let me check and get back to you.",
-          "Sure, that works for me.",
-        ];
+        "I will text you later.",
+        "I will let you know.",
+        "Sounds good, thanks!",
+        "Let me check and get back to you.",
+        "Sure, that works for me.",
+      ];
   });
   const [editingResponseIndex, setEditingResponseIndex] = useState<
     number | null
@@ -402,7 +402,7 @@ const Messages = () => {
               }
               attachmentsMap[att.message_id].push(att);
             }
-          } catch (e) {}
+          } catch (e) { }
         }
 
         // Set user profiles
@@ -423,10 +423,6 @@ const Messages = () => {
         setAttachments(attachmentsMap);
         setCurrentSwap(null);
 
-        toast({
-          title: "Success",
-          description: "Assistant chat opened",
-        });
       } catch (error) {
         throw error;
       }
@@ -490,7 +486,7 @@ const Messages = () => {
       if (allUserIds.length > 0) {
         presenceService.getBatchPresence(allUserIds).then(setPresenceMap);
       }
-    } catch (error) {}
+    } catch (error) { }
   };
 
   // Effect 1: Initial load of auth and conversation list
@@ -648,7 +644,7 @@ const Messages = () => {
                 }
               }
             })
-            .catch((err) => {});
+            .catch((err) => { });
         }
       }
     }, 3000);
@@ -954,7 +950,7 @@ const Messages = () => {
         window.open(url, "_blank");
         // Small delay to avoid browser blocking multiple tabs
         await new Promise((resolve) => setTimeout(resolve, 500));
-      } catch (error) {}
+      } catch (error) { }
     }
     toast({
       title: "Downloading...",
@@ -1223,7 +1219,7 @@ const Messages = () => {
   return (
     <div className="flex flex-col h-[calc(100dvh-72px)] md:h-[calc(100vh-80px)] bg-background overflow-hidden">
       <div className="flex-1 overflow-hidden bg-background">
-        <div className="h-full bg-white overflow-hidden flex flex-col relative shadow-none">
+        <div className="h-full bg-white overflow-hidden flex flex-col relative">
           <div className="flex flex-1 overflow-hidden">
             {/* Left Panel: Conversation List */}
             <div
@@ -1262,7 +1258,7 @@ const Messages = () => {
                         <ChevronDown className="h-4 w-4" />
                       </Button>
                       {menuOpenId === "filter-menu" && (
-                        <div className="absolute left-0 mt-1 w-48 bg-white border border-border rounded-lg shadow-lg z-50 overflow-hidden">
+                        <div className="absolute left-0 mt-1 w-48 bg-white border border-border rounded-lg z-50 overflow-hidden">
                           <button
                             onClick={() => {
                               setActiveFilter("all");
@@ -1358,13 +1354,12 @@ const Messages = () => {
                           onClick={() =>
                             setSearchParams({ user: conv.otherUserId })
                           }
-                          className={`w-full p-4 flex items-center gap-3 transition-all rounded-none text-left ${
-                            isSelected
-                              ? "bg-muted"
-                              : isAssistant
-                                ? "bg-blue-50/30 hover:bg-blue-50/60"
-                                : "hover:bg-muted/40"
-                          }`}
+                          className={`w-full p-4 flex items-center gap-3 transition-all rounded-none text-left ${isSelected
+                            ? "bg-muted"
+                            : isAssistant
+                              ? "bg-blue-50/30 hover:bg-blue-50/60"
+                              : "hover:bg-muted/40"
+                            }`}
                         >
                           <div className="relative flex-shrink-0">
                             <img
@@ -1375,13 +1370,12 @@ const Messages = () => {
                                 profile?.profile_image_url,
                               )}
                               alt="Avatar"
-                              className={`h-11 w-11 rounded-full object-cover ring-2 shadow-sm ${
-                                isSelected
-                                  ? "ring-terracotta/30"
-                                  : isAssistant
-                                    ? "ring-blue-400 bg-blue-100"
-                                    : "ring-background"
-                              }`}
+                              className={`h-11 w-11 rounded-full object-cover ring-2 shadow-sm ${isSelected
+                                ? "ring-terracotta/30"
+                                : isAssistant
+                                  ? "ring-blue-400 bg-blue-100"
+                                  : "ring-background"
+                                }`}
                             />
                             {isAssistant && (
                               <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-white flex items-center justify-center">
@@ -1513,6 +1507,31 @@ const Messages = () => {
                                   onOfferUpdated={handleOfferCreated}
                                   refreshTrigger={offerRefreshKey}
                                 />
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        if (message.id.startsWith("assistant-greeting-")) {
+                          return (
+                            <div key={message.id} className="w-full flex flex-col items-center justify-center py-12 space-y-4 animate-in fade-in duration-500 mt-10">
+                              <div className="relative">
+                                <img
+                                  src={getCacheBustedImageUrl(senderProfile?.profile_image_url) || "/assistant-avatar.png"}
+                                  alt="Swapy"
+                                  className="h-24 w-24 rounded-full object-cover shadow-md border-4 border-background ring-2 ring-blue-100"
+                                />
+                                <div className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 border-4 border-background flex items-center justify-center shadow-sm">
+                                  <Sparkles className="h-4 w-4 text-white" />
+                                </div>
+                              </div>
+                              <div className="text-center max-w-sm px-4">
+                                <h3 className="text-2xl font-display font-semibold text-foreground mb-2 text-blue-800">
+                                  Hi, I'm Swapy
+                                </h3>
+                                <p className="text-muted-foreground text-sm">
+                                  How can I assist you today? I can help you find skill swaps, draft messages, or answer questions.
+                                </p>
                               </div>
                             </div>
                           );
@@ -1800,7 +1819,7 @@ const Messages = () => {
                                 <AutoReplySkeleton />
                               ) : (
                                 <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
-                                  <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 italic text-sm text-blue-800 leading-relaxed shadow-inner min-h-[60px]">
+                                  <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 italic text-sm text-blue-800 leading-relaxed min-h-[60px]">
                                     "{autoReplyPreview}"
                                   </div>
                                   <div className="flex gap-2">
@@ -1912,7 +1931,7 @@ const Messages = () => {
                                 handleSendMessage();
                               }
                             }}
-                            className="flex-1 resize-none border-0 shadow-none outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:shadow-none px-1 py-3 text-sm min-h-[44px] max-h-[120px] bg-transparent"
+                            className="flex-1 resize-none border-0 outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1 py-3 text-sm min-h-[44px] max-h-[120px] bg-transparent"
                             rows={1}
                           />
                         </div>
@@ -1924,7 +1943,7 @@ const Messages = () => {
                             sending ||
                             (!messageText.trim() && selectedFiles.length === 0)
                           }
-                          className="h-11 w-11 rounded-2xl shadow-md transition-transform active:scale-95 flex-shrink-0"
+                          className="h-11 w-11 rounded-2xl transition-transform active:scale-95 flex-shrink-0"
                         >
                           {sending ? (
                             <Loader2 className="h-5 w-5 animate-spin" />
@@ -1958,31 +1977,13 @@ const Messages = () => {
               !isAssistantUser(otherUserProfile) && (
                 <div className="hidden lg:flex w-64 lg:w-72 border-l border-border flex-col bg-muted/5 animate-in slide-in-from-right-4 duration-300">
                   <div className="p-4 lg:p-6 flex flex-col h-full overflow-y-auto">
-                    {/* User Avatar & Name */}
-                    <div className="flex flex-col items-center text-center pb-6 mb-6 border-b border-border/50">
+                    <div className="mb-8 flex flex-col items-center text-center">
                       <img
-                        src={
-                          otherUserProfile?.profile_image_url
-                            ? getCacheBustedImageUrl(
-                                otherUserProfile.profile_image_url,
-                              )
-                            : "/profile.svg"
-                        }
-                        alt={otherUserProfile?.full_name || "Profile"}
-                        className="h-20 w-20 rounded-full object-cover ring-4 ring-background shadow-sm mb-3"
+                        src={getCacheBustedImageUrl(otherUserProfile?.profile_image_url) || "/profile.svg"}
+                        alt={otherUserProfile?.full_name || "User"}
+                        className="h-20 w-20 rounded-full object-cover shadow-sm ring-2 ring-background border border-border mb-4"
                       />
-                      <h2 className="text-base font-bold text-foreground">
-                        {otherUserProfile?.full_name || "User"}
-                      </h2>
-                      {otherUserProfile?.profession && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {otherUserProfile.profession}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="mb-8">
-                      <h2 className="text-sm font-bold text-muted-foreground/60 uppercase tracking-wider mb-6">
+                      <h2 className="text-sm font-bold text-muted-foreground/60 uppercase tracking-wider mb-6 w-full text-left">
                         About{" "}
                         {otherUserProfile?.full_name?.split(" ")[0] || "User"}
                       </h2>
@@ -2015,11 +2016,11 @@ const Messages = () => {
                             <p className="text-sm font-bold text-foreground">
                               {otherUserProfile?.created_at
                                 ? new Intl.DateTimeFormat("en-US", {
-                                    month: "short",
-                                    year: "numeric",
-                                  }).format(
-                                    new Date(otherUserProfile.created_at),
-                                  )
+                                  month: "short",
+                                  year: "numeric",
+                                }).format(
+                                  new Date(otherUserProfile.created_at),
+                                )
                                 : "Recently"}
                             </p>
                           </div>
@@ -2080,11 +2081,11 @@ const Messages = () => {
                         </p>
                       ) : (
                         <p className="text-xs text-muted-foreground leading-relaxed">
-                          As a member since{" "}
+                          As a member since
                           {otherUserProfile?.created_at
                             ? new Date(
-                                otherUserProfile.created_at,
-                              ).getFullYear()
+                              otherUserProfile.created_at,
+                            ).getFullYear()
                             : "joining"}
                           , they are active in sharing their culture with the
                           community.
@@ -2095,7 +2096,7 @@ const Messages = () => {
                     <div className="mt-auto pt-8 flex flex-col items-center text-center">
                       <div className="relative mb-6 group">
                         <div className="absolute inset-0 bg-gradient-to-br from-terracotta/20 to-teal/20 rounded-full blur-xl group-hover:blur-2xl transition-all opacity-60"></div>
-                        <div className="relative h-20 w-20 rounded-3xl bg-white border border-border shadow-sm flex items-center justify-center p-4">
+                        <div className="relative h-20 w-20 rounded-3xl bg-white border border-border flex items-center justify-center p-4">
                           <div className="h-full w-full rounded-2xl border-2 border-dashed border-muted-foreground/20 flex items-center justify-center">
                             <Sparkles className="h-8 w-8 text-terracotta/20" />
                           </div>

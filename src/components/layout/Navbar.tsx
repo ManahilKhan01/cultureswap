@@ -203,7 +203,7 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
             <img
               src="/logo.svg"
               alt="CultureSwap Logo"
-              className="h-[40px] w-[140px] sm:h-[45px] sm:w-[165px] object-contain transition-transform duration-300 group-hover:scale-105 max-w-full"
+              className="h-[40px] w-[140px] sm:h-[45px] sm:w-[165px] object-contain object-left transition-transform duration-300 group-hover:scale-105 max-w-full"
             />
           </Link>
 
@@ -214,11 +214,10 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                 <Link
                   key={link.name}
                   to={link.href}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive(link.href)
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive(link.href)
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
+                    }`}
                 >
                   {link.name}
                 </Link>
@@ -273,7 +272,7 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                                 conversationProfiles[conv.otherUserId];
                               const isUnread =
                                 conv.lastMessage?.receiver_id ===
-                                  currentUser?.id && !conv.lastMessage?.read;
+                                currentUser?.id && !conv.lastMessage?.read;
                               const isAssistant =
                                 profile?.full_name
                                   ?.toLowerCase()
@@ -591,11 +590,10 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                       <Link
                         to="/messages"
                         onClick={() => setIsOpen(false)}
-                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors flex items-center justify-between ${
-                          isActive("/messages")
+                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors flex items-center justify-between ${isActive("/messages")
                             ? "bg-primary/10 text-primary"
                             : "text-foreground hover:bg-muted"
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-3">
                           <MessageCircle className="h-5 w-5" />
@@ -611,11 +609,10 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                       <Link
                         to="/notifications"
                         onClick={() => setIsOpen(false)}
-                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors flex items-center justify-between ${
-                          isActive("/notifications")
+                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors flex items-center justify-between ${isActive("/notifications")
                             ? "bg-primary/10 text-primary"
                             : "text-foreground hover:bg-muted"
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-3">
                           <Bell className="h-5 w-5" />
@@ -636,11 +633,10 @@ const Navbar = ({ isLoggedIn = false }: NavbarProps) => {
                         key={link.name}
                         to={link.href}
                         onClick={() => setIsOpen(false)}
-                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors ${
-                          isActive(link.href)
+                        className={`px-4 py-3 rounded-lg text-base font-medium transition-colors ${isActive(link.href)
                             ? "bg-primary/10 text-primary"
                             : "text-foreground hover:bg-muted"
-                        }`}
+                          }`}
                       >
                         {link.name}
                       </Link>

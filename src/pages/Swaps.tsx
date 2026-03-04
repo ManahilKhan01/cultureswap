@@ -459,16 +459,23 @@ const Swaps = () => {
                   </div>
                 </>
               ) : (
-                <div>
-                  <h3 className="font-semibold text-foreground">
-                    {swap.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {isOwner
-                      ? "Your swap - waiting for partner"
-                      : "No partner yet"}
-                  </p>
-                </div>
+                <>
+                  <img
+                    src={profiles[swap.user_id]?.profile_image_url || "/profile.svg"}
+                    alt={profiles[swap.user_id]?.full_name || "Owner"}
+                    className="h-12 w-12 rounded-full object-cover ring-2 ring-border"
+                  />
+                  <div>
+                    <h3 className="font-semibold text-foreground">
+                      {swap.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {isOwner
+                        ? "Your swap - waiting for partner"
+                        : "No partner yet"}
+                    </p>
+                  </div>
+                </>
               )}
             </div>
             {getStatusBadge(swap.status)}
@@ -563,7 +570,7 @@ const Swaps = () => {
           <Button
             variant="terracotta"
             className="gap-2 font-semibold"
-            onClick={() => navigate("/swap/create")}
+            onClick={() => navigate("/create-swap")}
           >
             <Plus className="h-4 w-4" />
             Create New Swap
@@ -623,7 +630,7 @@ const Swaps = () => {
                   Open swaps are those waiting for a partner.
                 </p>
                 <Button variant="terracotta" asChild>
-                  <Link to="/swap/create">Create New Swap</Link>
+                  <Link to="/create-swap">Create New Swap</Link>
                 </Button>
               </Card>
             )}
@@ -645,7 +652,7 @@ const Swaps = () => {
                 </p>
                 <div className="flex gap-3 justify-center">
                   <Button variant="terracotta" asChild>
-                    <Link to="/swap/create">Add Skill</Link>
+                    <Link to="/create-swap">Add Skill</Link>
                   </Button>
                   <Button variant="outline" asChild>
                     <Link to="/discover">Discover Skills</Link>

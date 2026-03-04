@@ -22,3 +22,5 @@ export function Toaster() {
     </ToastProvider>
   );
 }
+
+export { ToastProvider } from "@/components/ui/toast";

@@ -341,7 +341,7 @@ const Dashboard = () => {
             </div>
             <div className="flex gap-2">
               <Button variant="terracotta" asChild>
-                <Link to="/swap/create">
+                <Link to="/create-swap">
                   Create Swap
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -412,18 +412,16 @@ const Dashboard = () => {
                       >
                         <div className="flex items-center gap-4">
                           <div
-                            className={`h-12 w-12 rounded-xl flex items-center justify-center transition-colors ${
-                              session.type === "Teaching"
+                            className={`h-12 w-12 rounded-xl flex items-center justify-center transition-colors ${session.type === "Teaching"
                                 ? "bg-terracotta/10 group-hover:bg-terracotta/20"
                                 : "bg-teal/10 group-hover:bg-teal/20"
-                            }`}
+                              }`}
                           >
                             <Calendar
-                              className={`h-6 w-6 ${
-                                session.type === "Teaching"
+                              className={`h-6 w-6 ${session.type === "Teaching"
                                   ? "text-terracotta"
                                   : "text-teal"
-                              }`}
+                                }`}
                             />
                           </div>
                           <div className="min-w-0">

@@ -496,10 +496,10 @@ const Settings = () => {
                     <Label htmlFor="bio">Bio</Label>
                     <span
                       className={`text-xs ${profile.bio.length >= 500
-                          ? "text-red-500 font-bold"
-                          : profile.bio.length >= 400
-                            ? "text-orange-500 font-medium"
-                            : "text-green-500 font-medium"
+                        ? "text-red-500 font-bold"
+                        : profile.bio.length >= 400
+                          ? "text-orange-500 font-medium"
+                          : "text-green-500 font-medium"
                         }`}
                     >
                       {profile.bio.length}/500
@@ -562,6 +562,7 @@ const Settings = () => {
                     }
                     placeholder="Select skills you offer"
                     searchPlaceholder="Search skills..."
+                    maxItems={3}
                   />
                 </div>
 
@@ -574,6 +575,7 @@ const Settings = () => {
                     }
                     placeholder="Select skills you want to learn"
                     searchPlaceholder="Search skills..."
+                    maxItems={3}
                   />
                 </div>
 

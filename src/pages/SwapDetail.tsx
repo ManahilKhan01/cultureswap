@@ -190,8 +190,8 @@ const SwapDetail = () => {
           const isOwner = swapData.user_id === user.id;
           setIsCreator(isOwner);
 
-          // If viewing from Discover, load the swap creator's info
-          if (source === "discover") {
+          // If viewing from Discover, or it's our own open swap, load the swap creator's info
+          if (source === "discover" || (!swapData.partner_id && isOwner)) {
             const creatorProfile = await profileService.getProfile(
               swapData.user_id,
             );
@@ -915,8 +915,8 @@ const SwapDetail = () => {
           </div>
 
           <div className="w-full lg:w-1/4 space-y-6">
-            {/* Show Swap Creator card when viewing from Discover */}
-            {source === "discover" && swapCreator && (
+            {/* Show Swap Creator card when viewing from Discover, or when viewing our own open swap */}
+            {(source === "discover" || (!partner && isCreator)) && swapCreator && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Swap Creator</CardTitle>
@@ -947,15 +947,17 @@ const SwapDetail = () => {
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1" asChild>
-                      <Link
-                        to={`/messages?user=${swapCreator.id}&swap=${swap.id}`}
-                      >
-                        <MessageCircle className="h-4 w-4 mr-2" />
-                        Message
-                      </Link>
-                    </Button>
-                    <Button variant="ghost" className="flex-1" asChild>
+                    {swapCreator.id !== currentUserId && (
+                      <Button variant="outline" className="flex-1" asChild>
+                        <Link
+                          to={`/messages?user=${swapCreator.id}&swap=${swap.id}`}
+                        >
+                          <MessageCircle className="h-4 w-4 mr-2" />
+                          Message
+                        </Link>
+                      </Button>
+                    )}
+                    <Button variant="ghost" className={swapCreator.id === currentUserId ? "w-full" : "flex-1"} asChild>
                       <Link to={`/user/${swapCreator.id}`}>
                         <User className="h-4 w-4 mr-2" />
                         Profile
@@ -1395,7 +1397,7 @@ const SwapDetail = () => {
 
             {/* Slide-in Chat Panel */}
             {partner && currentUserId && isChatOpen && (
-              <div className="fixed inset-y-0 right-0 w-full sm:w-[400px] z-50 bg-background border-l border-border animate-in slide-in-from-right duration-300">
+              <div className="fixed inset-y-0 right-0 w-full sm:w-[400px] z-[100] bg-background border-l border-border animate-in slide-in-from-right duration-300">
                 <SwapChatPanel
                   swapId={swap.id}
                   currentUserId={currentUserId}
@@ -1410,7 +1412,7 @@ const SwapDetail = () => {
             {/* Overlay for chat panel */}
             {isChatOpen && (
               <div
-                className="fixed inset-0 bg-black/20 z-40 animate-in fade-in"
+                className="fixed inset-0 bg-black/20 z-[90] animate-in fade-in"
                 onClick={() => setIsChatOpen(false)}
               />
             )}

@@ -42,6 +42,7 @@ import { SwapCard } from "@/components/SwapCard";
 interface SwapWithProfile {
   id: string;
   user_id: string;
+  partner_id?: string;
   title: string;
   description?: string;
   skill_offered: string;
@@ -58,7 +59,7 @@ interface SwapWithProfile {
 
 const DiscoverSkeleton = () => (
   <div className="min-h-screen bg-background">
-    <main className="w-full px-4 md:px-8 pb-8 pt-2">
+    <main className="w-full px-4 md:px-8 pb-8 pt-0">
       {/* Category Scroller Skeleton */}
       <div className="mb-6">
         <div className="flex items-center gap-8 px-10 border-b border-border/50 py-4 overflow-hidden">
@@ -187,7 +188,7 @@ const Discover = () => {
 
         // 2. Fetch profiles and ratings in background (Slower)
         const uniqueUserIds = [
-          ...new Set(allSwaps.map((swap) => swap.user_id)),
+          ...new Set(openSwaps.map((swap) => swap.user_id)),
         ];
 
         Promise.all([
@@ -208,7 +209,8 @@ const Discover = () => {
             ratings[userId] = ratingsArray[index];
           });
 
-          const swapsWithRatings = allSwaps.map((swap) => ({
+          // IMPORTANT FIX: Only apply ratings to openSwaps, not allSwaps (which includes active/cancelled)
+          const swapsWithRatings = openSwaps.map((swap) => ({
             ...swap,
             rating: ratings[swap.user_id] || 0,
           }));
@@ -366,7 +368,7 @@ const Discover = () => {
 
   return (
     <>
-      <main className="w-full px-4 md:px-8 pb-8 pt-2">
+      <main className="w-full px-4 md:px-8 pb-8 pt-0">
         {/* Category Scroller (Minimalist) */}
         <div className="mb-6">
           <div className="relative group flex items-center border-b border-border/50 py-4">

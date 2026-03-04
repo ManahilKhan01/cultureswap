@@ -25,49 +25,50 @@ import NotFound from "./pages/NotFound";
 import MainLayout from "./components/layout/MainLayout";
 import ScrollToTop from "./components/ScrollToTop";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import { ToastProvider } from "@/components/ui/toaster";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <ScrollToTop />
-        <Routes>
-          {/* Public Landing Page */}
-          <Route element={<MainLayout />}>
-            <Route path="/" element={<Index />} />
-            <Route path="/discover" element={<Discover />} />
-          </Route>
-
-          {/* Auth Pages (No Navbar) */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-
-          {/* App Pages with persistent Navbar */}
-          <Route element={<MainLayout />}>
-            <Route element={<ProtectedRoute />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/swaps" element={<Swaps />} />
-              <Route path="/swap/create" element={<CreateSwap />} />
-              <Route path="/swap/:id" element={<SwapDetail />} />
-              <Route path="/user/:id" element={<UserProfile />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/messages" element={<Messages />} />
-              <Route path="/community" element={<Community />} />
-              <Route path="/schedule" element={<Schedule />} />
-              <Route path="/notifications" element={<Notifications />} />
+      <ToastProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <ScrollToTop />
+          <Routes>
+            {/* Public Landing Page */}
+            <Route element={<MainLayout />}>
+              <Route path="/" element={<Index />} />
+              <Route path="/discover" element={<Discover />} />
             </Route>
-          </Route>
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+            {/* Auth Pages (No Navbar) */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+
+            {/* Protected Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<MainLayout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/swaps" element={<Swaps />} />
+                <Route path="/swap/:id" element={<SwapDetail />} />
+                <Route path="/create-swap" element={<CreateSwap />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/messages" element={<Messages />} />
+                <Route path="/community" element={<Community />} />
+                <Route path="/schedule" element={<Schedule />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="*" element={<NotFound />} />
+              </Route>
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </ToastProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

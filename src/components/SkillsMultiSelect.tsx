@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SKILLS_CATEGORIES, SkillCategory } from "@/data/skillsCategories";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface SkillsMultiSelectProps {
   value: string[];
@@ -14,6 +15,7 @@ interface SkillsMultiSelectProps {
   placeholder?: string;
   label?: string;
   searchPlaceholder?: string;
+  maxItems?: number;
 }
 
 export const SkillsMultiSelect: React.FC<SkillsMultiSelectProps> = ({
@@ -22,7 +24,9 @@ export const SkillsMultiSelect: React.FC<SkillsMultiSelectProps> = ({
   placeholder = "Select skills",
   label = "Skills",
   searchPlaceholder = "Search skills...",
+  maxItems,
 }) => {
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
@@ -62,6 +66,14 @@ export const SkillsMultiSelect: React.FC<SkillsMultiSelectProps> = ({
     if (existingIndex > -1) {
       newValue = value.filter((_, i) => i !== existingIndex);
     } else {
+      if (maxItems !== undefined && value.length >= maxItems) {
+        toast({
+          title: "Limit Reached",
+          description: `You can only select up to ${maxItems} skills.`,
+          variant: "destructive",
+        });
+        return;
+      }
       newValue = [...value, skill];
     }
 
@@ -82,7 +94,7 @@ export const SkillsMultiSelect: React.FC<SkillsMultiSelectProps> = ({
   return (
     <div className="w-full space-y-2">
       {label && <label className="text-sm font-medium">{label}</label>}
-      
+
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -195,11 +207,18 @@ export const SkillsMultiSelect: React.FC<SkillsMultiSelectProps> = ({
         </PopoverContent>
       </Popover>
 
-      {value.length > 0 && (
-        <div className="text-xs text-muted-foreground">
-          {value.length} skill{value.length !== 1 ? "s" : ""} selected
-        </div>
-      )}
+      <div className="flex justify-between items-center text-xs text-muted-foreground pt-1">
+        <span>
+          {value.length > 0
+            ? `${value.length} skill${value.length !== 1 ? "s" : ""} selected`
+            : "No skills selected"}
+        </span>
+        {maxItems && (
+          <span className={value.length >= maxItems ? "text-destructive font-medium" : ""}>
+            {value.length} / {maxItems} Max
+          </span>
+        )}
+      </div>
     </div>
   );
 };
