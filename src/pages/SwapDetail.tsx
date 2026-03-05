@@ -143,7 +143,7 @@ const SwapDetail = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
   const [fetchingSessions, setFetchingSessions] = useState(false);
-  const [showExpiredSessions, setShowExpiredSessions] = useState(false);
+  const [isAllSessionsModalOpen, setIsAllSessionsModalOpen] = useState(false);
   const [partnerStatus, setPartnerStatus] = useState<UserStatus>("offline");
   const [creatorStatus, setCreatorStatus] = useState<UserStatus>("offline");
 
@@ -878,8 +878,8 @@ const SwapDetail = () => {
                   </div>
                   <div
                     className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted/70 transition-colors"
-                    onClick={() => setShowExpiredSessions(!showExpiredSessions)}
-                    title="Click to toggle expired sessions"
+                    onClick={() => setIsAllSessionsModalOpen(true)}
+                    title="View all sessions"
                   >
                     <Video className="h-5 w-5 text-teal" />
                     <div>
@@ -1391,9 +1391,42 @@ const SwapDetail = () => {
                   loading={fetchingSessions}
                   currentUserId={currentUserId || undefined}
                   onDeleteSession={handleDeleteSession}
-                  showExpired={showExpiredSessions}
+                  showExpired={false}
                 />
               )}
+
+            {/* All Sessions Modal */}
+            <Dialog
+              open={isAllSessionsModalOpen}
+              onOpenChange={setIsAllSessionsModalOpen}
+            >
+              <DialogContent
+                className="max-w-md max-h-[85vh] overflow-y-auto"
+                aria-describedby={undefined}
+              >
+                <DialogHeader>
+                  <DialogTitle>All Sessions</DialogTitle>
+                </DialogHeader>
+                <div className="mt-4 -mx-2 sm:-mx-6 px-2 sm:px-6">
+                  {sessions.length > 0 ? (
+                    <SessionManager
+                      swapId={swap.id}
+                      sessions={sessions}
+                      loading={fetchingSessions}
+                      currentUserId={currentUserId || undefined}
+                      onDeleteSession={handleDeleteSession}
+                      showExpired={true}
+                      variant="bare"
+                    />
+                  ) : (
+                    <div className="py-8 text-center text-muted-foreground">
+                      <Video className="h-12 w-12 mx-auto mb-2 opacity-30" />
+                      <p>No sessions found</p>
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
 
             {/* Slide-in Chat Panel */}
             {partner && currentUserId && isChatOpen && (

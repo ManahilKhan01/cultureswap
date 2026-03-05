@@ -18,6 +18,7 @@ interface SessionManagerProps {
   currentUserId?: string;
   onDeleteSession?: (sessionId: string) => void;
   showExpired?: boolean;
+  variant?: "card" | "bare";
 }
 
 export const SessionManager = ({
@@ -27,6 +28,7 @@ export const SessionManager = ({
   currentUserId,
   onDeleteSession,
   showExpired = false,
+  variant = "card",
 }: SessionManagerProps) => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -97,14 +99,16 @@ export const SessionManager = ({
         (s) => s.status !== "expired" && s.status !== "cancelled",
       );
 
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Recent Sessions</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent>
+  const content = (
+    <>
+      {variant === "card" && (
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Recent Sessions</CardTitle>
+          </div>
+        </CardHeader>
+      )}
+      <CardContent className={variant === "bare" ? "p-0" : ""}>
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-terracotta" />
@@ -214,6 +218,12 @@ export const SessionManager = ({
           </div>
         )}
       </CardContent>
-    </Card>
+    </>
   );
+
+  if (variant === "bare") {
+    return <div className="w-full">{content}</div>;
+  }
+
+  return <Card>{content}</Card>;
 };
