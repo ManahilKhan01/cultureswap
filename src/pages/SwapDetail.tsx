@@ -127,8 +127,22 @@ const SwapDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const source = searchParams.get("source"); // 'discover' if coming from Discover, null otherwise
+
+  // Show toast if redirected after connecting Google Calendar
+  useEffect(() => {
+    if (searchParams.get("google") === "connected") {
+      toast({
+        title: "Google Calendar Connected!",
+        description:
+          "You can now schedule swap sessions with Google Meet links.",
+      });
+      // Clean up the query param
+      searchParams.delete("google");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, []);
 
   // Try to find in mock first, then database
   const mockSwap = mockSwaps.find((s) => s.id === id);
@@ -1163,7 +1177,7 @@ const SwapDetail = () => {
                                   "google-calendar/auth",
                                   {
                                     body: {
-                                      redirect_path: `/swaps/${id}`,
+                                      redirect_path: `/swap/${id}?google=connected`,
                                     },
                                   },
                                 );
