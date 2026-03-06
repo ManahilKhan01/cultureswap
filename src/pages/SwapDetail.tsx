@@ -144,6 +144,8 @@ const SwapDetail = () => {
   const [sessions, setSessions] = useState<any[]>([]);
   const [fetchingSessions, setFetchingSessions] = useState(false);
   const [isAllSessionsModalOpen, setIsAllSessionsModalOpen] = useState(false);
+  const [isGoogleConnected, setIsGoogleConnected] = useState(false);
+  const [showConnectGooglePrompt, setShowConnectGooglePrompt] = useState(false);
   const [partnerStatus, setPartnerStatus] = useState<UserStatus>("offline");
   const [creatorStatus, setCreatorStatus] = useState<UserStatus>("offline");
 
@@ -178,6 +180,14 @@ const SwapDetail = () => {
       } = await supabase.auth.getUser();
       if (user) {
         setCurrentUserId(user.id);
+
+        // Check Google Calendar connection status (one-time check)
+        const { data: googleToken } = await supabase
+          .from("google_tokens")
+          .select("user_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        setIsGoogleConnected(!!googleToken);
       }
 
       const swapData = await swapService.getSwapById(id!);
@@ -916,57 +926,64 @@ const SwapDetail = () => {
 
           <div className="w-full lg:w-1/4 space-y-6">
             {/* Show Swap Creator card when viewing from Discover, or when viewing our own open swap */}
-            {(source === "discover" || (!partner && isCreator)) && swapCreator && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Swap Creator</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <div className="relative">
-                      <img
-                        src={swapCreator.avatar}
-                        alt={swapCreator.name}
-                        className="h-16 w-16 rounded-full object-cover ring-2 ring-border"
-                      />
-                      <StatusDot displayStatus={creatorStatus} size="md" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">{swapCreator.name}</h3>
-                      <div className="flex items-center gap-1 mt-1">
-                        <Star className="h-4 w-4 fill-golden text-golden" />
-                        <span className="text-sm font-medium">
-                          {swapCreator.rating?.toFixed(1) || "0.0"}
-                        </span>
+            {(source === "discover" || (!partner && isCreator)) &&
+              swapCreator && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Swap Creator</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="relative">
+                        <img
+                          src={swapCreator.avatar}
+                          alt={swapCreator.name}
+                          className="h-16 w-16 rounded-full object-cover ring-2 ring-border"
+                        />
+                        <StatusDot displayStatus={creatorStatus} size="md" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">{swapCreator.name}</h3>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Star className="h-4 w-4 fill-golden text-golden" />
+                          <span className="text-sm font-medium">
+                            {swapCreator.rating?.toFixed(1) || "0.0"}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    <p>
-                      {swapCreator.location}, {swapCreator.country}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    {swapCreator.id !== currentUserId && (
-                      <Button variant="outline" className="flex-1" asChild>
-                        <Link
-                          to={`/messages?user=${swapCreator.id}&swap=${swap.id}`}
-                        >
-                          <MessageCircle className="h-4 w-4 mr-2" />
-                          Message
+                    <div className="text-sm text-muted-foreground">
+                      <p>
+                        {swapCreator.location}, {swapCreator.country}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      {swapCreator.id !== currentUserId && (
+                        <Button variant="outline" className="flex-1" asChild>
+                          <Link
+                            to={`/messages?user=${swapCreator.id}&swap=${swap.id}`}
+                          >
+                            <MessageCircle className="h-4 w-4 mr-2" />
+                            Message
+                          </Link>
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        className={
+                          swapCreator.id === currentUserId ? "w-full" : "flex-1"
+                        }
+                        asChild
+                      >
+                        <Link to={`/user/${swapCreator.id}`}>
+                          <User className="h-4 w-4 mr-2" />
+                          Profile
                         </Link>
                       </Button>
-                    )}
-                    <Button variant="ghost" className={swapCreator.id === currentUserId ? "w-full" : "flex-1"} asChild>
-                      <Link to={`/user/${swapCreator.id}`}>
-                        <User className="h-4 w-4 mr-2" />
-                        Profile
-                      </Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
             {partner && source !== "discover" && (
               <Card>
@@ -1060,12 +1077,20 @@ const SwapDetail = () => {
                   <CardTitle className="text-lg">Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
+                  <Button
+                    variant="terracotta"
+                    className="w-full"
+                    onClick={() => {
+                      if (isGoogleConnected) {
+                        setScheduleOpen(true);
+                      } else {
+                        setShowConnectGooglePrompt(true);
+                      }
+                    }}
+                  >
+                    Schedule Next Session
+                  </Button>
                   <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="terracotta" className="w-full">
-                        Schedule Next Session
-                      </Button>
-                    </DialogTrigger>
                     <DialogContent aria-describedby={undefined}>
                       <DialogHeader>
                         <DialogTitle>Schedule Next Session</DialogTitle>
@@ -1102,6 +1127,85 @@ const SwapDetail = () => {
                           onClick={handleScheduleSession}
                         >
                           Schedule
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+
+                  {/* Connect Google Calendar Prompt */}
+                  <Dialog
+                    open={showConnectGooglePrompt}
+                    onOpenChange={setShowConnectGooglePrompt}
+                  >
+                    <DialogContent aria-describedby={undefined}>
+                      <DialogHeader>
+                        <DialogTitle>Connect Google Calendar</DialogTitle>
+                        <DialogDescription>
+                          To schedule sessions with Google Meet links, you need
+                          to connect your Google Calendar first. You'll be
+                          redirected to Google to authorize access, then brought
+                          back to this page.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <DialogFooter>
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowConnectGooglePrompt(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="terracotta"
+                          onClick={async () => {
+                            try {
+                              const { data: authData, error: authError } =
+                                await supabase.functions.invoke(
+                                  "google-calendar/auth",
+                                  {
+                                    body: {
+                                      redirect_path: `/swaps/${id}`,
+                                    },
+                                  },
+                                );
+                              if (authError) {
+                                let errorMessage =
+                                  authError.message || authError.toString();
+                                if (
+                                  authError.context &&
+                                  typeof authError.context.json === "function"
+                                ) {
+                                  try {
+                                    const response = authError.context.clone();
+                                    const body = await response.json();
+                                    if (body && body.error) {
+                                      errorMessage = body.error;
+                                    }
+                                  } catch (e) {
+                                    /* ignore */
+                                  }
+                                }
+                                throw new Error(errorMessage);
+                              }
+                              if (!authData?.url)
+                                throw new Error("Could not get auth URL");
+                              // Redirect to Google OAuth
+                              window.location.href = authData.url;
+                            } catch (error: any) {
+                              console.error(
+                                "Google Calendar auth error:",
+                                error,
+                              );
+                              toast({
+                                title: "Connection Failed",
+                                description:
+                                  error.message ||
+                                  "Failed to connect to Google Calendar.",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                        >
+                          Connect Google Calendar
                         </Button>
                       </DialogFooter>
                     </DialogContent>

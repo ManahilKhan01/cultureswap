@@ -67,6 +67,21 @@ serve(async (req: Request) => {
       // Let's make this PROTECTED to get the user ID securely.
       const user = await getAuthUser(req);
 
+      // Accept optional redirect_path from request body
+      let redirectPath = "/profile?google=connected";
+      try {
+        const body = await req.json();
+        if (body?.redirect_path) {
+          redirectPath = body.redirect_path;
+        }
+      } catch (_e) {
+        // No body or invalid JSON, use default redirect
+      }
+
+      // Encode user_id and redirect_path into state
+      const statePayload = JSON.stringify({ userId: user.id, redirectPath });
+      const encodedState = btoa(statePayload);
+
       const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
       authUrl.searchParams.set("client_id", GOOGLE_CLIENT_ID);
       authUrl.searchParams.set("redirect_uri", GOOGLE_REDIRECT_URI);
@@ -77,7 +92,7 @@ serve(async (req: Request) => {
       );
       authUrl.searchParams.set("access_type", "offline");
       authUrl.searchParams.set("prompt", "consent");
-      authUrl.searchParams.set("state", user.id); // Pass user ID in state
+      authUrl.searchParams.set("state", encodedState);
 
       return new Response(JSON.stringify({ url: authUrl.toString() }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -88,7 +103,7 @@ serve(async (req: Request) => {
     // This is called by Google, so it won't have our app's Authorization header.
     if (path === "google-callback" || url.searchParams.has("code")) {
       const code = url.searchParams.get("code");
-      const userId = url.searchParams.get("state");
+      const stateParam = url.searchParams.get("state");
       const error = url.searchParams.get("error");
 
       if (error) {
@@ -98,11 +113,25 @@ serve(async (req: Request) => {
         });
       }
 
-      if (!code || !userId) {
+      if (!code || !stateParam) {
         return new Response("Missing code or state parameter", {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "text/html" },
         });
+      }
+
+      // Decode state: try new JSON format first, fallback to plain user ID
+      let userId: string;
+      let redirectPath = "/profile?google=connected";
+      try {
+        const decoded = JSON.parse(atob(stateParam));
+        userId = decoded.userId;
+        if (decoded.redirectPath) {
+          redirectPath = decoded.redirectPath;
+        }
+      } catch (_e) {
+        // Fallback: state is just the plain user ID (old format)
+        userId = stateParam;
       }
 
       // Exchange code for tokens
@@ -132,7 +161,7 @@ serve(async (req: Request) => {
         .upsert({
           user_id: userId,
           access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token, // Only returned on first consent or if prompt=consent
+          refresh_token: tokens.refresh_token,
           expiry_date: new Date(
             Date.now() + tokens.expires_in * 1000,
           ).toISOString(),
@@ -145,10 +174,10 @@ serve(async (req: Request) => {
         });
       }
 
-      // Redirect back to frontend
+      // Redirect back to frontend (swap page or profile)
       const frontendUrl =
         Deno.env.get("FRONTEND_URL") || "http://localhost:8080";
-      return Response.redirect(`${frontendUrl}/profile?google=connected`, 302);
+      return Response.redirect(`${frontendUrl}${redirectPath}`, 302);
     }
 
     // --- PROTECTED ROUTES (Auth Required) ---
