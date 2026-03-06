@@ -6,6 +6,8 @@ import {
   ExternalLink,
   Loader2,
   Trash2,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +33,8 @@ export const SessionManager = ({
   variant = "card",
 }: SessionManagerProps) => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [expandedLinkId, setExpandedLinkId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const handleDelete = async (sessionId: string) => {
     if (!onDeleteSession) return;
@@ -154,10 +158,13 @@ export const SessionManager = ({
                   </div>
                   <div className="flex flex-col items-end gap-2 shrink-0">
                     <div className="hidden sm:block">
-                      <a
-                        href={session.meet_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setExpandedLinkId(
+                            expandedLinkId === session.id ? null : session.id,
+                          );
+                        }}
                         className={`flex items-center gap-2 text-xs font-medium transition-colors ${
                           session.status === "expired" ||
                           session.status === "cancelled"
@@ -167,7 +174,7 @@ export const SessionManager = ({
                       >
                         <Video className="h-3.5 w-3.5" />
                         Link
-                      </a>
+                      </button>
                     </div>
 
                     {/* Delete Button */}
@@ -191,6 +198,53 @@ export const SessionManager = ({
                       )}
                   </div>
                 </div>
+
+                {/* Expanded Meet Link with Copy */}
+                {expandedLinkId === session.id && session.meet_link && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border/50 text-xs">
+                    <a
+                      href={session.meet_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-terracotta hover:underline truncate flex-1 min-w-0"
+                    >
+                      {session.meet_link}
+                    </a>
+                    <button
+                      onClick={() => {
+                        try {
+                          // Try modern clipboard API first
+                          if (navigator.clipboard && window.isSecureContext) {
+                            navigator.clipboard.writeText(session.meet_link);
+                          } else {
+                            // Fallback for non-secure contexts (HTTP / network IP)
+                            const textarea = document.createElement("textarea");
+                            textarea.value = session.meet_link;
+                            textarea.style.position = "fixed";
+                            textarea.style.opacity = "0";
+                            document.body.appendChild(textarea);
+                            textarea.select();
+                            document.execCommand("copy");
+                            document.body.removeChild(textarea);
+                          }
+                          setCopiedId(session.id);
+                          setTimeout(() => setCopiedId(null), 2000);
+                        } catch (err) {
+                          console.error("Copy failed:", err);
+                        }
+                      }}
+                      className="shrink-0 p-1 rounded hover:bg-muted transition-colors"
+                      title="Copy link"
+                    >
+                      {copiedId === session.id ? (
+                        <Check className="h-3.5 w-3.5 text-green-500" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                      )}
+                    </button>
+                  </div>
+                )}
+
                 <div className="pt-2 border-t border-border/50">
                   <a
                     href={session.meet_link}
